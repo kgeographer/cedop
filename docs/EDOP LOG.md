@@ -1,5 +1,32 @@
 ### EDOP LOG
 ----
+#### 31 Dec 2025
+```
+rsync -av --progress --partial \
+  -e "ssh -i ~/.ssh/do_nov2016 -o ServerAliveInterval=1800" \
+  basins_l08.gpkg \
+  karlg@107.170.199.83:/home/karlg/xfer/
+```
+OR
+
+```ssh edop-droplet
+rsync -av --progress --partial basins_l08.gpkg edop-droplet:/home/karlg/xfer/
+```
+psql access: `on droplet: `sudo -u postgres psql`
+
+```
+sudo -u postgres ogr2ogr \
+  -f PostgreSQL \
+  PG:"dbname=edop user=postgres" \
+  /tmp/basins_l08.gpkg \
+  BasinATLAS_v10_lev08 \
+  -nln basin08 \
+  -lco GEOMETRY_NAME=geom \
+  -lco FID=id \
+  -lco SPATIAL_INDEX=GIST \
+  -progress
+```
+
 #### 30 Dec 2025
 - exported level 08 from BasinATLAS_v10.gdb as geopackage
   - `ogr2ogr -f GPKG basins_l08.gpkg BasinATLAS_v10.gdb BasinATLAS_v10_lev08`

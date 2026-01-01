@@ -1,0 +1,142 @@
+[
+	{
+		"id_no" : 303,
+		"name_en" : "Iguazu National Park",
+		"states_name_en" : "Argentina",
+		"short_description_en" : "The semicircular waterfall at the heart of this site is some 80 m high and 2,700 m in diameter and is situated on a basaltic line spanning the border between Argentina and Brazil. Made up of many cascades producing vast sprays of water, it is one of the most spectacular waterfalls in the world. The surrounding subtropical rainforest has over 2,000 species of vascular plants and is home to the typical wildlife of the region: tapirs, giant anteaters, howler monkeys, ocelots, jaguars and caymans.",
+		"geom" : "POINT (-54.286073 -25.577357)"
+	},
+	{
+		"id_no" : 447,
+		"name_en" : "Uluru-Kata Tjuta National Park",
+		"states_name_en" : "Australia",
+		"short_description_en" : "This park, formerly called Uluru (Ayers Rock – Mount Olga) National Park, features spectacular geological formations that dominate the vast red sandy plain of central Australia. Uluru, an immense monolith, and Kata Tjuta, the rock domes located west of Uluru, form part of the traditional belief system of one of the oldest human societies in the world. The traditional owners of Uluru-Kata Tjuta are the Anangu Aboriginal people.",
+		"geom" : "POINT (131 -25.33333333)"
+	},
+	{
+		"id_no" : 1033,
+		"name_en" : "Historic Centre of Vienna",
+		"states_name_en" : "Austria",
+		"short_description_en" : "Vienna developed from early Celtic and Roman settlements into a Medieval and Baroque city, the capital of the Austro-Hungarian Empire. It played an essential role as a leading European music centre, from the great age of Viennese Classicism through the early part of the 20th century. The historic centre of Vienna is rich in architectural ensembles, including Baroque castles and gardens, as well as the late-19th-century Ringstrasse lined with grand buildings, monuments and parks.",
+		"geom" : "POINT (16.3699 48.2094)"
+	},
+	{
+		"id_no" : 668,
+		"name_en" : "Angkor",
+		"states_name_en" : "Cambodia",
+		"short_description_en" : "Angkor is one of the most important archaeological sites in South-East Asia. Stretching over some 400 km2, including forested area, Angkor Archaeological Park contains the magnificent remains of the different capitals of the Khmer Empire, from the 9th to the 15th century. They include the famous Temple of Angkor Wat and, at Angkor Thom, the Bayon Temple with its countless sculptural decorations. UNESCO has set up a wide-ranging programme to safeguard this symbolic site and its surroundings.",
+		"geom" : "POINT (103.8333333 13.43333333)"
+	},
+	{
+		"id_no" : 158,
+		"name_en" : "Head-Smashed-In Buffalo Jump",
+		"states_name_en" : "Canada",
+		"short_description_en" : "In south-west Alberta, the remains of marked trails and an aboriginal camp, and a tumulus where vast quantities of buffalo (American Bison) skeletons can still be found, are evidence of a custom practised by aboriginal peoples of the North American plains for nearly 6,000 years. Using their excellent knowledge of the topography and of buffalo behaviour, they killed their prey by chasing them over a precipice; the carcasses were later carved up in the camp below.",
+		"geom" : "POINT (-113.6520527778 49.7084055556)"
+	},
+	{
+		"id_no" : 880,
+		"name_en" : "Summer Palace, an Imperial Garden in Beijing",
+		"states_name_en" : "China",
+		"short_description_en" : "The Summer Palace in Beijing – first built in 1750, largely destroyed in the war of 1860 and restored on its original foundations in 1886 – is a masterpiece of Chinese landscape garden design. The natural landscape of hills and open water is combined with artificial features such as pavilions, halls, palaces, temples and bridges to form a harmonious ensemble of outstanding aesthetic value.",
+		"geom" : "POINT (116.1411111 39.91055556)"
+	},
+	{
+		"id_no" : 811,
+		"name_en" : "Old Town of Lijiang",
+		"states_name_en" : "China",
+		"short_description_en" : "The Old Town of Lijiang, which is perfectly adapted to the uneven topography of this key commercial and strategic site, has retained a historic townscape of high quality and authenticity. Its architecture is noteworthy for the blending of elements from several cultures that have come together over many centuries. Lijiang also possesses an ancient water-supply system of great complexity and ingenuity that still functions effectively today.",
+		"geom" : "POINT (100.23333 26.86667)"
+	},
+	{
+		"id_no" : 822,
+		"name_en" : "Historic Centre (Old Town) of Tallinn",
+		"states_name_en" : "Estonia",
+		"short_description_en" : "The origins of Tallinn date back to the 13th century, when a castle was built there by the crusading knights of the Teutonic Order. It developed as a major centre of the Hanseatic League, and its wealth is demonstrated by the opulence of the public buildings (the churches in particular) and the domestic architecture of the merchants' houses, which have survived to a remarkable degree despite the ravages of fire and war in the intervening centuries.",
+		"geom" : "POINT (24.73333333 59.43333)"
+	},
+	{
+		"id_no" : 243,
+		"name_en" : "Ellora Caves",
+		"states_name_en" : "India",
+		"short_description_en" : "These 34 monasteries and temples, extending over more than 2 km, were dug side by side in the wall of a high basalt cliff, not far from Aurangabad, in Maharashtra. Ellora, with its uninterrupted sequence of monuments dating from A.D. 600 to 1000, brings the civilization of ancient India to life. Not only is the Ellora complex a unique artistic creation and a technological exploit but, with its sanctuaries devoted to Buddhism, Hinduism and Jainism, it illustrates the spirit of tolerance that was characteristic of ancient India.",
+		"geom" : "POINT (75.17917 20.02639)"
+	},
+	{
+		"id_no" : 394,
+		"name_en" : "Venice and its Lagoon",
+		"states_name_en" : "Italy",
+		"short_description_en" : "Founded in the 5th century and spread over 118 small islands, Venice became a major maritime power in the 10th century. The whole city is an extraordinary architectural masterpiece in which even the smallest building contains works by some of the world's greatest artists such as Giorgione, Titian, Tintoretto, Veronese and others.",
+		"geom" : "POINT (12.33894444 45.43430556)"
+	},
+	{
+		"id_no" : 688,
+		"name_en" : "Historic Monuments of Ancient Kyoto (Kyoto, Uji and Otsu Cities)",
+		"states_name_en" : "Japan",
+		"short_description_en" : "Built in A.D. 794 on the model of the capitals of ancient China, Kyoto was the imperial capital of Japan from its foundation until the middle of the 19th century. As the centre of Japanese culture for more than 1,000 years, Kyoto illustrates the development of Japanese wooden architecture, particularly religious architecture, and the art of Japanese gardens, which has influenced landscape gardening the world over.",
+		"geom" : "POINT (135.7694444 34.98055556)"
+	},
+	{
+		"id_no" : 326,
+		"name_en" : "Petra",
+		"states_name_en" : "Jordan",
+		"short_description_en" : "Inhabited since prehistoric times, this Nabataean caravan-city, situated between the Red Sea and the Dead Sea, was an important crossroads between Arabia, Egypt and Syria-Phoenicia. Petra is half-built, half-carved into the rock, and is surrounded by mountains riddled with passages and gorges. It is one of the world's most famous archaeological sites, where ancient Eastern traditions blend with Hellenistic architecture.",
+		"geom" : "POINT (35.44333 30.33056)"
+	},
+	{
+		"id_no" : 119,
+		"name_en" : "Timbuktu",
+		"states_name_en" : "Mali",
+		"short_description_en" : "Home of the prestigious Koranic Sankore University and other madrasas, Timbuktu was an intellectual and spiritual capital and a centre for the propagation of Islam throughout Africa in the 15th and 16th centuries. Its three great mosques, Djingareyber, Sankore and Sidi Yahia, recall Timbuktu's golden age. Although continuously restored, these monuments are today under threat from desertification.",
+		"geom" : "POINT (-2.999444444 16.77333333)"
+	},
+	{
+		"id_no" : 274,
+		"name_en" : "Historic Sanctuary of Machu Picchu",
+		"states_name_en" : "Peru",
+		"short_description_en" : "Machu Picchu stands 2,430 m above sea-level, in the middle of a tropical mountain forest, in an extraordinarily beautiful setting. It was probably the most amazing urban creation of the Inca Empire at its height; its giant walls, terraces and ramps seem as if they have been cut naturally in the continuous rock escarpments. The natural setting, on the eastern slopes of the Andes, encompasses the upper Amazon basin with its rich diversity of flora and fauna.",
+		"geom" : "POINT (-72.533443 -13.184934)"
+	},
+	{
+		"id_no" : 379,
+		"name_en" : "Historic City of Toledo",
+		"states_name_en" : "Spain",
+		"short_description_en" : "Successively a Roman municipium, the capital of the Visigothic Kingdom, a fortress of the Emirate of Cordoba, an outpost of the Christian kingdoms fighting the Moors and, in the 16th century, the temporary seat of supreme power under Charles V, Toledo is the repository of more than 2,000 years of history. Its masterpieces are the product of heterogeneous civilizations in an environment where the existence of three major religions – Judaism, Christianity and Islam – was a major factor.",
+		"geom" : "POINT (-4.0244444444 39.8569444444)"
+	},
+	{
+		"id_no" : 1572,
+		"name_en" : "Göbekli Tepe",
+		"states_name_en" : "Türkiye",
+		"short_description_en" : "Located in the Germuş mountains of south-eastern Anatolia, this property presents monumental round-oval and rectangular megalithic structures erected by hunter-gatherers in the Pre-Pottery Neolithic age between 9,600 and 8,200 BCE. These monuments were probably used in connection with rituals, most likely of a funerary nature. Distinctive T-shaped pillars are carved with images of wild animals, providing insight into the way of life and beliefs of people living in Upper Mesopotamia about 11,500 years ago.",
+		"geom" : "POINT (38.9223638889 37.2232419444)"
+	},
+	{
+		"id_no" : 527,
+		"name_en" : "Kyiv: Saint-Sophia Cathedral and Related Monastic Buildings, Kyiv-Pechersk Lavra",
+		"states_name_en" : "Ukraine",
+		"short_description_en" : "Designed to rival Hagia Sophia in Constantinople, Kyiv's Saint-Sophia Cathedral symbolizes the 'new Constantinople', capital of the Christian principality of Kyiv, which was created in the 11th century in a region evangelized after the baptism of St Vladimir in 988. The spiritual and intellectual influence of Kyiv-Pechersk Lavra contributed to the spread of Orthodox thought and the Orthodox faith in the Russian world from the 17th to the 19th century.",
+		"geom" : "POINT (30.51686 50.45258)"
+	},
+	{
+		"id_no" : 492,
+		"name_en" : "Taos Pueblo",
+		"states_name_en" : "United States of America",
+		"short_description_en" : "Situated in the valley of a small tributary of the Rio Grande, this adobe settlement – consisting of dwellings and ceremonial buildings – represents the culture of the Pueblo Indians of Arizona and New Mexico.",
+		"geom" : "POINT (-105.546 36.438)"
+	},
+	{
+		"id_no" : 198,
+		"name_en" : "Cahokia Mounds State Historic Site",
+		"states_name_en" : "United States of America",
+		"short_description_en" : "Cahokia Mounds, some 13 km north-east of St Louis, Missouri, is the largest pre-Columbian settlement north of Mexico. It was occupied primarily during the Mississippian period (800–1400), when it covered nearly 1,600 ha and included some 120 mounds. It is a striking example of a complex chiefdom society, with many satellite mound centres and numerous outlying hamlets and villages. This agricultural society may have had a population of 10–20,000 at its peak between 1050 and 1150. Primary features at the site include Monks Mound, the largest prehistoric earthwork in the Americas, covering over 5 ha and standing 30 m high.",
+		"geom" : "POINT (-90.06138889 38.65861111)"
+	},
+	{
+		"id_no" : 603,
+		"name_en" : "Samarkand  – Crossroad of Cultures",
+		"states_name_en" : "Uzbekistan",
+		"short_description_en" : "The historic town of Samarkand is a crossroad and melting pot of the world's cultures. Founded in the 7th century B.C. as ancient Afrasiab, Samarkand had its most significant development in the Timurid period from the 14th to the 15th centuries. The major monuments include the Registan Mosque and madrasas, Bibi-Khanum Mosque, the Shakhi-Zinda compound and the Gur-Emir ensemble, as well as Ulugh-Beg's Observatory.",
+		"geom" : "POINT (67 39.66861)"
+	}
+]

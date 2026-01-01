@@ -1,10 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<p>
+  Click the button to test a sample point.
+</p>
+
+<button id="test-btn">Get Signature</button>
+
+<pre id="output"></pre>
+{% endblock %}
