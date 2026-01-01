@@ -1,9 +1,18 @@
+# Environment / IDE
 .env
- __pycache__/
- .idea/
+.idea/
 
- metadata/BasinATLAS_Catalog_v10.pdf
+# Python
+__pycache__/
+*.pyc
 
-git rm --cached metadata/BasinATLAS_Catalog_v10.pdf
-git commit -m "ignored stuff"
-git push origin main
+# macOS
+.DS_Store
+
+# Local/binary reference material (do not version)
+metadata/*.pdf
+articles/*.pdf
+
+# Optional: also ignore large derived spreadsheets if you don't want them tracked
+# metadata/*.xlsx
+# metadata/*.tsv

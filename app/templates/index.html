@@ -1,11 +1,247 @@
 {% extends "base.html" %}
 
 {% block content %}
-<p>
-  Click the button to test a sample point.
-</p>
+<div class="container-fluid">
+  <ul class="nav nav-tabs" id="edopTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-main" data-bs-toggle="tab" data-bs-target="#panel-main" type="button" role="tab" aria-controls="panel-main" aria-selected="true">Main</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-compare" data-bs-toggle="tab" data-bs-target="#panel-compare" type="button" role="tab" aria-controls="panel-compare" aria-selected="false">Compare</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-wh" data-bs-toggle="tab" data-bs-target="#panel-wh" type="button" role="tab" aria-controls="panel-wh" aria-selected="false">World Heritage</button>
+    </li>
+  </ul>
 
-<button id="test-btn">Get Signature</button>
+  <div class="tab-content pt-3" id="edopTabContent">
 
-<pre id="output"></pre>
+    <!-- MAIN TAB -->
+    <div class="tab-pane fade show active" id="panel-main" role="tabpanel" aria-labelledby="tab-main">
+      <div class="row g-3">
+        <div class="col-12 col-lg-4">
+          <h4 class="mb-3">Resolve place</h4>
+
+          <form id="main-form" class="mb-3">
+            <div class="mb-2">
+              <label class="form-label" for="main-lon">Longitude</label>
+              <input class="form-control" id="main-lon" name="lon" type="number" step="any" placeholder="e.g. -2.99944" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="main-lat">Latitude</label>
+              <input class="form-control" id="main-lat" name="lat" type="number" step="any" placeholder="e.g. 16.77333" />
+            </div>
+
+            <div class="my-3 text-muted">— or —</div>
+
+            <div class="mb-2">
+              <label class="form-label" for="main-name">Place name (WHG suggest; first hit only)</label>
+              <input class="form-control" id="main-name" name="name" type="text" placeholder="e.g. Timbuktu" />
+              <div class="form-text">For now, name resolution uses WHG <code>/suggest/entity</code> and returns the top-ranked entity. Coordinates are not available until token-based entity detail access is working.</div>
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button class="btn btn-primary" id="main-resolve-btn" type="submit">Resolve</button>
+              <button class="btn btn-outline-secondary" id="test-btn" type="button">Use Timbuktu lon/lat</button>
+            </div>
+          </form>
+
+          <div class="mb-3">
+            <h5 class="mb-2">Resolved place</h5>
+            <pre id="main-resolved" class="bg-light p-2" style="min-height: 7rem;"></pre>
+          </div>
+
+          <div>
+            <h5 class="mb-2">Environmental profile</h5>
+            <pre id="output" class="bg-light p-2" style="min-height: 12rem;"></pre>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+          <h4 class="mb-3">Map</h4>
+          <div id="map" style="height: 420px; border: 1px solid #ddd;"></div>
+          <div class="form-text mt-2">Map plumbing is wired for a marker now; polygon overlay can be added once <code>/api/signature</code> returns GeoJSON geometry.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPARE TAB (placeholder) -->
+    <div class="tab-pane fade" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare">
+      <p class="text-muted">Compare UI coming next (two places → two profiles).</p>
+    </div>
+
+    <!-- WORLD HERITAGE TAB (placeholder) -->
+    <div class="tab-pane fade" id="panel-wh" role="tabpanel" aria-labelledby="tab-wh">
+      <p class="text-muted">World Heritage UI coming next (dropdown and/or clickable markers).</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ResolvedPlace shape (client-side):
+  // {
+  //   label: string,
+  //   source: 'lonlat' | 'whg_suggest',
+  //   location?: { type: 'Point', coordinates: [lon, lat] },
+  //   meta?: object
+  // }
+
+  let map = null;
+  let marker = null;
+
+  function ensureMap() {
+    if (map) return;
+    if (!window.L) {
+      console.warn('Leaflet (window.L) not found. Map will remain inert until Leaflet is included.');
+      return;
+    }
+    map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+  }
+
+  function setMarkerFromLonLat(lon, lat) {
+    ensureMap();
+    if (!map) return;
+    const ll = [lat, lon];
+    if (!marker) {
+      marker = L.marker(ll).addTo(map);
+    } else {
+      marker.setLatLng(ll);
+    }
+    map.setView(ll, 9);
+  }
+
+  function renderResolvedPlace(obj) {
+    const pre = document.getElementById('main-resolved');
+    pre.textContent = obj ? JSON.stringify(obj, null, 2) : '';
+  }
+
+  function renderSignature(sig) {
+    const pre = document.getElementById('output');
+    pre.textContent = sig ? JSON.stringify(sig, null, 2) : '';
+  }
+
+  async function fetchSignature(lon, lat) {
+    const url = `/api/signature?lon=${encodeURIComponent(lon)}&lat=${encodeURIComponent(lat)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Signature request failed (${resp.status}): ${txt}`);
+    }
+    return await resp.json();
+  }
+
+  async function resolveByLonLat(lon, lat) {
+    const resolved = {
+      label: 'lon/lat input',
+      source: 'lonlat',
+      location: { type: 'Point', coordinates: [Number(lon), Number(lat)] }
+    };
+    renderResolvedPlace(resolved);
+    setMarkerFromLonLat(Number(lon), Number(lat));
+
+    const sig = await fetchSignature(lon, lat);
+    renderSignature(sig);
+  }
+
+  async function resolveByName(name) {
+    const q = `https://whgazetteer.org/suggest/entity?prefix=${encodeURIComponent(name)}&limit=3&cursor=0&exact=false`;
+    const resp = await fetch(q);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`WHG suggest failed (${resp.status}): ${txt}`);
+    }
+    const data = await resp.json();
+    const first = data && data.result && data.result.length ? data.result[0] : null;
+
+    if (!first) {
+      const resolved = {
+        label: name,
+        source: 'whg_suggest',
+        meta: { status: 'not_found' }
+      };
+      renderResolvedPlace(resolved);
+      renderSignature({ detail: 'Not found in WHG suggest (no candidates).' });
+      return;
+    }
+
+    const resolved = {
+      label: first.name,
+      source: 'whg_suggest',
+      meta: {
+        whg_id: first.id,
+        score: first.score,
+        description: first.description,
+        match: first.match,
+        alt_names: first.alt_names || []
+      }
+    };
+    renderResolvedPlace(resolved);
+
+    // No coordinates available from suggest; cannot fetch signature yet.
+    renderSignature({
+      detail: 'Resolved to top WHG entity via /suggest/entity, but coordinates are unavailable until token-based entity detail access works.',
+      whg_id: first.id,
+      name: first.name
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Wire Timbuktu test button (existing behavior)
+    const testBtn = document.getElementById('test-btn');
+    testBtn.addEventListener('click', async () => {
+      // Timbuktu WH site (approx): lon=-2.999444444, lat=16.77333333
+      const lon = -2.999444444;
+      const lat = 16.77333333;
+      document.getElementById('main-lon').value = lon;
+      document.getElementById('main-lat').value = lat;
+      document.getElementById('main-name').value = '';
+      renderResolvedPlace(null);
+      renderSignature(null);
+      try {
+        await resolveByLonLat(lon, lat);
+      } catch (e) {
+        renderSignature({ error: String(e) });
+      }
+    });
+
+    // Main form submit
+    const form = document.getElementById('main-form');
+    form.addEventListener('submit', async (evt) => {
+      evt.preventDefault();
+      renderResolvedPlace(null);
+      renderSignature(null);
+
+      const lon = document.getElementById('main-lon').value.trim();
+      const lat = document.getElementById('main-lat').value.trim();
+      const name = document.getElementById('main-name').value.trim();
+
+      try {
+        if (lon !== '' && lat !== '') {
+          await resolveByLonLat(lon, lat);
+          return;
+        }
+        if (name !== '') {
+          await resolveByName(name);
+          return;
+        }
+        renderSignature({ detail: 'Enter lon/lat or a place name.' });
+      } catch (e) {
+        renderSignature({ error: String(e) });
+      }
+    });
+
+    // Initialize map if Leaflet is present
+    ensureMap();
+
+    // Leaflet sometimes needs an explicit size recalculation when inside tabs.
+    document.getElementById('tab-main').addEventListener('shown.bs.tab', () => {
+      if (map) map.invalidateSize();
+    });
+  });
+</script>
 {% endblock %}
