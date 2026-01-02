@@ -80,7 +80,13 @@
       <!-- Outputs (shared across tabs) -->
       <div class="mt-3">
         <h5 class="mb-2">Environmental profile</h5>
-        <pre id="output" class="bg-light p-2" style="min-height: 12rem;"></pre>
+
+        <!-- Summary + grouped accordions (preferred) -->
+        <div id="profile-summary" class="small"></div>
+        <div id="profile-accordions" class="mt-2"></div>
+
+        <!-- Fallback (raw JSON) -->
+        <pre id="output" class="bg-light p-2" style="min-height: 12rem; display:none;"></pre>
       </div>
 
       <div class="mb-3 mt-3">
@@ -315,9 +321,148 @@
     pre.textContent = obj ? JSON.stringify(obj, null, 2) : '';
   }
 
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function formatValue(v) {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'number') {
+      // Keep pilot formatting simple: round long floats lightly
+      const abs = Math.abs(v);
+      if (abs !== 0 && abs < 1) return v.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+      if (!Number.isInteger(v) && abs >= 1 && abs < 1000) return v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+      return String(v);
+    }
+    if (typeof v === 'object') {
+      // Render small objects (e.g., pnv_shares) compactly
+      try {
+        return JSON.stringify(v);
+      } catch (e) {
+        return String(v);
+      }
+    }
+    return String(v);
+  }
+
+  function humanizeKey(k) {
+    // Minimal pilot prettifier
+    return String(k)
+      .replaceAll('_', ' ')
+      .replace(/\bavg\b/gi, 'avg')
+      .replace(/\bmin\b/gi, 'min')
+      .replace(/\bmax\b/gi, 'max');
+  }
+
   function renderSignature(sig) {
     const pre = document.getElementById('output');
-    pre.textContent = sig ? JSON.stringify(sig, null, 2) : '';
+    const summaryEl = document.getElementById('profile-summary');
+    const accEl = document.getElementById('profile-accordions');
+
+    // Clear
+    if (summaryEl) summaryEl.innerHTML = '';
+    if (accEl) accEl.innerHTML = '';
+
+    if (!sig) {
+      if (pre) {
+        pre.style.display = 'none';
+        pre.textContent = '';
+      }
+      return;
+    }
+
+    const hasGrouped = sig.profile_summary && sig.profile_groups;
+
+    if (!hasGrouped) {
+      // Fallback to raw JSON
+      if (pre) {
+        pre.style.display = '';
+        pre.textContent = JSON.stringify(sig, null, 2);
+      }
+      return;
+    }
+
+    // Hide raw JSON in normal path
+    if (pre) {
+      pre.style.display = 'none';
+      pre.textContent = '';
+    }
+
+    // ---------- Summary ----------
+    if (summaryEl) {
+      const items = Array.isArray(sig.profile_summary) ? sig.profile_summary : [];
+      if (items.length) {
+        const rows = items
+          .filter(it => it && it.value !== undefined)
+          .map(it => {
+            const label = escapeHtml(it.label || humanizeKey(it.key || ''));
+            const value = escapeHtml(formatValue(it.value));
+            return `<div class="d-flex justify-content-between gap-2 py-1 border-bottom"><div class="text-muted">${label}</div><div class="text-end">${value}</div></div>`;
+          })
+          .join('');
+        summaryEl.innerHTML = `
+          <div class="card">
+            <div class="card-body p-2">
+              <div class="fw-semibold mb-1">Summary</div>
+              ${rows}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // ---------- Accordions ----------
+    if (accEl) {
+      const groups = sig.profile_groups || {};
+      const order = ['A', 'B', 'C', 'D'];
+      const accId = 'profileAccordion';
+
+      const panels = order
+        .filter(code => groups[code])
+        .map((code, idx) => {
+          const g = groups[code];
+          const label = escapeHtml(g.label || code);
+          const items = Array.isArray(g.items) ? g.items : [];
+
+          const body = items.map(it => {
+            const k = it.key || '';
+            const l = escapeHtml(it.label || humanizeKey(k));
+            const v = escapeHtml(formatValue(it.value));
+            return `<div class="d-flex justify-content-between gap-2 py-1 border-bottom"><div class="text-muted">${l}</div><div class="text-end">${v}</div></div>`;
+          }).join('');
+
+          const headingId = `heading-${code}`;
+          const collapseId = `collapse-${code}`;
+
+          return `
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="${headingId}">
+                <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${idx === 0 ? 'true' : 'false'}" aria-controls="${collapseId}">
+                  ${escapeHtml(code)} — ${label}
+                </button>
+              </h2>
+              <div id="${collapseId}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" aria-labelledby="${headingId}" data-bs-parent="#${accId}">
+                <div class="accordion-body p-2">
+                  ${body || '<div class="text-muted">(no fields)</div>'}
+                </div>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      accEl.innerHTML = `
+        <div class="accordion" id="${accId}">
+          ${panels}
+        </div>
+      `;
+    }
   }
 
   async function fetchSignature(lon, lat) {
