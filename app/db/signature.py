@@ -18,27 +18,156 @@ load_dotenv()  # reads .env from project root
 
 SIGNATURE_SQL = """
 SELECT
+  id,
   zone_id,
   zone_name,
   strata_id,
   strata_code,
   land_cover_id,
   land_cover_name,
-  pop_density,
+
+  -- A: Physiographic bedrock
   elev_min,
   elev_max,
-  runoff,
+  slope_avg,
+  slope_upstream,
+  stream_gradient,
+  lithology,
+  lith_class,
+  karst,
+  karst_upstream,
+
+  -- B: Hydro-climatic baselines
   discharge_yr,
+  discharge_min,
+  discharge_max,
+  river_area,
+  river_area_upstream,
+  runoff,
+  gw_table_depth,
+  pnveg_id,
+  pnv_majority,
+  pnv_shares,
+  pct_clay,
+  pct_silt,
+  pct_sand,
+
+  -- C: Bioclimatic proxies
+  temp_yr,
+  temp_min,
+  temp_max,
+  precip_yr,
+  aridity,
+  wet_pct_grp1,
+  wet_pct_grp2,
+  permafrost_extent,
+  biome_id,
+  biome,
+  eco_id,
+  ecoregion,
+  freshwater_type,
+  freshwater_ecoregion_class,
+  freshwater_ecoregion_name,
+
+  -- D: Anthropocene markers
+  reservoir_vol,
+  cropland_extent,
+  pop_density,
+  human_footprint_09,
+  gdp_avg,
+  human_dev_idx,
+
   -- geometry handling: return a GeoJSON string (good for Leaflet)
   ST_AsGeoJSON(geom, 6) AS geom_geojson
-FROM public.v_basin08_basic
+FROM public.v_basin08_persist
 WHERE ST_Covers(
   geom,
   ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)
 )
-ORDER BY area_km2 ASC
+ORDER BY ST_Area(geom::geography) ASC
 LIMIT 1;
 """
+
+# -----------------------
+# Profile presentation metadata (pilot)
+# -----------------------
+
+PROFILE_GROUPS: Dict[str, Dict[str, Any]] = {
+    "A": {
+        "label": "Physiographic bedrock",
+        "fields": [
+            "elev_min",
+            "elev_max",
+            "slope_avg",
+            "slope_upstream",
+            "stream_gradient",
+            "lith_class",
+            "karst",
+            "karst_upstream",
+        ],
+    },
+    "B": {
+        "label": "Hydro-climatic baselines",
+        "fields": [
+            "runoff",
+            "discharge_yr",
+            "discharge_min",
+            "discharge_max",
+            "river_area",
+            "river_area_upstream",
+            "gw_table_depth",
+            "pnv_majority",
+            "pnv_shares",
+            "pct_clay",
+            "pct_silt",
+            "pct_sand",
+        ],
+    },
+    "C": {
+        "label": "Bioclimatic proxies",
+        "fields": [
+            "temp_yr",
+            "temp_min",
+            "temp_max",
+            "precip_yr",
+            "aridity",
+            "wet_pct_grp1",
+            "wet_pct_grp2",
+            "permafrost_extent",
+            "biome",
+            "ecoregion",
+            "freshwater_ecoregion_class",
+            "freshwater_ecoregion_name",
+        ],
+    },
+    "D": {
+        "label": "Anthropocene markers",
+        "fields": [
+            "pop_density",
+            "human_footprint_09",
+            "cropland_extent",
+            "reservoir_vol",
+            "gdp_avg",
+            "human_dev_idx",
+        ],
+    },
+}
+
+# Proposed “top summary” (pilot): quick-read fields that usually explain the setting best.
+# UI can render this as a compact list above accordions.
+PROFILE_SUMMARY: list[Dict[str, str]] = [
+    {"key": "zone_name", "label": "Bioclimate zone"},
+    {"key": "strata_code", "label": "Bioclimate stratum"},
+    {"key": "land_cover_name", "label": "Land cover"},
+    {"key": "elev_point", "label": "Elevation (point, m)"},
+    {"key": "elev_min", "label": "Elevation min (basin, m)"},
+    {"key": "elev_max", "label": "Elevation max (basin, m)"},
+    {"key": "relief_position", "label": "Relief position (0–1)"},
+    {"key": "runoff", "label": "Runoff (mm/yr)"},
+    {"key": "discharge_yr", "label": "Discharge (m³/s, yr)"},
+    {"key": "ecoregion", "label": "Ecoregion"},
+    {"key": "pop_density", "label": "Population density"},
+]
 
 # -----------------------
 # Elevation provider (external, swappable)
@@ -255,6 +384,40 @@ def get_signature(
             except Exception:
                 sig["relief_range_m"] = None
                 sig["relief_position"] = None
+
+            # -----------------------
+            # Pilot payload helpers for UI rendering (no UI changes required yet)
+            # -----------------------
+
+            # profile_summary: ordered list of {key,label,value} using PROFILE_SUMMARY
+            summary_items: list[Dict[str, Any]] = []
+            for spec in PROFILE_SUMMARY:
+                k = spec["key"]
+                if k in sig:
+                    summary_items.append({
+                        "key": k,
+                        "label": spec["label"],
+                        "value": sig.get(k),
+                    })
+
+            # profile_groups: {A:{label,items:[{key,label,value}...]}, ...}
+            grouped: Dict[str, Any] = {}
+            for gcode, gspec in PROFILE_GROUPS.items():
+                items: list[Dict[str, Any]] = []
+                for k in gspec["fields"]:
+                    if k in sig:
+                        items.append({
+                            "key": k,
+                            "label": k,  # UI can prettify later; keep stable now
+                            "value": sig.get(k),
+                        })
+                grouped[gcode] = {
+                    "label": gspec["label"],
+                    "items": items,
+                }
+
+            sig["profile_summary"] = summary_items
+            sig["profile_groups"] = grouped
 
             return sig
 
