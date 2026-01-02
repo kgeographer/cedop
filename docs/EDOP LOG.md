@@ -1,5 +1,10 @@
 ### EDOP LOG
 ----
+#### 01 Jan 2026
+- wired a "Resolve" button to WHG API endpoints (run a `/suggest/entity?` call, then an `/entity/{entity_id}/api` call with a resulting place id and it works nicely, ~1.8s
+- index.html now with inputs for lon/lat or name, returning an "Envirnmental profile" (`signature` internally), and point feature on Leaflet map
+- 
+
 #### 31 Dec 2025
 ```
 rsync -av --progress --partial \
