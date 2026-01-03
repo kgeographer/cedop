@@ -99,6 +99,13 @@
     <div class="col-12 col-lg-7">
       <h4 class="mb-3">Map</h4>
       <div id="map" style="height: 420px; border: 1px solid #ddd;"></div>
+      <style>
+        /* Hillshade blend: keeps relief legible when reference tiles (streets/labels) are toggled on.
+           Note: mix-blend-mode behavior can vary slightly across browsers. */
+        .edop-hillshade {
+          mix-blend-mode: multiply;
+        }
+      </style>
       <div class="form-text mt-2">Map plumbing is wired for a marker now; polygon overlay can be added once <code>/api/signature</code> returns GeoJSON geometry.</div>
     </div>
 
@@ -246,11 +253,41 @@
       console.warn('Leaflet (window.L) not found. Map will remain inert until Leaflet is included.');
       return;
     }
+
     map = L.map('map').setView([0, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
+
+    // Overlay (toggle): standard OSM streets/labels
+    // NOTE: kept as an overlay because the hillshade tiles are JPEG (no alpha) and must sit underneath.
+    const osmOverlay = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      opacity: 0.50,
       attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    });
+
+    // Overlay (ALWAYS ON): hillshade (terrain context).
+    // Source: OpenStreetMap US tileservice (TileJSON: https://tiles.openstreetmap.us/raster/hillshade.json)
+    const hillshadeLayer = L.tileLayer('https://tiles.openstreetmap.us/raster/hillshade/{z}/{x}/{y}.jpg', {
+      maxZoom: 12,
+      opacity: 1.0,
+      className: 'edop-hillshade',
+      attribution: 'Hillshade: &copy; OpenStreetMap US'
+    });
+
+    // Add defaults
+    // Hillshade is the always-on environmental context (base).
+    hillshadeLayer.addTo(map);
+    osmOverlay.addTo(map);
+    // Streets/labels are ON by default.
+    // (User can toggle them on via the layer control.)
+
+    // Layer switcher: hillshade is always on; streets are toggleable.
+    L.control.layers(
+      null,
+      {
+        'Streets / labels': osmOverlay
+      },
+      { collapsed: true }
+    ).addTo(map);
   }
 
   function setMarkerFromLonLat(lon, lat) {
