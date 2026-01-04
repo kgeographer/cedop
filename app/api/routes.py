@@ -135,6 +135,33 @@ def _load_wh_seed() -> list[Dict[str, Any]]:
     return out
 
 
+def _get_cluster_labels() -> Dict[int, str]:
+    """Fetch cluster labels for WH sites from database."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT s.id_no, c.cluster_label
+                FROM edop_clusters c
+                JOIN edop_wh_sites s ON s.site_id = c.site_id
+            """)
+            return {row[0]: row[1] for row in cur.fetchall()}
+    except Exception:
+        return {}
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
 # -----------------------
 # API endpoints
 # -----------------------
@@ -227,7 +254,66 @@ def wh_sites():
     """Return the small World Heritage seed set used by the pilot UI."""
     try:
         sites = _load_wh_seed()
+        cluster_labels = _get_cluster_labels()
+
+        # Add cluster_label to each site
+        for site in sites:
+            id_no = site.get("id_no")
+            site["cluster_label"] = cluster_labels.get(id_no)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"count": len(sites), "sites": sites}
+
+
+@router.get("/similar")
+def similar(id_no: int, limit: int = 5):
+    """Return most similar WH sites to the given site by id_no."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    b.id_no,
+                    b.name_en,
+                    b.lon,
+                    b.lat,
+                    ROUND(sim.distance::numeric, 2) as distance,
+                    c.cluster_label
+                FROM edop_similarity sim
+                JOIN edop_wh_sites a ON a.site_id = sim.site_a
+                JOIN edop_wh_sites b ON b.site_id = sim.site_b
+                LEFT JOIN edop_clusters c ON c.site_id = b.site_id
+                WHERE a.id_no = %s
+                ORDER BY sim.distance ASC
+                LIMIT %s
+            """, (id_no, limit))
+
+            results = []
+            for row in cur.fetchall():
+                results.append({
+                    "id_no": row[0],
+                    "name_en": row[1],
+                    "lon": float(row[2]),
+                    "lat": float(row[3]),
+                    "distance": float(row[4]),
+                    "cluster_label": row[5]
+                })
+
+            return {"source_id_no": id_no, "similar": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()

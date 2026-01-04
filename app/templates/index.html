@@ -66,8 +66,9 @@
             <div class="form-text">Seed list will come from the EDOP backend; selecting a site will drop a marker and compute an environmental profile.</div>
           </div>
 
-          <div class="mt-3">
+          <div class="mt-3 d-flex gap-2">
             <button class="btn btn-outline-secondary" id="wh-show-desc" type="button" disabled>Show description</button>
+            <button class="btn btn-outline-primary" id="wh-most-similar" type="button" disabled>Most similar</button>
           </div>
 
           <div class="mt-3">
@@ -80,6 +81,11 @@
       <!-- Outputs (shared across tabs) -->
       <div class="mt-3">
         <h5 class="mb-2">Environmental profile</h5>
+
+        <!-- Cluster label (shown for WH sites) -->
+        <div id="cluster-label" class="mb-2" style="display:none;">
+          <span class="badge bg-secondary fs-6" id="cluster-label-text"></span>
+        </div>
 
         <!-- Summary + grouped accordions (preferred) -->
         <div id="profile-summary" class="small"></div>
@@ -107,6 +113,12 @@
         }
       </style>
       <div class="form-text mt-2">Map plumbing is wired for a marker now; polygon overlay can be added once <code>/api/signature</code> returns GeoJSON geometry.</div>
+
+      <!-- Similar sites results (shown below map) -->
+      <div id="similar-results" class="mt-3" style="display:none;">
+        <h5 class="mb-2">Most Similar Sites</h5>
+        <div id="similar-list"></div>
+      </div>
     </div>
 
   </div>
@@ -124,6 +136,7 @@
   let map = null;
   let marker = null;
   let basinLayer = null; // GeoJSON polygon overlay from signature (sub-basin)
+  let similarMarkers = []; // Markers for similar sites
   // World Heritage seed list state
   let whSites = [];
   let whSelected = null;
@@ -194,21 +207,165 @@
     }
   }
 
+  function showClusterLabel(label) {
+    const container = document.getElementById('cluster-label');
+    const text = document.getElementById('cluster-label-text');
+    if (!container || !text) return;
+
+    if (label) {
+      text.textContent = label;
+      container.style.display = '';
+    } else {
+      text.textContent = '';
+      container.style.display = 'none';
+    }
+  }
+
+  function clearSimilarMarkers() {
+    similarMarkers.forEach(m => {
+      if (map) map.removeLayer(m);
+    });
+    similarMarkers = [];
+  }
+
+  function clearSimilarResults() {
+    const container = document.getElementById('similar-results');
+    const list = document.getElementById('similar-list');
+    if (container) container.style.display = 'none';
+    if (list) list.innerHTML = '';
+    clearSimilarMarkers();
+  }
+
+  async function fetchSimilarSites(idNo, limit = 5) {
+    const url = `/api/similar?id_no=${encodeURIComponent(idNo)}&limit=${limit}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Similar sites request failed (${resp.status}): ${txt}`);
+    }
+    return await resp.json();
+  }
+
+  function renderSimilarSites(data, sourceSite) {
+    const container = document.getElementById('similar-results');
+    const list = document.getElementById('similar-list');
+    if (!container || !list) return;
+
+    const similar = data.similar || [];
+    if (!similar.length) {
+      list.innerHTML = '<div class="text-muted">No similar sites found.</div>';
+      container.style.display = '';
+      return;
+    }
+
+    // Build list HTML
+    const rows = similar.map((site, idx) => {
+      const sameCluster = site.cluster_label === sourceSite.cluster_label;
+      const clusterNote = sameCluster
+        ? `<span class="text-success small">same cluster</span>`
+        : `<span class="text-muted small">${site.cluster_label || ''}</span>`;
+      return `
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <div>
+            <strong>${idx + 1}.</strong> ${escapeHtml(site.name_en)}
+            <div class="small">${clusterNote}</div>
+          </div>
+          <div class="text-muted small">dist: ${site.distance}</div>
+        </div>
+      `;
+    }).join('');
+
+    list.innerHTML = rows;
+    container.style.display = '';
+
+    // Add markers for similar sites
+    clearSimilarMarkers();
+    ensureMap();
+
+    const bounds = [];
+
+    // Include source site in bounds
+    if (sourceSite.location && sourceSite.location.coordinates) {
+      bounds.push([sourceSite.location.coordinates[1], sourceSite.location.coordinates[0]]);
+    }
+
+    similar.forEach((site, idx) => {
+      const lat = site.lat;
+      const lon = site.lon;
+      bounds.push([lat, lon]);
+
+      // Use a different color/icon for similar sites
+      const simMarker = L.circleMarker([lat, lon], {
+        radius: 8,
+        fillColor: '#6c757d',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+      }).addTo(map);
+
+      simMarker.bindPopup(`
+        <div style="max-width: 200px;">
+          <strong>${idx + 1}. ${site.name_en}</strong><br/>
+          <span class="text-muted">Distance: ${site.distance}</span><br/>
+          <span class="small">${site.cluster_label || ''}</span>
+        </div>
+      `);
+
+      similarMarkers.push(simMarker);
+    });
+
+    // Zoom to fit all markers
+    if (bounds.length > 1 && map) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }
+
+  async function whShowSimilar() {
+    if (!whSelected) return;
+
+    const btnSimilar = document.getElementById('wh-most-similar');
+    if (btnSimilar) btnSimilar.disabled = true;
+
+    try {
+      whSetStatus('Finding similar sites…');
+      const data = await fetchSimilarSites(whSelected.id_no, 5);
+      renderSimilarSites(data, whSelected);
+      whSetStatus('');
+    } catch (e) {
+      whSetStatus(String(e));
+    } finally {
+      if (btnSimilar) btnSimilar.disabled = false;
+    }
+  }
+
   async function whSelectById(idNo) {
     const btnDesc = document.getElementById('wh-show-desc');
+    const btnSimilar = document.getElementById('wh-most-similar');
     const descBox = document.getElementById('wh-desc');
 
     whSelected = whSites.find((s) => String(s.id_no) === String(idNo)) || null;
 
+    // Clear previous results
     if (descBox) {
       descBox.style.display = 'none';
       descBox.textContent = '';
     }
+    if (btnDesc) btnDesc.textContent = 'Show description';
+    clearSimilarResults();
 
     if (!whSelected) {
       if (btnDesc) btnDesc.disabled = true;
+      if (btnSimilar) btnSimilar.disabled = true;
+      showClusterLabel(null);
       return;
     }
+
+    // Show cluster label if available
+    showClusterLabel(whSelected.cluster_label);
+
+    // Enable Most Similar button
+    if (btnSimilar) btnSimilar.disabled = false;
 
     // This path is not WHG resolution; clear Resolved place
     renderResolvedPlace(null);
@@ -524,6 +681,9 @@
   }
 
   async function resolveByLonLat(lon, lat) {
+    // Clear cluster label (only shown for WH sites)
+    showClusterLabel(null);
+
     const resolved = {
       label: 'lon/lat input',
       source: 'lonlat',
@@ -538,6 +698,9 @@
   }
 
   async function resolveByName(name) {
+    // Clear cluster label (only shown for WH sites)
+    showClusterLabel(null);
+
     // Call EDOP backend resolver (server-side WHG token usage)
     const url = `/api/resolve?name=${encodeURIComponent(name)}`;
     const resp = await fetch(url);
@@ -630,15 +793,30 @@
       });
     }
 
-    // World Heritage: show description
+    // World Heritage: toggle description
     const whBtn = document.getElementById('wh-show-desc');
     if (whBtn) {
       whBtn.addEventListener('click', () => {
         const descBox = document.getElementById('wh-desc');
         if (!whSelected || !whSelected.short_description_en || !descBox) return;
-        descBox.textContent = whSelected.short_description_en;
-        descBox.style.display = '';
+
+        // Toggle visibility
+        if (descBox.style.display === 'none' || !descBox.style.display) {
+          descBox.textContent = whSelected.short_description_en;
+          descBox.style.display = '';
+          whBtn.textContent = 'Hide description';
+        } else {
+          descBox.style.display = 'none';
+          descBox.textContent = '';
+          whBtn.textContent = 'Show description';
+        }
       });
+    }
+
+    // World Heritage: most similar button
+    const btnSimilar = document.getElementById('wh-most-similar');
+    if (btnSimilar) {
+      btnSimilar.addEventListener('click', whShowSimilar);
     }
 
     // Leaflet often needs an explicit size recalculation when switching tabs.
@@ -650,6 +828,8 @@
         // Always clear shared panels
         renderResolvedPlace(null);
         renderSignature(null);
+        showClusterLabel(null);
+        clearSimilarResults();
 
         // Always clear map overlays and reset view
         clearBasinLayer();
