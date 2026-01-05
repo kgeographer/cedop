@@ -49,7 +49,8 @@ def load_wikipedia_leads():
     """Load Wikipedia lead text from TSV file."""
     sites = []
     with open(DATA_FILE, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f, delimiter="\t")
+        # Disable quote handling - wiki_lead fields may start with quotes
+        reader = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
         for row in reader:
             sites.append({
                 "id_no": int(row["id_no"]),

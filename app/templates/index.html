@@ -68,7 +68,8 @@
 
           <div class="mt-3 d-flex gap-2">
             <button class="btn btn-outline-secondary" id="wh-show-desc" type="button" disabled>Show description</button>
-            <button class="btn btn-outline-primary" id="wh-most-similar" type="button" disabled>Most similar</button>
+            <button class="btn btn-outline-primary" id="wh-similar-env" type="button" disabled>Similar (env)</button>
+            <button class="btn btn-outline-info" id="wh-similar-text" type="button" disabled>Similar (semantic)</button>
           </div>
 
           <div class="mt-3">
@@ -116,8 +117,8 @@
 
       <!-- Similar sites results (shown below map) -->
       <div id="similar-results" class="mt-3" style="display:none;">
-        <h5 class="mb-0">Most Similar Sites</h5>
-        <p class="fst-italic small">computed from the multivariate environmental profile using dimensionality reduction and clustering</p>
+        <h5 class="mb-0" id="similar-heading">Most Similar Sites</h5>
+        <p class="fst-italic small" id="similar-description"></p>
         <div id="similar-list"></div>
       </div>
     </div>
@@ -247,13 +248,36 @@
     return await resp.json();
   }
 
+  async function fetchSimilarTextSites(idNo, limit = 5) {
+    const url = `/api/similar-text?id_no=${encodeURIComponent(idNo)}&limit=${limit}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Similar text sites request failed (${resp.status}): ${txt}`);
+    }
+    return await resp.json();
+  }
+
   // Color palette for similar sites (distinct, colorblind-friendly)
   const SIMILAR_COLORS = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00'];
 
-  function renderSimilarSites(data, sourceSite) {
+  function renderSimilarSites(data, sourceSite, similarityType = 'env') {
     const container = document.getElementById('similar-results');
     const list = document.getElementById('similar-list');
+    const heading = document.getElementById('similar-heading');
+    const description = document.getElementById('similar-description');
     if (!container || !list) return;
+
+    // Set heading and description based on similarity type
+    if (heading && description) {
+      if (similarityType === 'text') {
+        heading.textContent = 'Similar Sites (Semantic)';
+        description.textContent = 'computed from Wikipedia text embeddings using cosine similarity';
+      } else {
+        heading.textContent = 'Similar Sites (Environmental)';
+        description.textContent = 'computed from the multivariate environmental profile using dimensionality reduction and clustering';
+      }
+    }
 
     const similar = data.similar || [];
     if (!similar.length) {
@@ -263,12 +287,16 @@
     }
 
     // Build list HTML with color swatches
+    const isText = similarityType === 'text';
     const rows = similar.map((site, idx) => {
       const color = SIMILAR_COLORS[idx % SIMILAR_COLORS.length];
       const sameCluster = site.cluster_label === sourceSite.cluster_label;
       const clusterNote = sameCluster
         ? `<span class="text-success small">same cluster</span>`
         : `<span class="text-muted small">${site.cluster_label || ''}</span>`;
+      // Text similarity returns 'similarity', env returns 'distance'
+      const metricLabel = isText ? 'sim' : 'dist';
+      const metricValue = isText ? site.similarity : site.distance;
       return `
         <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
           <div>
@@ -276,7 +304,7 @@
             <div class="small">${clusterNote}</div>
           </div>
           <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small">dist: ${site.distance}</span>
+            <span class="text-muted small">${metricLabel}: ${metricValue}</span>
             <span style="display:inline-block; width:16px; height:16px; background:${color}; border-radius:3px;"></span>
           </div>
         </div>
@@ -330,16 +358,38 @@
     }
   }
 
-  async function whShowSimilar() {
+  async function whShowSimilarEnv() {
     if (!whSelected) return;
 
-    const btnSimilar = document.getElementById('wh-most-similar');
+    const btnSimilar = document.getElementById('wh-similar-env');
     if (btnSimilar) btnSimilar.disabled = true;
 
+    clearSimilarResults();
+
     try {
-      whSetStatus('Finding similar sites…');
+      whSetStatus('Finding environmentally similar sites…');
       const data = await fetchSimilarSites(whSelected.id_no, 5);
-      renderSimilarSites(data, whSelected);
+      renderSimilarSites(data, whSelected, 'env');
+      whSetStatus('');
+    } catch (e) {
+      whSetStatus(String(e));
+    } finally {
+      if (btnSimilar) btnSimilar.disabled = false;
+    }
+  }
+
+  async function whShowSimilarText() {
+    if (!whSelected) return;
+
+    const btnSimilar = document.getElementById('wh-similar-text');
+    if (btnSimilar) btnSimilar.disabled = true;
+
+    clearSimilarResults();
+
+    try {
+      whSetStatus('Finding semantically similar sites…');
+      const data = await fetchSimilarTextSites(whSelected.id_no, 5);
+      renderSimilarSites(data, whSelected, 'text');
       whSetStatus('');
     } catch (e) {
       whSetStatus(String(e));
@@ -350,7 +400,8 @@
 
   async function whSelectById(idNo) {
     const btnDesc = document.getElementById('wh-show-desc');
-    const btnSimilar = document.getElementById('wh-most-similar');
+    const btnSimilarEnv = document.getElementById('wh-similar-env');
+    const btnSimilarText = document.getElementById('wh-similar-text');
     const descBox = document.getElementById('wh-desc');
 
     whSelected = whSites.find((s) => String(s.id_no) === String(idNo)) || null;
@@ -365,7 +416,8 @@
 
     if (!whSelected) {
       if (btnDesc) btnDesc.disabled = true;
-      if (btnSimilar) btnSimilar.disabled = true;
+      if (btnSimilarEnv) btnSimilarEnv.disabled = true;
+      if (btnSimilarText) btnSimilarText.disabled = true;
       showClusterLabel(null);
       return;
     }
@@ -373,8 +425,9 @@
     // Show cluster label if available
     showClusterLabel(whSelected.cluster_label);
 
-    // Enable Most Similar button
-    if (btnSimilar) btnSimilar.disabled = false;
+    // Enable Similar buttons
+    if (btnSimilarEnv) btnSimilarEnv.disabled = false;
+    if (btnSimilarText) btnSimilarText.disabled = false;
 
     // This path is not WHG resolution; clear Resolved place
     renderResolvedPlace(null);
@@ -822,10 +875,14 @@
       });
     }
 
-    // World Heritage: most similar button
-    const btnSimilar = document.getElementById('wh-most-similar');
-    if (btnSimilar) {
-      btnSimilar.addEventListener('click', whShowSimilar);
+    // World Heritage: similar buttons
+    const btnSimilarEnv = document.getElementById('wh-similar-env');
+    if (btnSimilarEnv) {
+      btnSimilarEnv.addEventListener('click', whShowSimilarEnv);
+    }
+    const btnSimilarText = document.getElementById('wh-similar-text');
+    if (btnSimilarText) {
+      btnSimilarText.addEventListener('click', whShowSimilarText);
     }
 
     // Leaflet often needs an explicit size recalculation when switching tabs.

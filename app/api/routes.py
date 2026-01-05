@@ -317,3 +317,55 @@ def similar(id_no: int, limit: int = 5):
     finally:
         if 'conn' in locals():
             conn.close()
+
+
+@router.get("/similar-text")
+def similar_text(id_no: int, limit: int = 5):
+    """Return most similar WH sites by text/semantic similarity."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    b.id_no,
+                    b.name_en,
+                    b.lon,
+                    b.lat,
+                    ROUND(sim.similarity::numeric, 3) as similarity,
+                    c.cluster_label
+                FROM edop_text_similarity sim
+                JOIN edop_wh_sites a ON a.site_id = sim.site_a
+                JOIN edop_wh_sites b ON b.site_id = sim.site_b
+                LEFT JOIN edop_text_clusters c ON c.site_id = b.site_id
+                WHERE a.id_no = %s
+                ORDER BY sim.similarity DESC
+                LIMIT %s
+            """, (id_no, limit))
+
+            results = []
+            for row in cur.fetchall():
+                results.append({
+                    "id_no": row[0],
+                    "name_en": row[1],
+                    "lon": float(row[2]),
+                    "lat": float(row[3]),
+                    "similarity": float(row[4]),
+                    "cluster_label": row[5]
+                })
+
+            return {"source_id_no": id_no, "similar": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
