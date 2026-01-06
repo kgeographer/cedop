@@ -26,6 +26,22 @@ OUTPUT_FILE = Path(__file__).parent.parent / "app" / "data" / "clio" / "cliopatr
 # LPF JSON-LD context
 LPF_CONTEXT = "https://linkedpasts.org/assets/linkedplaces-context-v1.3.jsonld"
 
+# Coordinate precision (5 decimal places ≈ 1 meter)
+COORD_PRECISION = 5
+
+
+def round_coords(coords, precision=COORD_PRECISION):
+    """
+    Recursively round coordinates to specified precision.
+    Handles all GeoJSON coordinate structures (Point, LineString, Polygon, Multi*).
+    """
+    if isinstance(coords[0], (int, float)):
+        # Base case: [lon, lat] pair
+        return [round(c, precision) for c in coords]
+    else:
+        # Recursive case: list of coordinate arrays
+        return [round_coords(c, precision) for c in coords]
+
 
 def normalize_name(name):
     """Strip wrapping parentheses for grouping: '(Ottoman Empire)' -> 'Ottoman Empire'"""
@@ -130,10 +146,10 @@ def build_lpf_feature(polity_name, features_data):
         min_year = min(min_year, from_year)
         max_year = max(max_year, to_year)
 
-        # Add temporal scope to geometry
+        # Add temporal scope to geometry (with rounded coordinates)
         geom_with_when = {
             "type": geom["type"],
-            "coordinates": geom["coordinates"],
+            "coordinates": round_coords(geom["coordinates"]),
             "when": {
                 "timespans": [{
                     "start": {"in": format_year(from_year)},
