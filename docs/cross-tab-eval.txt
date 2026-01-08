@@ -1,0 +1,31 @@
+ Here's the cross-tabulation. Some observations:
+
+High concordance (environment & text agree):
+- Iguazu + Uluru: Both in env "Subtropical/Arid Wilderness" AND text cluster 0 (natural parks)
+- Timbuktu + Samarkand: Both in env "Arid Heritage Crossroads" AND text cluster 3 (trade routes)
+- Vienna, Venice, Tallinn: All in env "Temperate Lowland Heritage" AND text cluster 2 (European cities)
+
+Interesting divergences:
+- Angkor & Head-Smashed-In: Same env cluster (Temperate Lowland) but grouped with archaeological sites (text cluster 1) — semantically similar despite different climates
+- Petra: Env groups it with Iguazu/Uluru (arid wilderness), but text groups it with archaeological sites (Göbekli Tepe, Machu Picchu)
+- Toledo: Env groups it with Timbuktu/Samarkand (arid crossroads), but text groups it with European cities (Vienna, Venice)
+
+
+Fascinating. Only 1 of 20 sites (Iguazu) has the same nearest neighbor in both environmental and text similarity. This confirms the two dimensions are largely orthogonal.
+
+  Key insights:
+
+  | Site          | Env nearest neighbor      | Text nearest neighbor        |
+  |---------------|---------------------------|------------------------------|
+  | Timbuktu      | Göbekli Tepe (arid)       | Samarkand (trade routes)     |
+  | Samarkand     | Toledo (arid)             | Timbuktu (trade routes)      |
+  | Venice        | Tallinn (temperate coast) | Vienna (European capitals)   |
+  | Petra         | Uluru (desert)            | Göbekli Tepe (archaeology)   |
+  | Summer Palace | Venice (waterways)        | Lijiang (Chinese heritage)   |
+  | Cahokia       | Vienna (?!)               | Head-Smashed-In (indigenous) |
+
+  The environmental similarity captures physical geography (climate, terrain, hydrology), while text similarity captures cultural/historical narrative (archaeology, trade routes, religious sites, colonial history).
+
+  Only Iguazu ↔ Uluru align on both — both are natural parks in similar climates with similar "national park" narratives.
+
+  This validates the dual-similarity approach: the two lenses reveal genuinely different aspects of place relatedness.  

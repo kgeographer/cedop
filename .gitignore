@@ -19,3 +19,7 @@ articles/*.pdf
 # metadata/*.tsv
 
 app/data/world_heritage*.*
+
+# Large Cliopatria files (exceeds GitHub 100MB limit)
+app/data/clio/cliopatria_lpf.json
+app/data/clio/cliopatria_polities_only.geojson

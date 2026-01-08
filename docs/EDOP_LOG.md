@@ -1,5 +1,27 @@
 ### EDOP LOG
 ----
+#### 06 Jan 2026
+- built Wikipedia corpus pipeline: harvest → band mapping → LLM summarization → embeddings
+- created `scripts/corpus/` with `harvest_sections.py`, `summarize_bands.py`, `generate_band_embeddings.py`
+- harvested 674 Wikipedia sections for 20 pilot sites via MediaWiki API
+- developed semantic band mapping (history, environment, culture, modern) with aggressive pattern matching — 67% content coverage
+- used Claude API to summarize each band per site into 150-300 word normalized summaries
+- generated OpenAI embeddings (`text-embedding-3-small`) per band + composite; stored in new tables `edop_band_embeddings`, `edop_band_similarity`, `edop_band_clusters`
+- correlation analysis: environment text band tracks physical environment (r=-0.19); history band shows no relationship (r=+0.01)
+- text clustering reveals discourse types: European imperial (Vienna, Venice), trade routes (Timbuktu, Samarkand), indigenous monuments (Angkor, Cahokia)
+- cluster agreement between text and environmental: 45% (vs 20% chance) — complementary signals, not redundant
+- added `wiki_slug` column to `edop_wh_sites`; populated for 20 pilot sites
+
+#### 05 Jan 2026
+- created `scripts/generate_text_embeddings.py`: OpenAI embeddings from Wikipedia lead+history text
+- new tables: `edop_text_embeddings`, `edop_text_similarity`, `edop_text_clusters` (k=5)
+- text clusters show semantic coherence: natural parks, archaeological sites, European cities, trade routes, Chinese heritage
+- key finding: only 1/20 sites shares nearest neighbor between environmental and text similarity — dimensions largely orthogonal
+- added `/api/similar-text` endpoint mirroring `/api/similar`
+- UI updated with dual buttons: "Similar (env)" and "Similar (semantic)" with dynamic headings/descriptions
+- created `scripts/cliopatria_to_lpf.py`: transforms Seshat/Cliopatria polities GeoJSON to Linked Places Format (1,547 polities, 449 MB)
+- removed `.env` from git tracking (API keys); pushed clean `embedding` branch
+
 #### 04 Jan 2026 (w/ChatGPT)
 - began integrating Wikipedia text as a second similarity signal for 20 exemplar World Heritage sites
 - implemented `fetch_wikipedia_wh.py` using MediaWiki API (no HTML scraping); retrieves canonical title, pageid, URL, lead text
