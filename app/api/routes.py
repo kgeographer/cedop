@@ -369,3 +369,187 @@ def similar_text(id_no: int, limit: int = 5):
     finally:
         if 'conn' in locals():
             conn.close()
+
+
+# -----------------------
+# WHC Cities (258) endpoints
+# -----------------------
+
+@router.get("/whc-cities")
+def whc_cities():
+    """Return all 258 World Heritage Cities with coordinates and cluster info."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    c.id,
+                    c.city,
+                    c.country,
+                    c.region,
+                    ST_X(c.geom) as lon,
+                    ST_Y(c.geom) as lat,
+                    ec.cluster_id as env_cluster,
+                    tc.cluster_id as text_cluster
+                FROM wh_cities c
+                LEFT JOIN whc_clusters ec ON ec.city_id = c.id
+                LEFT JOIN whc_band_clusters tc ON tc.city_id = c.id AND tc.band = 'composite'
+                WHERE c.geom IS NOT NULL
+                ORDER BY c.region, c.country, c.city
+            """)
+
+            cities = []
+            for row in cur.fetchall():
+                cities.append({
+                    "id": row[0],
+                    "city": row[1],
+                    "country": row[2],
+                    "region": row[3],
+                    "location": {
+                        "type": "Point",
+                        "coordinates": [float(row[4]), float(row[5])]
+                    } if row[4] and row[5] else None,
+                    "env_cluster": row[6],
+                    "text_cluster": row[7]
+                })
+
+            return {"count": len(cities), "cities": cities}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+@router.get("/whc-similar")
+def whc_similar(city_id: int, limit: int = 5):
+    """Return most similar WHC cities by environmental signature."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            # whc_similarity stores upper triangle (city_a < city_b)
+            # Need to query both directions
+            cur.execute("""
+                WITH similarities AS (
+                    SELECT city_b as other_id, distance, similarity
+                    FROM whc_similarity
+                    WHERE city_a = %s
+                    UNION ALL
+                    SELECT city_a as other_id, distance, similarity
+                    FROM whc_similarity
+                    WHERE city_b = %s
+                )
+                SELECT
+                    c.id,
+                    c.city,
+                    c.country,
+                    c.region,
+                    ST_X(c.geom) as lon,
+                    ST_Y(c.geom) as lat,
+                    ROUND(s.distance::numeric, 2) as distance,
+                    ec.cluster_id as env_cluster
+                FROM similarities s
+                JOIN wh_cities c ON c.id = s.other_id
+                LEFT JOIN whc_clusters ec ON ec.city_id = c.id
+                ORDER BY s.distance ASC
+                LIMIT %s
+            """, (city_id, city_id, limit))
+
+            results = []
+            for row in cur.fetchall():
+                results.append({
+                    "id": row[0],
+                    "city": row[1],
+                    "country": row[2],
+                    "region": row[3],
+                    "lon": float(row[4]) if row[4] else None,
+                    "lat": float(row[5]) if row[5] else None,
+                    "distance": float(row[6]),
+                    "env_cluster": row[7]
+                })
+
+            return {"source_city_id": city_id, "similar": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+@router.get("/whc-similar-text")
+def whc_similar_text(city_id: int, band: str = "composite", limit: int = 5):
+    """Return most similar WHC cities by text/semantic similarity."""
+    import psycopg
+    import os
+
+    valid_bands = ['history', 'environment', 'culture', 'modern', 'composite']
+    if band not in valid_bands:
+        raise HTTPException(status_code=400, detail=f"Invalid band. Must be one of: {valid_bands}")
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    c.id,
+                    c.city,
+                    c.country,
+                    c.region,
+                    ST_X(c.geom) as lon,
+                    ST_Y(c.geom) as lat,
+                    ROUND(s.similarity::numeric, 3) as similarity,
+                    tc.cluster_id as text_cluster
+                FROM whc_band_similarity s
+                JOIN wh_cities c ON c.id = s.city_b
+                LEFT JOIN whc_band_clusters tc ON tc.city_id = c.id AND tc.band = %s
+                WHERE s.city_a = %s AND s.band = %s
+                ORDER BY s.rank ASC
+                LIMIT %s
+            """, (band, city_id, band, limit))
+
+            results = []
+            for row in cur.fetchall():
+                results.append({
+                    "id": row[0],
+                    "city": row[1],
+                    "country": row[2],
+                    "region": row[3],
+                    "lon": float(row[4]) if row[4] else None,
+                    "lat": float(row[5]) if row[5] else None,
+                    "similarity": float(row[6]),
+                    "text_cluster": row[7]
+                })
+
+            return {"source_city_id": city_id, "band": band, "similar": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()

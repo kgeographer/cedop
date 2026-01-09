@@ -14,7 +14,10 @@
           <button class="nav-link" id="tab-compare" data-bs-toggle="tab" data-bs-target="#panel-compare" type="button" role="tab" aria-controls="panel-compare" aria-selected="false">Compare</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="tab-wh" data-bs-toggle="tab" data-bs-target="#panel-wh" type="button" role="tab" aria-controls="panel-wh" aria-selected="false">World Heritage</button>
+          <button class="nav-link" id="tab-wh" data-bs-toggle="tab" data-bs-target="#panel-wh" type="button" role="tab" aria-controls="panel-wh" aria-selected="false">WH Pilot</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="tab-whc" data-bs-toggle="tab" data-bs-target="#panel-whc" type="button" role="tab" aria-controls="panel-whc" aria-selected="false">WHC Cities</button>
         </li>
       </ul>
 
@@ -54,8 +57,8 @@
           <p class="text-muted">Compare UI coming next (two places → two profiles).</p>
         </div>
 
-        <!-- WORLD HERITAGE TAB -->
-        <div class="tab-pane fade show active" id="panel-wh" role="tabpanel" aria-labelledby="tab-wh">
+        <!-- WORLD HERITAGE TAB (pilot 20 sites) -->
+        <div class="tab-pane fade" id="panel-wh" role="tabpanel" aria-labelledby="tab-wh">
           <h4 class="mb-3">20 World Heritage sites</h4>
 
           <div class="mb-2">
@@ -74,6 +77,28 @@
 
           <div class="mt-3">
             <div class="alert alert-light" id="wh-desc" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- WHC CITIES TAB (258 cities) -->
+        <div class="tab-pane fade show active" id="panel-whc" role="tabpanel" aria-labelledby="tab-whc">
+          <h4 class="mb-3">258 World Heritage Cities</h4>
+
+          <div class="mb-2">
+            <label class="form-label" for="whc-select">Choose a city</label>
+            <select class="form-select" id="whc-select" disabled>
+              <option value="">Loading…</option>
+            </select>
+            <div class="form-text">Grouped by UNESCO region. Select to view environmental profile and similarity.</div>
+          </div>
+
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-primary" id="whc-similar-env" type="button" disabled>Similar (env)</button>
+            <button class="btn btn-outline-info" id="whc-similar-text" type="button" disabled>Similar (semantic)</button>
+          </div>
+
+          <div class="mt-3">
+            <div class="alert alert-light" id="whc-status" style="display:none;"></div>
           </div>
         </div>
 
@@ -139,9 +164,13 @@
   let marker = null;
   let basinLayer = null; // GeoJSON polygon overlay from signature (sub-basin)
   let similarMarkers = []; // Markers for similar sites
-  // World Heritage seed list state
+  // World Heritage seed list state (pilot 20 sites)
   let whSites = [];
   let whSelected = null;
+
+  // WHC Cities state (258 cities)
+  let whcCities = [];
+  let whcSelected = null;
   function setMarkerWithPopup(lon, lat, popupHtml) {
     setMarkerFromLonLat(lon, lat);
     if (!marker) return;
@@ -463,6 +492,295 @@
     } catch (e) {
       whSetStatus(String(e));
       renderSignature({ error: String(e) });
+    }
+  }
+
+  // -----------------------
+  // WHC Cities (258) functions
+  // -----------------------
+
+  function whcSetStatus(msg) {
+    const el = document.getElementById('whc-status');
+    if (!el) {
+      console.log(msg);
+      return;
+    }
+    if (!msg) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    el.style.display = '';
+    el.textContent = msg;
+  }
+
+  async function whcLoadCities() {
+    const sel = document.getElementById('whc-select');
+    if (!sel) return;
+
+    sel.disabled = true;
+    sel.innerHTML = '<option value="">Loading…</option>';
+
+    try {
+      const resp = await fetch('/api/whc-cities');
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(`WHC cities request failed (${resp.status}): ${txt}`);
+      }
+      const data = await resp.json();
+      whcCities = (data && data.cities) ? data.cities : [];
+
+      // Group by region
+      const byRegion = {};
+      whcCities.forEach((c) => {
+        const region = c.region || 'Other';
+        if (!byRegion[region]) byRegion[region] = [];
+        byRegion[region].push(c);
+      });
+
+      // Build grouped dropdown
+      sel.innerHTML = '<option value="">Select a city…</option>';
+      Object.keys(byRegion).sort().forEach((region) => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = region;
+        byRegion[region].forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = String(c.id);
+          opt.textContent = `${c.city}, ${c.country}`;
+          optgroup.appendChild(opt);
+        });
+        sel.appendChild(optgroup);
+      });
+
+      sel.disabled = false;
+    } catch (e) {
+      sel.innerHTML = '<option value="">(Cities unavailable)</option>';
+      sel.disabled = true;
+      whcSetStatus(String(e));
+    }
+  }
+
+  async function whcSelectById(cityId) {
+    const btnSimilarEnv = document.getElementById('whc-similar-env');
+    const btnSimilarText = document.getElementById('whc-similar-text');
+
+    whcSelected = whcCities.find((c) => String(c.id) === String(cityId)) || null;
+
+    // Clear previous state
+    clearSimilarResults();
+    whcSetStatus('');
+
+    if (!whcSelected) {
+      if (btnSimilarEnv) btnSimilarEnv.disabled = true;
+      if (btnSimilarText) btnSimilarText.disabled = true;
+      showClusterLabel(null);
+      return;
+    }
+
+    // Show cluster label (combine env + text clusters)
+    const clusterInfo = [];
+    if (whcSelected.env_cluster !== null && whcSelected.env_cluster !== undefined) {
+      clusterInfo.push(`Env: ${whcSelected.env_cluster}`);
+    }
+    if (whcSelected.text_cluster !== null && whcSelected.text_cluster !== undefined) {
+      clusterInfo.push(`Text: ${whcSelected.text_cluster}`);
+    }
+    showClusterLabel(clusterInfo.length ? clusterInfo.join(' | ') : null);
+
+    // Enable Similar buttons
+    if (btnSimilarEnv) btnSimilarEnv.disabled = false;
+    if (btnSimilarText) btnSimilarText.disabled = false;
+
+    // Clear Resolved place (this is not WHG resolution)
+    renderResolvedPlace(null);
+
+    const loc = whcSelected.location;
+    if (!loc || loc.type !== 'Point' || !loc.coordinates || loc.coordinates.length < 2) {
+      whcSetStatus('Selected city has no usable Point geometry.');
+      return;
+    }
+
+    const lon = Number(loc.coordinates[0]);
+    const lat = Number(loc.coordinates[1]);
+
+    const popupHtml = `
+      <div style="max-width: 260px;">
+        <strong>${whcSelected.city}</strong><br/>
+        <span class="text-muted">${whcSelected.country} (${whcSelected.region})</span>
+      </div>
+    `;
+    setMarkerWithPopup(lon, lat, popupHtml);
+
+    try {
+      whcSetStatus('Computing environmental profile…');
+      const sig = await fetchSignature(lon, lat);
+      renderSignature(sig);
+      setBasinFromSignature(sig);
+      whcSetStatus('');
+      if (marker && marker.getPopup()) marker.openPopup();
+    } catch (e) {
+      whcSetStatus(String(e));
+      renderSignature({ error: String(e) });
+    }
+  }
+
+  async function fetchWhcSimilarEnv(cityId, limit = 5) {
+    const url = `/api/whc-similar?city_id=${encodeURIComponent(cityId)}&limit=${limit}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`WHC similar request failed (${resp.status}): ${txt}`);
+    }
+    return await resp.json();
+  }
+
+  async function fetchWhcSimilarText(cityId, band = 'composite', limit = 5) {
+    const url = `/api/whc-similar-text?city_id=${encodeURIComponent(cityId)}&band=${encodeURIComponent(band)}&limit=${limit}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`WHC similar-text request failed (${resp.status}): ${txt}`);
+    }
+    return await resp.json();
+  }
+
+  function renderWhcSimilarSites(data, sourceSite, similarityType = 'env') {
+    const container = document.getElementById('similar-results');
+    const list = document.getElementById('similar-list');
+    const heading = document.getElementById('similar-heading');
+    const description = document.getElementById('similar-description');
+    if (!container || !list) return;
+
+    // Set heading and description based on similarity type
+    if (heading && description) {
+      if (similarityType === 'text') {
+        heading.textContent = 'Similar Cities (Semantic)';
+        description.textContent = 'computed from Wikipedia text embeddings using cosine similarity';
+      } else {
+        heading.textContent = 'Similar Cities (Environmental)';
+        description.textContent = 'computed from basin environmental signatures using PCA distance';
+      }
+    }
+
+    const similar = data.similar || [];
+    if (!similar.length) {
+      list.innerHTML = '<div class="text-muted">No similar cities found.</div>';
+      container.style.display = '';
+      return;
+    }
+
+    // Build list HTML with color swatches
+    const isText = similarityType === 'text';
+    const rows = similar.map((site, idx) => {
+      const color = SIMILAR_COLORS[idx % SIMILAR_COLORS.length];
+      const clusterKey = isText ? 'text_cluster' : 'env_cluster';
+      const sourceCluster = isText ? sourceSite.text_cluster : sourceSite.env_cluster;
+      const sameCluster = site[clusterKey] === sourceCluster;
+      const clusterNote = sameCluster
+        ? `<span class="text-success small">same cluster</span>`
+        : `<span class="text-muted small">cluster ${site[clusterKey] ?? '?'}</span>`;
+      const metricLabel = isText ? 'sim' : 'dist';
+      const metricValue = isText ? site.similarity : site.distance;
+      return `
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <div>
+            <strong>${idx + 1}.</strong> ${escapeHtml(site.city)}, ${escapeHtml(site.country)}
+            <div class="small">${clusterNote}</div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">${metricLabel}: ${metricValue}</span>
+            <span style="display:inline-block; width:16px; height:16px; background:${color}; border-radius:3px;"></span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    list.innerHTML = rows;
+    container.style.display = '';
+
+    // Add markers for similar sites
+    clearSimilarMarkers();
+    ensureMap();
+
+    const bounds = [];
+
+    // Include source site in bounds
+    if (sourceSite.location && sourceSite.location.coordinates) {
+      bounds.push([sourceSite.location.coordinates[1], sourceSite.location.coordinates[0]]);
+    }
+
+    similar.forEach((site, idx) => {
+      const lat = site.lat;
+      const lon = site.lon;
+      if (!lat || !lon) return;
+      const color = SIMILAR_COLORS[idx % SIMILAR_COLORS.length];
+      bounds.push([lat, lon]);
+
+      const simMarker = L.circleMarker([lat, lon], {
+        radius: 10,
+        fillColor: color,
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9
+      }).addTo(map);
+
+      const metricLabel = isText ? 'Similarity' : 'Distance';
+      const metricValue = isText ? site.similarity : site.distance;
+      simMarker.bindPopup(`
+        <div style="max-width: 200px;">
+          <strong>${idx + 1}. ${site.city}</strong><br/>
+          <span class="text-muted">${site.country}</span><br/>
+          <span class="small">${metricLabel}: ${metricValue}</span>
+        </div>
+      `);
+
+      similarMarkers.push(simMarker);
+    });
+
+    // Zoom to fit all markers
+    if (bounds.length > 1 && map) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }
+
+  async function whcShowSimilarEnv() {
+    if (!whcSelected) return;
+
+    const btn = document.getElementById('whc-similar-env');
+    if (btn) btn.disabled = true;
+
+    clearSimilarResults();
+
+    try {
+      whcSetStatus('Finding environmentally similar cities…');
+      const data = await fetchWhcSimilarEnv(whcSelected.id, 5);
+      renderWhcSimilarSites(data, whcSelected, 'env');
+      whcSetStatus('');
+    } catch (e) {
+      whcSetStatus(String(e));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function whcShowSimilarText() {
+    if (!whcSelected) return;
+
+    const btn = document.getElementById('whc-similar-text');
+    if (btn) btn.disabled = true;
+
+    clearSimilarResults();
+
+    try {
+      whcSetStatus('Finding semantically similar cities…');
+      const data = await fetchWhcSimilarText(whcSelected.id, 'composite', 5);
+      renderWhcSimilarSites(data, whcSelected, 'text');
+      whcSetStatus('');
+    } catch (e) {
+      whcSetStatus(String(e));
+    } finally {
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -885,6 +1203,29 @@
       btnSimilarText.addEventListener('click', whShowSimilarText);
     }
 
+    // WHC Cities: load cities now
+    whcLoadCities();
+
+    // WHC Cities: selection handler
+    const whcSel = document.getElementById('whc-select');
+    if (whcSel) {
+      whcSel.addEventListener('change', async () => {
+        const v = whcSel.value;
+        if (!v) return;
+        await whcSelectById(v);
+      });
+    }
+
+    // WHC Cities: similar buttons
+    const whcBtnSimilarEnv = document.getElementById('whc-similar-env');
+    if (whcBtnSimilarEnv) {
+      whcBtnSimilarEnv.addEventListener('click', whcShowSimilarEnv);
+    }
+    const whcBtnSimilarText = document.getElementById('whc-similar-text');
+    if (whcBtnSimilarText) {
+      whcBtnSimilarText.addEventListener('click', whcShowSimilarText);
+    }
+
     // Leaflet often needs an explicit size recalculation when switching tabs.
     // Pilot behavior: treat each tab as its own workflow; clear shared UI + map state on ANY tab change.
     document.querySelectorAll('button[data-bs-toggle="tab"]').forEach((btn) => {
@@ -916,6 +1257,11 @@
             descBox.style.display = 'none';
             descBox.textContent = '';
           }
+        }
+
+        // WHC-specific UI reset when entering WHC tab
+        if (targetSel === '#panel-whc') {
+          whcSetStatus('');
         }
       });
     });

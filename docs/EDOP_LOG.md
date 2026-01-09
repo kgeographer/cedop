@@ -1,5 +1,25 @@
 ### EDOP LOG
 ----
+#### 08 Jan 2026
+- scaled up environmental analysis from 20 pilot sites to 258 World Heritage Cities (WHC)
+- merged WHG reconciliation data into `wh_cities` table: 258 geometries added, 254 basin_ids assigned (4 island cities outside HydroATLAS coverage)
+- created `whc_*` schema parallel to pilot `edop_*`: `whc_matrix` (254×893 features), `whc_pca_coords` (50 components), `whc_similarity` (32,131 pairs), `whc_clusters` (k=10)
+- environmental clustering reveals meaningful groups: Mediterranean (49), Arid/desert (21), Northern Europe (15), High altitude (22), Central Europe temperate (55), East Asia monsoon (39), Tropical wet (26)
+- persisted wiki/semantic data to database: `whc_band_summaries` (1,032 rows), `whc_band_clusters` (1,217), `whc_band_similarity` (12,170)
+- added 3 new API endpoints: `/api/whc-cities`, `/api/whc-similar`, `/api/whc-similar-text`
+- created **WHC Cities** tab in UI with grouped dropdown (by UNESCO region), dual similarity buttons, cluster badges
+- Timbuktu validation: env-similar → Agadez, Khiva, Zabid (arid); text-similar → Agadez, Dakar, Marrakesh (West African cultural)
+
+#### 07 Jan 2026
+- scaled up Wikipedia text corpus pipeline from 20 pilot sites to 258 WHC cities
+- used `wh_cities` database table as source; output to `output/corpus_258/` (file-only, no database)
+- harvested 7,757 Wikipedia sections; average 3.7/4 bands mapped per city
+- LLM summarization: 258 cities × 4 bands; ~$8.90 cost (1.3M input tokens, 329k output)
+- generated OpenAI embeddings (`text-embedding-3-small`) with k=8 clustering
+- text clusters show regional/cultural coherence: Northern European, Mediterranean, Hispanic World, South Asian, Lusophone, Central/Eastern European, Islamic/Arab, Mixed/Colonial
+- high similarity pairs validate approach: Kutná Hora↔Český Krumlov, Quedlinburg↔Goslar, Arequipa↔Cusco
+- completed WHG reconciliation for coordinates: uploaded LP-TSV to WHG, matched 258/258, exported geometry
+
 #### 06 Jan 2026
 - built Wikipedia corpus pipeline: harvest → band mapping → LLM summarization → embeddings
 - created `scripts/corpus/` with `harvest_sections.py`, `summarize_bands.py`, `generate_band_embeddings.py`

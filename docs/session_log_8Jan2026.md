@@ -169,11 +169,147 @@ output/corpus_258/
 
 ---
 
+## 5. Persisted Wiki/Semantic Data
+
+**Schema:** `sql/whc_band_schema.sql`
+**Script:** `scripts/populate_whc_band.py`
+
+### Tables Created
+
+| Table | Rows | Description |
+|-------|------|-------------|
+| whc_band_summaries | 1,032 | LLM-generated summaries (258 cities × 4 bands) |
+| whc_band_clusters | 1,217 | K-means cluster assignments (5 bands incl. composite) |
+| whc_band_similarity | 12,170 | Top-10 similar cities per city per band |
+| whc_band_metadata | 1 | Model config (text-embedding-3-small, k=8) |
+
+### Data Sources
+
+```
+band_summaries.json → whc_band_summaries
+band_embeddings.json → whc_band_clusters, whc_band_similarity, whc_band_metadata
+```
+
+Note: Raw embeddings (1536-dim vectors) were not persisted to JSON during generation to save space. Tables store clusters and similarity scores only.
+
+### Sample Queries
+
+**Cities most similar to Timbuktu (composite text embedding):**
+| City | Country | Similarity |
+|------|---------|------------|
+| Agadez | Niger | 0.708 |
+| Dakar | Senegal | 0.695 |
+| Saint-Louis | Senegal | 0.669 |
+| Marrakesh | Morocco | 0.658 |
+| Tétouan | Morocco | 0.654 |
+
+**Composite cluster distribution:**
+| Cluster | Cities |
+|---------|--------|
+| 0 | 50 |
+| 1 | 26 |
+| 2 | 52 |
+| 3 | 26 |
+| 4 | 18 |
+| 5 | 16 |
+| 6 | 31 |
+| 7 | 38 |
+
+---
+
+## Persisted Data Summary (Complete)
+
+| Table | Rows | Description |
+|-------|------|-------------|
+| wh_cities | 258 | + geom, basin_id columns |
+| whc_matrix | 254 | Environmental feature vectors |
+| whc_pca_coords | 254 | 50 PCA components per city |
+| whc_pca_variance | 50 | Explained variance |
+| whc_similarity | 32,131 | Pairwise environmental distances |
+| whc_clusters | 254 | Environmental cluster assignments |
+| whc_band_summaries | 1,032 | Wikipedia band summaries |
+| whc_band_clusters | 1,217 | Text embedding clusters |
+| whc_band_similarity | 12,170 | Text similarity (top-10 per city) |
+| whc_band_metadata | 1 | Embedding model config |
+
+---
+
+## Files Created
+
+```
+scripts/
+├── update_wh_cities_geom.py    # Merge geometry + assign basin_id
+├── populate_whc_matrix.py      # Environmental matrix population
+├── whc_pca_cluster.py          # PCA + clustering + similarity
+└── populate_whc_band.py        # Wiki/semantic data to database
+
+sql/
+├── whc_matrix_schema.sql       # WHC environmental analysis tables
+└── whc_band_schema.sql         # WHC text/semantic tables
+
+output/corpus_258/
+└── env_clusters.png            # Cluster visualization (PC1 vs PC2)
+```
+
+---
+
+## 6. WHC Cities UI Integration
+
+### New API Endpoints (`app/api/routes.py`)
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/whc-cities` | Returns 258 cities with coordinates, env_cluster, text_cluster |
+| `GET /api/whc-similar?city_id=X&limit=N` | Environmental similarity (PCA distance) |
+| `GET /api/whc-similar-text?city_id=X&band=composite&limit=N` | Text similarity (cosine) |
+
+### UI Changes (`app/templates/index.html`)
+
+- Renamed existing "World Heritage" tab → "WH Pilot" (20 sites)
+- Added new **"WHC Cities"** tab (default active):
+  - Searchable dropdown of 258 cities grouped by UNESCO region
+  - Shows combined cluster badges (Env: X | Text: Y)
+  - "Similar (env)" and "Similar (semantic)" buttons
+  - Results display below map with color-coded markers
+
+### Validation
+
+**Timbuktu similarity comparison:**
+| Type | Top 5 Similar Cities |
+|------|---------------------|
+| Environmental | Agadez, Khiva, Zabid, Damascus, Erbil (all arid/desert) |
+| Semantic | Agadez, Dakar, Saint-Louis, Marrakesh, Tétouan (West/North African) |
+
+Environmental similarity groups by climate; semantic similarity groups by cultural/historical connections.
+
+### Status
+~80% functional. Known issues to address:
+- Minor UI polish needed
+- Testing across all 258 cities
+
+---
+
+## Files Created/Modified
+
+```
+app/api/routes.py              # +3 new endpoints (whc-cities, whc-similar, whc-similar-text)
+app/templates/index.html       # +WHC Cities tab, ~280 lines of JS
+
+scripts/
+├── update_wh_cities_geom.py   # Merge geometry + assign basin_id
+├── populate_whc_matrix.py     # Environmental matrix population
+├── whc_pca_cluster.py         # PCA + clustering + similarity
+└── populate_whc_band.py       # Wiki/semantic data to database
+
+sql/
+├── whc_matrix_schema.sql      # WHC environmental analysis tables
+└── whc_band_schema.sql        # WHC text/semantic tables
+```
+
+---
+
 ## Next Steps
 
-- [ ] Persist wiki/semantic data from `output/corpus_258/` to database:
-  - `band_embeddings.json` → whc_band_embeddings table
-  - `band_summaries.json` → whc_band_summaries table
+- [ ] UI polish and testing
 - [ ] Cross-analysis: environmental clusters vs. text embedding clusters
-- [ ] UI integration for band-specific similarity
 - [ ] Add remaining categorical columns to whc_matrix (fec, cls, glc, etc.)

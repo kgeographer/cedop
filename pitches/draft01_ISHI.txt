@@ -1,0 +1,125 @@
+Environmental Dimensions of Place (EDOP)
+
+Toward an Environmental & Cultural Infrastructure for Place-Based Research
+
+Karl Grossner (KGEO Research)
+Draft concept note for discussion with WHG / ISHI
+
+⸻
+
+1. Motivation and framing
+
+The Environmental Dimensions of Place (EDOP) project is an attempt to formalize and operationalize aspects of place that are routinely invoked in historical and geographic scholarship but rarely made explicit, comparable, or computable.
+
+At a high level, EDOP grows out of a long-standing research interest in extending the idea of the cultural landscape into a form that can support discovery, comparison, and exploration across large collections of places. The goal is not to propose a universal or normative model of place, but to expose structured descriptors that can coexist with narrative description and editorial judgment.
+
+Within the context of the World Historical Gazetteer, EDOP can be understood initially as a machine-actionable complement to the “place setting blurb” currently appearing on Place Portal pages:
+	•	derived automatically,
+	•	grounded in well-established environmental datasets,
+	•	explicitly layered and historically cautious, and
+	•	designed for reuse via APIs rather than bespoke presentation.
+
+EDOP is both research (in how place descriptors are selected, structured, and interpreted) and infrastructure (a service layer that can be queried programmatically and reused across projects).
+
+⸻
+
+2. Core goals
+
+At its current stage, EDOP has three tightly scoped goals (now largely met):
+	1.	Develop environmental “signatures” for places, derived from global river basin and environmental datasets, expressed in a small number of interpretable dimensions.
+	2.	Experiment with semantic place signatures, derived from textual description, as a complementary (and explicitly provisional) layer for comparison and discovery.
+	3.	Provide a minimal service and interface layer to explore, test, and critique these representations.
+
+The emphasis throughout is on exposure and exploration, not on authoritative classification.
+
+⸻
+
+3. Environmental signatures: structure and rationale
+
+The environmental component of EDOP is based on per-sub-basin profiles derived from global river basin data (currently BasinAtlas / HydroATLAS).
+
+Each place is associated with an environmental profile organized into four “persistence bands”:
+	1.	Physiographic bedrock
+Long-term geological and topographic context.
+	2.	Hydro-climatic baselines
+Drainage, runoff, aridity, and related climatic constraints.
+	3.	Bioclimatic proxies
+Climate-derived indicators relevant to vegetation and productivity.
+	4.	Anthropocene markers
+Modern land use, population, and human modification signals.
+
+These bands are explicitly separated because they differ in temporal stability and historiographical applicability. Researchers can choose to ignore, down-weight, or foreground particular bands depending on period and question (e.g. medieval vs. modern contexts).
+
+The result is not a single score or label, but a structured environmental profile that can be compared across places or queried selectively.
+
+⸻
+
+4. Semantic signatures (experimental)
+
+In parallel, EDOP explores semantic place signatures derived from textual description. Current experiments use summarized Wikipedia text for a curated set of global cities, separated into four thematic bands:
+	•	historical
+	•	cultural
+	•	environmental
+	•	modern
+
+These texts are embedded using an OpenAI LLM model to enable similarity measures and clustering. This work is intentionally framed as exploratory:
+	•	embeddings are model-dependent and replaceable,
+	•	source corpora are imperfect and uneven,
+	•	results are suggestive rather than authoritative.
+
+The value here is less in the specific outcomes than in demonstrating how textual description may possibly be made comparable and cross-referenced with environmental profiles.
+
+Importantly, the environmental API does not depend on this semantic layer. The two are loosely coupled by design.
+
+⸻
+
+5. Service orientation and relation to WHG
+
+EDOP is conceived primarily as a service layer.
+
+In a WHG context, this could take the form of one or more API endpoints that:
+	•	accept a place geometry or identifier,
+	•	return a structured environmental profile,
+	•	optionally support comparison across places.
+
+Such an endpoint could:
+	•	supplement existing narrative “setting” descriptions,
+	•	support new discovery affordances (e.g. “environmentally similar places”),
+	•	be reused by other projects without imposing UI or editorial constraints.
+
+The emphasis is on optional enhancement, not replacement of existing WHG content.
+
+⸻
+
+6. Current state of work
+
+At this point, EDOP has already developed:
+	•	Environmental profiles for all sub-basins globally, with aggregation to point locations.
+	•	A working schema for four environmental persistence bands.
+	•	Semantic embeddings for 258 selected global cities across four thematic text bands.
+	•	A lightweight web interface used purely as a research and exploration aid, analogous to a shared notebook rather than a product UI (https://edop.geographer.org)
+
+So the core data and services already exist in prototype form.
+
+⸻
+
+7. Near-term extensions (illustrative)
+
+Possible next steps — contingent on interest and collaboration — include:
+	•	Formalizing EDOP as a documented API service usable by WHG and others.
+	•	Incorporating ecoregion context, using available Wikipedia and OneEarth interpretive texts as proxies where formal descriptions are lacking.
+	•	Exploring integration with temporally scoped historical polities (e.g. Cliopatria / Seshat) to support comparative environmental context at polity scale.
+
+These are not commitments, but indications of where EDOP could productively intersect with existing infrastructures.
+
+⸻
+
+8. Purpose of this discussion
+
+The immediate goal of this document is to:
+	•	surface EDOP as a concrete, working line of research and infrastructure,
+	•	explore whether its affordances align with WHG / ISHI priorities,
+	•	identify whether there is a focused, compensated contribution that would be mutually valuable.
+
+If there is interest, subsequent versions of this material would be tailored for potential partners like KNAW and Seshat.
+
