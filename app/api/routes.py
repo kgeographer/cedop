@@ -399,10 +399,9 @@ def whc_cities():
                     ST_X(c.geom) as lon,
                     ST_Y(c.geom) as lat,
                     ec.cluster_id as env_cluster,
-                    tc.cluster_id as text_cluster
+                    ec.cluster_label as env_cluster_label
                 FROM wh_cities c
                 LEFT JOIN whc_clusters ec ON ec.city_id = c.id
-                LEFT JOIN whc_band_clusters tc ON tc.city_id = c.id AND tc.band = 'composite'
                 WHERE c.geom IS NOT NULL
                 ORDER BY c.region, c.country, c.city
             """)
@@ -419,7 +418,7 @@ def whc_cities():
                         "coordinates": [float(row[4]), float(row[5])]
                     } if row[4] and row[5] else None,
                     "env_cluster": row[6],
-                    "text_cluster": row[7]
+                    "env_cluster_label": row[7]
                 })
 
             return {"count": len(cities), "cities": cities}
@@ -466,7 +465,8 @@ def whc_similar(city_id: int, limit: int = 5):
                     ST_X(c.geom) as lon,
                     ST_Y(c.geom) as lat,
                     ROUND(s.distance::numeric, 2) as distance,
-                    ec.cluster_id as env_cluster
+                    ec.cluster_id as env_cluster,
+                    ec.cluster_label as env_cluster_label
                 FROM similarities s
                 JOIN wh_cities c ON c.id = s.other_id
                 LEFT JOIN whc_clusters ec ON ec.city_id = c.id
@@ -484,7 +484,8 @@ def whc_similar(city_id: int, limit: int = 5):
                     "lon": float(row[4]) if row[4] else None,
                     "lat": float(row[5]) if row[5] else None,
                     "distance": float(row[6]),
-                    "env_cluster": row[7]
+                    "env_cluster": row[7],
+                    "env_cluster_label": row[8]
                 })
 
             return {"source_city_id": city_id, "similar": results}
@@ -548,6 +549,63 @@ def whc_similar_text(city_id: int, band: str = "composite", limit: int = 5):
 
             return {"source_city_id": city_id, "band": band, "similar": results}
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+@router.get("/whc-summaries")
+def whc_summaries(city_id: int):
+    """Return band summaries for a WHC city."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            # Get city name
+            cur.execute("SELECT city, country FROM wh_cities WHERE id = %s", (city_id,))
+            city_row = cur.fetchone()
+            if not city_row:
+                raise HTTPException(status_code=404, detail="City not found")
+
+            # Get summaries in desired order
+            cur.execute("""
+                SELECT band, summary
+                FROM whc_band_summaries
+                WHERE city_id = %s AND status = 'ok'
+                ORDER BY CASE band
+                    WHEN 'environment' THEN 1
+                    WHEN 'history' THEN 2
+                    WHEN 'culture' THEN 3
+                    WHEN 'modern' THEN 4
+                END
+            """, (city_id,))
+
+            summaries = []
+            for row in cur.fetchall():
+                summaries.append({
+                    "band": row[0],
+                    "summary": row[1]
+                })
+
+            return {
+                "city_id": city_id,
+                "city": city_row[0],
+                "country": city_row[1],
+                "summaries": summaries
+            }
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

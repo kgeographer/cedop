@@ -14,10 +14,10 @@
           <button class="nav-link" id="tab-compare" data-bs-toggle="tab" data-bs-target="#panel-compare" type="button" role="tab" aria-controls="panel-compare" aria-selected="false">Compare</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-wh" data-bs-toggle="tab" data-bs-target="#panel-wh" type="button" role="tab" aria-controls="panel-wh" aria-selected="false">WH Pilot</button>
+          <button class="nav-link active" id="tab-whc" data-bs-toggle="tab" data-bs-target="#panel-whc" type="button" role="tab" aria-controls="panel-whc" aria-selected="false">WH Cities</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="tab-whc" data-bs-toggle="tab" data-bs-target="#panel-whc" type="button" role="tab" aria-controls="panel-whc" aria-selected="false">WHC Cities</button>
+          <button class="nav-link" id="tab-wh" data-bs-toggle="tab" data-bs-target="#panel-wh" type="button" role="tab" aria-controls="panel-wh" aria-selected="false">WH Sites</button>
         </li>
       </ul>
 
@@ -80,7 +80,7 @@
           </div>
         </div>
 
-        <!-- WHC CITIES TAB (258 cities) -->
+        <!-- WH CITIES TAB (258 cities) -->
         <div class="tab-pane fade show active" id="panel-whc" role="tabpanel" aria-labelledby="tab-whc">
           <h4 class="mb-3">258 World Heritage Cities</h4>
 
@@ -121,7 +121,7 @@
         <pre id="output" class="bg-light p-2" style="min-height: 12rem; display:none;"></pre>
       </div>
 
-      <div class="mb-3 mt-3">
+      <div id="resolved-place-section" class="mb-3 mt-3" style="display:none;">
         <h5 class="mb-2">Resolved place</h5>
         <pre id="main-resolved" class="bg-light p-2" style="min-height: 7rem;"></pre>
       </div>
@@ -148,6 +148,21 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- City Summaries Modal -->
+<div class="modal fade" id="summariesModal" tabindex="-1" aria-labelledby="summariesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="summariesModalLabel">City Summaries</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="summariesModalBody">
+        <div class="text-center text-muted">Loading...</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -577,15 +592,8 @@
       return;
     }
 
-    // Show cluster label (combine env + text clusters)
-    const clusterInfo = [];
-    if (whcSelected.env_cluster !== null && whcSelected.env_cluster !== undefined) {
-      clusterInfo.push(`Env: ${whcSelected.env_cluster}`);
-    }
-    if (whcSelected.text_cluster !== null && whcSelected.text_cluster !== undefined) {
-      clusterInfo.push(`Text: ${whcSelected.text_cluster}`);
-    }
-    showClusterLabel(clusterInfo.length ? clusterInfo.join(' | ') : null);
+    // Show environmental cluster label
+    showClusterLabel(whcSelected.env_cluster_label || null);
 
     // Enable Similar buttons
     if (btnSimilarEnv) btnSimilarEnv.disabled = false;
@@ -673,18 +681,24 @@
     const isText = similarityType === 'text';
     const rows = similar.map((site, idx) => {
       const color = SIMILAR_COLORS[idx % SIMILAR_COLORS.length];
-      const clusterKey = isText ? 'text_cluster' : 'env_cluster';
-      const sourceCluster = isText ? sourceSite.text_cluster : sourceSite.env_cluster;
-      const sameCluster = site[clusterKey] === sourceCluster;
-      const clusterNote = sameCluster
-        ? `<span class="text-success small">same cluster</span>`
-        : `<span class="text-muted small">cluster ${site[clusterKey] ?? '?'}</span>`;
+      const sameCluster = site.env_cluster === sourceSite.env_cluster;
+      let clusterNote = '';
+      if (!isText) {
+        // For env similarity, show cluster label
+        clusterNote = sameCluster
+          ? `<span class="text-success small">same cluster</span>`
+          : `<span class="text-muted small">${site.env_cluster_label || ''}</span>`;
+      }
       const metricLabel = isText ? 'sim' : 'dist';
       const metricValue = isText ? site.similarity : site.distance;
+      // For semantic similarity, make city name clickable to show summaries
+      const cityDisplay = isText
+        ? `<a href="#" class="text-decoration-none" onclick="showCitySummaries(${site.id}, '${escapeHtml(site.city).replace(/'/g, "\\'")}', '${escapeHtml(site.country).replace(/'/g, "\\'")}'); return false;">${escapeHtml(site.city)}, ${escapeHtml(site.country)}</a>`
+        : `${escapeHtml(site.city)}, ${escapeHtml(site.country)}`;
       return `
         <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
           <div>
-            <strong>${idx + 1}.</strong> ${escapeHtml(site.city)}, ${escapeHtml(site.country)}
+            <strong>${idx + 1}.</strong> ${cityDisplay}
             <div class="small">${clusterNote}</div>
           </div>
           <div class="d-flex align-items-center gap-2">
@@ -781,6 +795,50 @@
       whcSetStatus(String(e));
     } finally {
       if (btn) btn.disabled = false;
+    }
+  }
+
+  async function showCitySummaries(cityId, cityName, country) {
+    const modal = new bootstrap.Modal(document.getElementById('summariesModal'));
+    const titleEl = document.getElementById('summariesModalLabel');
+    const bodyEl = document.getElementById('summariesModalBody');
+
+    // Set title and show loading state
+    titleEl.textContent = `${cityName}, ${country}`;
+    bodyEl.innerHTML = '<div class="text-center text-muted py-4">Loading summaries...</div>';
+    modal.show();
+
+    try {
+      const resp = await fetch(`/api/whc-summaries?city_id=${encodeURIComponent(cityId)}`);
+      if (!resp.ok) {
+        throw new Error(`Failed to load summaries (${resp.status})`);
+      }
+      const data = await resp.json();
+
+      if (!data.summaries || data.summaries.length === 0) {
+        bodyEl.innerHTML = '<div class="text-muted">No summaries available for this city.</div>';
+        return;
+      }
+
+      // Band display names
+      const bandLabels = {
+        'environment': 'Environment',
+        'history': 'History',
+        'culture': 'Culture',
+        'modern': 'Modern'
+      };
+
+      // Build HTML for summaries
+      const html = data.summaries.map(s => `
+        <div class="mb-4">
+          <h5 class="text-secondary border-bottom pb-1">${bandLabels[s.band] || s.band}</h5>
+          <p class="mb-0">${escapeHtml(s.summary)}</p>
+        </div>
+      `).join('');
+
+      bodyEl.innerHTML = html;
+    } catch (e) {
+      bodyEl.innerHTML = `<div class="text-danger">Error: ${escapeHtml(String(e))}</div>`;
     }
   }
 
@@ -1245,11 +1303,18 @@
           map.setView([0, 0], 2);
         }
 
-        // WH-specific UI reset only when entering WH tab
+        // Tab-specific UI visibility
         const targetSel = (evt && evt.target && evt.target.getAttribute)
           ? evt.target.getAttribute('data-bs-target')
           : null;
 
+        // Show "Resolved place" section only on Main tab
+        const resolvedSection = document.getElementById('resolved-place-section');
+        if (resolvedSection) {
+          resolvedSection.style.display = targetSel === '#panel-main' ? '' : 'none';
+        }
+
+        // WH-specific UI reset when entering WH tab
         if (targetSel === '#panel-wh') {
           whSetStatus('');
           const descBox = document.getElementById('wh-desc');
