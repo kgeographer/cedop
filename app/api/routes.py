@@ -611,3 +611,104 @@ def whc_summaries(city_id: int):
     finally:
         if 'conn' in locals():
             conn.close()
+
+
+# -----------------------
+# Basin Cluster endpoints
+# -----------------------
+
+@router.get("/basin-clusters")
+def basin_clusters():
+    """Return all basin clusters with basin and city counts."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    b.cluster_id,
+                    COUNT(DISTINCT b.id) as basin_count,
+                    COUNT(DISTINCT c.id) as city_count
+                FROM basin08 b
+                LEFT JOIN wh_cities c ON c.basin_id = b.id
+                WHERE b.cluster_id IS NOT NULL
+                GROUP BY b.cluster_id
+                ORDER BY b.cluster_id
+            """)
+
+            clusters = []
+            for row in cur.fetchall():
+                clusters.append({
+                    "cluster_id": row[0],
+                    "basin_count": row[1],
+                    "city_count": row[2]
+                })
+
+            return {"clusters": clusters}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+@router.get("/basin-clusters/{cluster_id}/cities")
+def basin_cluster_cities(cluster_id: int):
+    """Return cities in basins of a given cluster."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    c.id,
+                    c.city,
+                    c.country,
+                    c.region,
+                    ST_X(c.geom) as lon,
+                    ST_Y(c.geom) as lat
+                FROM wh_cities c
+                JOIN basin08 b ON c.basin_id = b.id
+                WHERE b.cluster_id = %s
+                ORDER BY c.country, c.city
+            """, (cluster_id,))
+
+            cities = []
+            for row in cur.fetchall():
+                cities.append({
+                    "id": row[0],
+                    "city": row[1],
+                    "country": row[2],
+                    "region": row[3],
+                    "lon": float(row[4]) if row[4] else None,
+                    "lat": float(row[5]) if row[5] else None
+                })
+
+            return {
+                "cluster_id": cluster_id,
+                "city_count": len(cities),
+                "cities": cities
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()

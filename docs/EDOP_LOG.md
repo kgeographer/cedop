@@ -1,6 +1,9 @@
 ### EDOP LOG
 ----
-#### 08 Jan 2026
+#### 10 Jan 2026
+
+
+#### 09 Jan 2026
 - scaled up environmental analysis from 20 pilot sites to 258 World Heritage Cities (WHC)
 - merged WHG reconciliation data into `wh_cities` table: 258 geometries added, 254 basin_ids assigned (4 island cities outside HydroATLAS coverage)
 - created `whc_*` schema parallel to pilot `edop_*`: `whc_matrix` (254×893 features), `whc_pca_coords` (50 components), `whc_similarity` (32,131 pairs), `whc_clusters` (k=10)
