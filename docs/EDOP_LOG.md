@@ -1,5 +1,20 @@
 ### EDOP LOG
 ----
+#### 11 Jan 2026
+- created `docs/edop_database_schema.md` — comprehensive reference for all source and result tables to reduce context-building between Claude Code sessions
+- implemented full 1565-dimensional basin clustering pipeline for all 190,675 basins:
+  - `scripts/basin08_sparse_matrix.py`: extracts 27 numerical + 15 PNV + 1519 one-hot categorical features → sparse matrix (97.88% sparse, 13 MB)
+  - `scripts/basin08_pca.py`: TruncatedSVD reduces to 150 components (86.2% variance)
+  - `scripts/basin08_cluster_analysis.py`: tests k=5-50, analyzes silhouette/elbow/Calinski-Harabasz
+  - `scripts/basin08_clustering_k20.py`: final k=20 clustering, creates `basin08_pca_clusters` table
+- new table `basin08_pca_clusters` (190,675 rows): hybas_id → cluster_id based on full environmental signature
+- cluster sizes range from 4,263 to 18,736 basins (reasonably balanced)
+- cluster labeling via `scripts/basin08_cluster_labels.py`: analyzes centroids, biomes, WHC city membership
+- created `output/basin08_cluster_labels_manual.json` — editable labels derived from biome + city analysis (e.g., "Mediterranean / Warm Temperate", "Tropical Coastal", "Arctic Tundra")
+- output files in `output/`: sparse matrix, PCA products, cluster assignments/centroids/labels
+- **PCA vs FAMD validation** (`scripts/basin08_famd_comparison.py`): 50k sample comparison shows moderate agreement (ARI=0.437, NMI=0.609, ~60% best-match). PCA acceptable for exploratory work; FAMD more defensible for rigorous analysis.
+- note: exploratory work; clusters subject to revision based on downstream utility
+
 #### 10 Jan 2026
 
 
