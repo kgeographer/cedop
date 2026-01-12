@@ -30,33 +30,47 @@
           <!-- Input method pills -->
           <ul class="nav nav-pills nav-pills-sm nav-fill mb-3" id="main-input-pills" role="tablist">
             <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="pill-gaz" data-bs-toggle="pill" data-bs-target="#input-gaz" type="button" role="tab" aria-controls="input-gaz" aria-selected="false">EDOP Gazetteer</button>
+              <button class="nav-link show active" id="pill-whg" data-bs-toggle="pill" data-bs-target="#input-whg" type="button" role="tab" aria-controls="input-whg" aria-selected="false">WHG API</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="pill-edop" data-bs-toggle="pill" data-bs-target="#input-edop" type="button" role="tab" aria-controls="input-edop" aria-selected="false">EDOP Gazetteer</button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="pill-coords" data-bs-toggle="pill" data-bs-target="#input-coords" type="button" role="tab" aria-controls="input-coords" aria-selected="true">Coordinates</button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="pill-edop" data-bs-toggle="pill" data-bs-target="#input-edop" type="button" role="tab" aria-controls="input-edop" aria-selected="false">WHG API</button>
             </li>
           </ul>
 
           <!-- Input forms (swappable based on pill selection) -->
           <div class="tab-content" id="main-input-content">
 
-            <!-- WHG Place Search -->
-            <div class="tab-pane fade" id="input-edop" role="tabpanel" aria-labelledby="pill-edop">
+            <!-- WHG API -->
+            <div class="tab-pane fade show active" id="input-whg" role="tabpanel" aria-labelledby="pill-whg">
               <div class="mb-3">
                 <div class="mb-2">
-                  <label class="form-label" for="edop-search">Search places</label>
+<!--                  <label class="form-label" for="whg-search">Search places</label>-->
                   <div class="position-relative">
-                    <input class="form-control" id="edop-search" type="text" placeholder="Type to search..." autocomplete="off" />
-                    <div id="edop-dropdown" class="dropdown-menu w-100" style="display:none; max-height:300px; overflow-y:auto;"></div>
+                    <input class="form-control" id="whg-search" type="text" placeholder="Type 3+ chars to search places..." autocomplete="off" />
+                    <div id="whg-dropdown" class="dropdown-menu w-100" style="display:none; max-height:300px; overflow-y:auto;"></div>
                   </div>
-                  <div class="form-text text-muted">Type 3+ chars; add ", country" to filter (e.g. "Santa Fe, US")</div>
+                  <div class="form-text text-muted"></div>
                 </div>
               </div>
             </div>
-
+            <!-- Local EDOP gazetteer  -->
+            <div class="tab-pane fade" id="input-edop" role="tabpanel" aria-labelledby="pill-gaz">
+              <div class="mb-3">
+                <div class="mb-2">
+                  <div class="position-relative">
+                    <input class="form-control" id="gaz-search" type="text" placeholder="Type to search..." autocomplete="off" />
+                    <div id="gaz-dropdown" class="dropdown-menu w-100" style="display:none; max-height:300px; overflow-y:auto;"></div>
+                  </div>
+                  <div class="form-text text-muted">~97k places from multiple sources. Type 3+ chars to search. <a href="#" id="gaz-clear-link">Clear</a></div>
+                </div>
+                <div class="mt-3 d-flex gap-2">
+                  <button class="btn btn-outline-primary" id="gaz-similar-env" type="button" disabled>Similar (env)</button>
+                </div>
+              </div>
+            </div>
             <!-- Coordinates input -->
             <div class="tab-pane fade" id="input-coords" role="tabpanel" aria-labelledby="pill-coords">
               <form id="coords-form" class="mb-3">
@@ -76,35 +90,17 @@
                 </div>
               </form>
             </div>
-
-            <!-- WHG Lookup input -->
-            <div class="tab-pane fade" id="input-whg" role="tabpanel" aria-labelledby="pill-whg">
+            <!-- deprecated; inactive -->
+            <div class="tab-pane fade" id="input-foo" role="tabpanel" aria-labelledby="pill-foo">
               <form id="whg-form" class="mb-3">
                 <div class="mb-2">
                   <label class="form-label" for="main-name">Place name</label>
-                  <input class="form-control" id="main-name" name="name" type="text" placeholder="e.g. Timbuktu" />
+                  <input class="form-control" id="main-name" name="name" type="text" placeholder="e.g. Timbux1x`ktu" />
                   <div class="form-text">Name resolution via WHG API (top-ranked hit only)</div>
                 </div>
                 <button class="btn btn-primary" type="submit">Resolve</button>
               </form>
             </div>
-
-            <!-- Gazetteer input -->
-            <div class="tab-pane fade show active" id="input-gaz" role="tabpanel" aria-labelledby="pill-gaz">
-              <div class="mb-3">
-                <div class="mb-2">
-                  <div class="position-relative">
-                    <input class="form-control" id="gaz-search" type="text" placeholder="Type to search..." autocomplete="off" />
-                    <div id="gaz-dropdown" class="dropdown-menu w-100" style="display:none; max-height:300px; overflow-y:auto;"></div>
-                  </div>
-                  <div class="form-text text-muted">~97k places from multiple sources. Type 3+ chars to search. <a href="#" id="gaz-clear-link">Clear</a></div>
-                </div>
-                <div class="mt-3 d-flex gap-2">
-                  <button class="btn btn-outline-primary" id="gaz-similar-env" type="button" disabled>Similar (env)</button>
-                </div>
-              </div>
-            </div>
-
           </div>
 
           <!-- Main tab status message -->
@@ -200,7 +196,6 @@
       <!-- Outputs (shared across tabs) -->
       <div class="mt-3">
         <h5 class="mb-2">Environmental profile</h5>
-
         <!-- Cluster label (shown for WH sites) -->
         <div id="cluster-label" class="mb-2" style="display:none;">
           <span class="badge bg-secondary fs-6" id="cluster-label-text"></span>
@@ -1685,11 +1680,13 @@
     });
 
     // -----------------------
-    // WHG Autocomplete (EDOP Places pill)
+    // WHG Autocomplete (???  pill)
     // -----------------------
 
-    const edopSearch = document.getElementById('edop-search');
-    const edopDropdown = document.getElementById('edop-dropdown');
+    const edopSearch = document.getElementById('whg-search');
+    const edopDropdown = document.getElementById('whg-dropdown');
+    // const edopSearch = document.getElementById('edop-search');
+    // const edopDropdown = document.getElementById('edop-dropdown');
     let edopDebounceTimer = null;
     let countriesLookup = null;
 
