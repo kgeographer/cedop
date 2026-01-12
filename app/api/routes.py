@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api", tags=["api"])
 
 
 # -----------------------
-# Utility helpers
+# WHG API and utility helpers
 # -----------------------
 
 def _http_get_json(url: str, timeout_sec: int = 20) -> Dict[str, Any]:

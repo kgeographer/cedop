@@ -46,14 +46,43 @@
             <!-- WHG API -->
             <div class="tab-pane fade show active" id="input-whg" role="tabpanel" aria-labelledby="pill-whg">
               <div class="mb-3">
-                <div class="mb-2">
-<!--                  <label class="form-label" for="whg-search">Search places</label>-->
-                  <div class="position-relative">
-                    <input class="form-control" id="whg-search" type="text" placeholder="Type 3+ chars to search places..." autocomplete="off" />
-                    <div id="whg-dropdown" class="dropdown-menu w-100" style="display:none; max-height:300px; overflow-y:auto;"></div>
+
+                <div class="d-flex align-items-center gap-2">
+                  <div class="flex-grow-1 position-relative">
+                    <input
+                      class="form-control"
+                      id="whg-search"
+                      type="text"
+                      placeholder="search World Historical Gazetteer..."
+                      autocomplete="off"
+                    />
+                    <div
+                      id="whg-dropdown"
+                      class="dropdown-menu w-100"
+                      style="display:none; max-height:300px; overflow-y:auto;">
+                    </div>
                   </div>
-                  <div class="form-text text-muted"></div>
+
+                  <a href="#" id="whg-advanced-toggle" class="small text-nowrap">advanced</a>
                 </div>
+
+                <div id="whg-advanced" class="mt-2" style="display:none;">
+                  <div class="row g-2 align-items-center">
+                    <div class="col">
+                      <label class="form-label mb-1 small" for="whg-country">Country (dummy)</label>
+                      <select class="form-select form-select-sm" id="whg-country">
+                        <option value="">(any country)</option>
+                        <option value="US">United States</option>
+                        <option value="MX">Mexico</option>
+                        <option value="AR">Argentina</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-text text-muted">This is a placeholder; wiring to a full country list comes next.</div>
+                </div>
+
+                <div class="form-text text-muted"></div>
+
               </div>
             </div>
             <!-- Local EDOP gazetteer  -->
@@ -1680,13 +1709,22 @@
     });
 
     // -----------------------
-    // WHG Autocomplete (???  pill)
+    // WHG Autocomplete
     // -----------------------
+    // WHG Advanced toggle
+    const whgAdvancedToggle = document.getElementById('whg-advanced-toggle');
+    const whgAdvanced = document.getElementById('whg-advanced');
+    if (whgAdvancedToggle && whgAdvanced) {
+      whgAdvancedToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isHidden = (whgAdvanced.style.display === 'none' || whgAdvanced.style.display === '');
+        whgAdvanced.style.display = isHidden ? 'block' : 'none';
+        whgAdvancedToggle.textContent = isHidden ? 'hide' : 'advanced';
+      });
+    }
 
     const edopSearch = document.getElementById('whg-search');
     const edopDropdown = document.getElementById('whg-dropdown');
-    // const edopSearch = document.getElementById('edop-search');
-    // const edopDropdown = document.getElementById('edop-dropdown');
     let edopDebounceTimer = null;
     let countriesLookup = null;
 

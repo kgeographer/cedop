@@ -1,0 +1,293 @@
+PROMPT
+======
+
+We paused development of the WHG API method of resolving places, now on the `pill-whg` button. It is currently working to call a /suggest endpoint, and the payload is parsed to find a place id then call a /entity endpoint for geometry so a marker can go on the map. In fact a different two-endpoint set of calls to a /reconcile endpoint can return better results to allow a user to choose. I have largely figured out how to make the WHG /reconcile api endpoint work (see below).
+
+The reconcile endpoint can take several arguments that can dramatically improve candidate results, including 2-letter country code(s) and bounds ("fclasses": ["P"] is a default (it's cities). e.g.
+  ```
+  "fclasses": ["P"],
+  "countries": ["MX"],
+  "bounds": {
+    "geometries": [{
+      "type": "Polygon",
+      "coordinates": [[
+        [-1.0,51.0],
+        [-1.0,52.0],
+        [0.5,52.0],
+        [0.5,51.0],
+        [-1.0,51.0]
+      ]]
+    }]
+  }
+  ```
+So the question is, how to let the user supply those. Answer (I think) is 
+a) by selecting an admin0 feature, then optionally admin1 or
+b) drawing a bounding box/polygon
+
+For a) having the map load with admin0 features, and clicking one begins building parameters. It could then zoom to the country and load (or display) admin1 bounds with labels or hover behavior to supply names. clicking one of those generates a "bounds" parameter. The user sees this query being built (and changed if they choose anothe country or admin1 feature).
+For b) a Leaflet Draw capability (if necessary to capture bounds)
+
+Please consider this proposal and comment as to efficacy - technically and from a UX/UI perspective. No code until we are on the same page
+
+
+first call:
+curl -X POST https://whgazetteer.org/reconcile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eGvqKuZTwBGOeBoRSIplo0QEYjr3Gx0botvyO4xvzQ8" \
+  -H "User-Agent: EDOP/0.1" \
+  -d '{
+    "queries": {
+      "q1": {
+        "query": "Pittsburgh",
+        "mode": "exact",
+        "fclasses": ["P"],
+        "countries": ["US"],
+        "type": "https://whgazetteer.org/static/whg_schema.jsonld#Place",
+        "size": 20
+      }
+    }
+  }'
+
+returns the following. note that rows with `"match": true` are exact on "name" and that rows with `"match": false` have a match in "alt_names"
+
+{"q1": {"result": [
+  
+  {"id": "place:5575355", "name": "Pittsburgh", "score": 100, "match": true, "alt_names": [], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}, 
+  {"id": "place:5081285", "name": "Pittsburgh", "score": 100, "match": true, "alt_names": ["Pittsburg"], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}, 
+  {"id": "place:5724455", "name": "Pittsburgh", "score": 100, "match": true, "alt_names": ["The Manor of Pittsburgh", "Pitts-Bourg", "Fort Trent", "Fort Pitt", "Fort Duquesne", "Menachk-sink", "Hothawikamiki"], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}, 
+  {"id": "place:5461104", "name": "Hymera", "score": 41, "match": false, "alt_names": ["Pittsburgh", "Pittsburg"], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}, 
+  {"id": "place:4778548", "name": "Fargo", "score": 41, "match": false, "alt_names": ["Pittsburgh"], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}, 
+  {"id": "place:4777948", "name": "Pittsburg", "score": 41, "match": false, "alt_names": ["PittsbuRgh", "New Pittsburgh", "New Pittsburg", "Hopefield"], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}, 
+  {"id": "place:5871586", "name": "Pittsburg", "score": 41, "match": false, "alt_names": ["Pittsburgh"], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}, 
+  {"id": "place:5737339", "name": "Tipton", "score": 41, "match": false, "alt_names": ["Pittsburgh"], "description": "Country: US", "type": [
+  {"id": "https://whgazetteer.org/static/whg_schema.jsonld#Place", "name": "Place"}]}
+]}}
+
+
+A second query sends only an "extend" element with a list of place IDs, `"place:{nnnnnn}"`
+
+curl -X POST https://whgazetteer.org/reconcile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eGvqKuZTwBGOeBoRSIplo0QEYjr3Gx0botvyO4xvzQ8" \
+  -H "User-Agent: EDOP/0.1" \
+  -d '{  
+    "extend": {
+      "ids": [
+        "place:5575355",
+        "place:5081285",
+        "place:5724455"
+      ],
+      "type": "https://whgazetteer.org/static/whg_schema.jsonld#Place",
+      "properties": [
+        {"id": "whg:geometry_wkt"},
+        {"id": "whg:countries_objects"},
+        {"id": "whg:types_objects"},
+        {"id": "whg:names_summary"}
+      ]
+    }
+  }'
+
+
+returns:
+{
+  "meta": [
+    {
+      "id": "whg:geometry_wkt",
+      "name": "whg:geometry_wkt"
+    },
+    {
+      "id": "whg:countries_objects",
+      "name": "whg:countries_objects"
+    },
+    {
+      "id": "whg:types_objects",
+      "name": "whg:types_objects"
+    },
+    {
+      "id": "whg:names_summary",
+      "name": "whg:names_summary"
+    }
+  ],
+  "rows": {
+    "place:5081285": {
+      "whg:geometry_wkt": [
+        {
+          "str": "POINT(-116.8167 40.4167)"
+        }
+      ],
+      "whg:countries_objects": [
+        {
+          "str": "[{\"code\": \"US\", \"label\": \"United States of America\"}]"
+        }
+      ],
+      "whg:types_objects": [
+        {
+          "str": "[{\"label\": \"inhabited places\", \"sourceLabel\": \"inhabited place\", \"identifier\": \"aat:300008347\", \"gn_class\": \"P\"}]"
+        }
+      ],
+      "whg:names_summary": [
+        {
+          "str": "Pittsburg"
+        },
+        {
+          "str": "Pittsburgh"
+        }
+      ]
+    },
+    "place:5575355": {
+      "whg:geometry_wkt": [
+        {
+          "str": "POINT(-97.1667 48.6167)"
+        }
+      ],
+      "whg:countries_objects": [
+        {
+          "str": "[{\"code\": \"US\", \"label\": \"United States of America\"}]"
+        }
+      ],
+      "whg:types_objects": [
+        {
+          "str": "[{\"label\": \"inhabited places\", \"sourceLabel\": \"inhabited place\", \"identifier\": \"aat:300008347\", \"gn_class\": \"P\"}]"
+        }
+      ],
+      "whg:names_summary": [
+        {
+          "str": "Pittsburgh"
+        }
+      ]
+    },
+    "place:5724455": {
+      "whg:geometry_wkt": [
+        {
+          "str": "POINT(-79.9833 40.4333)"
+        }
+      ],
+      "whg:countries_objects": [
+        {
+          "str": "[{\"code\": \"US\", \"label\": \"United States of America\"}]"
+        }
+      ],
+      "whg:types_objects": [
+        {
+          "str": "[{\"label\": \"cities\", \"sourceLabel\": \"city\", \"identifier\": \"aat:300008389\", \"gn_class\": \"P\"}, {\"label\": \"inhabited places\", \"sourceLabel\": \"battlefield\", \"identifier\": \"aat:300008347\", \"gn_class\": \"P\"}, {\"label\": \"battlefields\", \"sourceLabel\": \"port\", \"identifier\": \"aat:300000835\", \"gn_class\": \"S\"}, {\"label\": \"ports (settlements)\", \"sourceLabel\": \"inhabited place\", \"identifier\": \"aat:300120599\", \"gn_class\": \"P\"}]"
+        }
+      ],
+      "whg:names_summary": [
+        {
+          "str": "Fort Duquesne"
+        },
+        {
+          "str": "Fort Pitt"
+        },
+        {
+          "str": "Fort Trent"
+        },
+        {
+          "str": "Pitts-Bourg"
+        },
+        {
+          "str": "Pittsburgh"
+        },
+        {
+          "str": "The Manor of Pittsburgh"
+        }
+      ]
+    }
+  }
+}
+
+
+RESPONSE
+========
+This is a thoughtful proposal. Let me give you my assessment:
+
+  Technical Feasibility
+
+  Approach (a) - Admin boundary selection: ✅ Feasible
+  - Load simplified admin0 polygons (Natural Earth 110m is ~800KB for world)
+  - On click → extract country code, build "countries": ["XX"]
+  - Zoom to country, load admin1 on demand (or pre-bundled per country)
+  - Admin1 click → extract geometry for "bounds" parameter
+
+  Approach (b) - Drawing: ✅ Feasible
+  - Leaflet.Draw is mature, well-documented
+  - Rectangle/polygon → convert to GeoJSON for bounds parameter
+
+  UX/UI Concerns
+
+  Potential issues:
+
+  1. Forced geographic context - Many users just want to type "Pittsburgh" and go. Requiring country selection first adds friction for the common case.
+  2. Data loading - Admin0 is small, but admin1 for 200+ countries is substantial. Lazy-loading helps but adds latency.
+  3. Discoverability - Will users understand they can/should click the map? Need clear affordances.
+  4. Cognitive load - Watching a query being "built" is powerful for experts but potentially confusing for casual users.
+
+  Counter-proposal: Progressive Refinement
+
+  Instead of "select geography first, then search", consider:
+
+  ┌─────────────────────────────────────────────┐
+  │ [Pittsburgh________] [Search]               │
+  ├─────────────────────────────────────────────┤
+  │ 8 results found                             │
+  │                                             │
+  │ ○ Pittsburgh, US (match) ← Fort Pitt, etc   │
+  │ ○ Pittsburgh, US (match)                    │
+  │ ○ Pittsburgh, US (match)                    │
+  │ ○ Hymera, US (alt: Pittsburgh)              │
+  │ ...                                         │
+  │                                             │
+  │ Too many results? [Refine by region ▼]      │
+  │   ┌─────────────────────────────┐           │
+  │   │ Country: [US ▼]             │           │
+  │   │ State:   [Pennsylvania ▼]   │           │
+  │   │ ─── or ───                  │           │
+  │   │ [Draw on map]               │           │
+  │   └─────────────────────────────┘           │
+  └─────────────────────────────────────────────┘
+
+  Flow:
+  1. User types name → immediate results (unconstrained)
+  2. If results are good → select one, done
+  3. If ambiguous → "Refine" panel appears
+  4. Select country dropdown (fast, no map interaction needed)
+  5. Optionally select admin1 or draw bounds
+  6. Re-query with constraints
+
+  Advantages:
+  - Simple path stays simple
+  - Geographic refinement is discoverable but not mandatory
+  - Dropdowns are faster than map clicks for known locations
+  - Map drawing available for "I know where but not what it's called" cases
+
+  Hybrid Option
+
+  If you want the map to be primary (which fits EDOP's geographic focus):
+
+  1. Map loads with faint admin0 outlines (always visible, not interactive initially)
+  2. User types in search box → results appear
+  3. "Constrain to map area" toggle → activates map selection mode
+  4. Click country → highlights, adds to query, re-runs search
+  5. Optional: click admin1 or draw for finer constraint
+
+  This keeps map central but doesn't force interaction.
+
+  My Recommendation
+
+  For the prototype: Dropdowns + optional draw
+  - Country dropdown (searchable, ~200 options)
+  - Admin1 dropdown (loads on country select)
+  - Draw rectangle button (power user feature)
+  - No complex admin layer loading needed
+
+  For production: Full map-based selection as you described, but with the "progressive refinement" pattern rather than "select first, search second".
+
+  What's your priority - showcasing map-centric interaction for funders, or getting functional refinement working quickly?
+
