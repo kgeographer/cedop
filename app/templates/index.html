@@ -70,12 +70,12 @@
                 </div>
 
                 <div id="whg-advanced" class="mt-2" style="display:none;">
-                  <div class="row g-2 align-items-center">
-                    <div class="col">
-                      <label class="form-label mb-1 small" for="whg-country">Filter by country</label>
-                      <select class="form-select form-select-sm" id="whg-country">
-                        <option value="">(any country)</option>
-                      </select>
+                  <div class="mb-1">
+                    <label class="form-label mb-1 small">Filter by country</label>
+                    <div id="whg-country-tags" class="d-flex flex-wrap gap-1 mb-1"></div>
+                    <div class="position-relative">
+                      <input class="form-control form-control-sm" id="whg-country-input" type="text" placeholder="Type to filter..." autocomplete="off" />
+                      <div id="whg-country-dropdown" class="dropdown-menu w-100" style="display:none; max-height:200px; overflow-y:auto;"></div>
                     </div>
                   </div>
                 </div>
@@ -1096,7 +1096,7 @@
       const list = document.getElementById('similar-list');
 
       if (heading) heading.textContent = `${label}`;
-      if (description) description.textContent = `${cities.length} WH cities in basins of this environmental type`;
+      if (description) description.textContent = `${cities.length} World Heritage cities in basins of this environmental type`;
 
       if (cities.length === 0) {
         list.innerHTML = '<div class="text-muted">No WH cities in basins of this type.</div>';
@@ -1715,10 +1715,13 @@
     const whgDropdown = document.getElementById('whg-dropdown');
     const whgAdvancedToggle = document.getElementById('whg-advanced-toggle');
     const whgAdvanced = document.getElementById('whg-advanced');
-    const whgCountrySelect = document.getElementById('whg-country');
+    const whgCountryInput = document.getElementById('whg-country-input');
+    const whgCountryDropdown = document.getElementById('whg-country-dropdown');
+    const whgCountryTags = document.getElementById('whg-country-tags');
     let whgDebounceTimer = null;
     let whgResults = [];  // Store results for selection
     let whgCandidateMarkers = [];  // Markers for all candidates
+    let selectedCountries = [];  // Array of {code, name} objects
 
     // Colors for candidate markers (match existing SIMILAR_COLORS pattern)
     const WHG_CANDIDATE_COLORS = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5'];
@@ -1733,7 +1736,6 @@
       ['MX', 'Mexico'], ['BR', 'Brazil'], ['AR', 'Argentina'], ['EG', 'Egypt'],
       ['ZA', 'South Africa'], ['NG', 'Nigeria'], ['KE', 'Kenya'], ['MA', 'Morocco'],
       ['IR', 'Iran'], ['IQ', 'Iraq'], ['SA', 'Saudi Arabia'], ['IL', 'Israel'],
-      ['--', '──────────'],
       ['AD', 'Andorra'], ['AE', 'United Arab Emirates'], ['AF', 'Afghanistan'],
       ['AG', 'Antigua and Barbuda'], ['AL', 'Albania'], ['AM', 'Armenia'], ['AO', 'Angola'],
       ['AZ', 'Azerbaijan'], ['BA', 'Bosnia and Herzegovina'], ['BB', 'Barbados'],
@@ -1775,41 +1777,120 @@
       ['XK', 'Kosovo'], ['YE', 'Yemen'], ['ZM', 'Zambia'], ['ZW', 'Zimbabwe']
     ];
 
-    // Populate country dropdown
-    if (whgCountrySelect) {
-      COUNTRY_LIST.forEach(([code, name]) => {
-        const opt = document.createElement('option');
-        if (code === '--') {
-          opt.disabled = true;
-          opt.textContent = name;
-        } else {
-          opt.value = code;
-          opt.textContent = `${name} (${code})`;
-        }
-        whgCountrySelect.appendChild(opt);
-      });
-    }
-
     // Reset filter link
     const whgResetFilter = document.getElementById('whg-reset-filter');
 
     function updateResetFilterVisibility() {
-      if (whgResetFilter && whgCountrySelect) {
-        whgResetFilter.style.display = whgCountrySelect.value ? 'inline' : 'none';
+      if (whgResetFilter) {
+        whgResetFilter.style.display = selectedCountries.length > 0 ? 'inline' : 'none';
       }
     }
 
-    if (whgCountrySelect) {
-      whgCountrySelect.addEventListener('change', updateResetFilterVisibility);
+    function renderCountryTags() {
+      if (!whgCountryTags) return;
+      whgCountryTags.innerHTML = selectedCountries.map(c => `
+        <span class="badge bg-secondary d-flex align-items-center gap-1" data-code="${c.code}">
+          ${escapeHtml(c.name)} (${c.code})
+          <a href="#" class="text-white text-decoration-none country-tag-remove" style="font-size: 14px; line-height: 1;">&times;</a>
+        </span>
+      `).join('');
+
+      // Add remove handlers
+      whgCountryTags.querySelectorAll('.country-tag-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const badge = btn.closest('.badge');
+          const code = badge.getAttribute('data-code');
+          selectedCountries = selectedCountries.filter(c => c.code !== code);
+          renderCountryTags();
+          updateResetFilterVisibility();
+        });
+      });
     }
+
+    function addCountry(code, name) {
+      if (selectedCountries.some(c => c.code === code)) return;
+      selectedCountries.push({ code, name });
+      renderCountryTags();
+      updateResetFilterVisibility();
+      if (whgCountryInput) whgCountryInput.value = '';
+      hideCountryDropdown();
+    }
+
+    function hideCountryDropdown() {
+      if (whgCountryDropdown) {
+        whgCountryDropdown.style.display = 'none';
+        whgCountryDropdown.innerHTML = '';
+      }
+    }
+
+    function showCountryDropdown(filter) {
+      if (!whgCountryDropdown) return;
+
+      const lowerFilter = (filter || '').toLowerCase();
+      const alreadySelected = new Set(selectedCountries.map(c => c.code));
+
+      // Filter countries: match name or code, exclude already selected
+      const matches = COUNTRY_LIST.filter(([code, name]) => {
+        if (alreadySelected.has(code)) return false;
+        if (!lowerFilter) return true;
+        return name.toLowerCase().includes(lowerFilter) || code.toLowerCase().includes(lowerFilter);
+      }).slice(0, 10);
+
+      if (matches.length === 0) {
+        hideCountryDropdown();
+        return;
+      }
+
+      whgCountryDropdown.innerHTML = matches.map(([code, name]) => `
+        <a href="#" class="dropdown-item country-option" data-code="${code}" data-name="${escapeHtml(name)}">
+          ${escapeHtml(name)} <span class="text-muted">(${code})</span>
+        </a>
+      `).join('');
+
+      whgCountryDropdown.style.display = 'block';
+
+      // Add click handlers
+      whgCountryDropdown.querySelectorAll('.country-option').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          addCountry(item.getAttribute('data-code'), item.getAttribute('data-name'));
+        });
+      });
+    }
+
+    // Country input events
+    if (whgCountryInput) {
+      whgCountryInput.addEventListener('input', () => {
+        showCountryDropdown(whgCountryInput.value);
+      });
+
+      whgCountryInput.addEventListener('focus', () => {
+        showCountryDropdown(whgCountryInput.value);
+      });
+
+      whgCountryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          hideCountryDropdown();
+        }
+      });
+    }
+
+    // Hide country dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (whgCountryInput && whgCountryDropdown &&
+          !whgCountryInput.contains(e.target) && !whgCountryDropdown.contains(e.target) &&
+          !e.target.closest('.country-tag-remove')) {
+        hideCountryDropdown();
+      }
+    });
 
     if (whgResetFilter) {
       whgResetFilter.addEventListener('click', (e) => {
         e.preventDefault();
-        if (whgCountrySelect) {
-          whgCountrySelect.value = '';
-          updateResetFilterVisibility();
-        }
+        selectedCountries = [];
+        renderCountryTags();
+        updateResetFilterVisibility();
       });
     }
 
@@ -1998,11 +2079,10 @@
         return;
       }
 
-      // Get country filter from advanced panel if set
-      let countries = null;
-      if (whgCountrySelect && whgCountrySelect.value) {
-        countries = whgCountrySelect.value;
-      }
+      // Get country filter from selected tags
+      const countries = selectedCountries.length > 0
+        ? selectedCountries.map(c => c.code).join(',')
+        : null;
 
       try {
         let url = `/api/whg-reconcile?q=${encodeURIComponent(input)}&size=10`;

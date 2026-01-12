@@ -87,22 +87,26 @@ Added country dropdown in the "advanced" panel with:
 ```html
 <div id="whg-advanced" class="mt-2" style="display:none;">
   <label class="form-label mb-1 small">Filter by country</label>
-  <select class="form-select form-select-sm" id="whg-country">
-    <option value="">(any country)</option>
-  </select>
+  <div id="whg-country-tags" class="d-flex flex-wrap gap-1 mb-1"></div>
+  <div class="position-relative">
+    <input class="form-control form-control-sm" id="whg-country-input"
+           type="text" placeholder="Type to filter..." autocomplete="off" />
+    <div id="whg-country-dropdown" class="dropdown-menu w-100"></div>
+  </div>
 </div>
 ```
 
 **JavaScript:**
 - `COUNTRY_LIST` array with ~170 ISO 3166-1 alpha-2 codes
-- Dropdown populated on page load
-- Selection passed to `/api/whg-reconcile?countries=XX`
+- Autocomplete filters by name or code as user types
+- Multiple countries selectable, displayed as badge tags with × to remove
+- Comma-separated codes passed to `/api/whg-reconcile?countries=GB,US`
 
 ### Reset Filter
 Added "reset filter" link in the "Resolve place" heading:
 - Hidden by default
-- Appears when country filter is active
-- Click clears filter back to "(any country)"
+- Appears when any country filter is active
+- Click clears all selected country tags
 
 ---
 
