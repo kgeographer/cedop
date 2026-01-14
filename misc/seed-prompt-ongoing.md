@@ -19,9 +19,9 @@ HydroATLAS basin data. Building a proof-of-concept for funding partners (ISHI/Pi
 
 **UI tabs and pills:**
 - Main tab:
-  - **EDOP Gazetteer** (default): autocomplete search of 97k places, Similar (env) button
+  - **WHG API** (default): reconcile-based search with multi-candidate map markers, country filter
+  - EDOP Gazetteer: autocomplete search of 97k local places, Similar (env) button
   - Coordinates: manual lon/lat entry
-  - WHG API: external place resolution
 - Basins: list 20 clusters of 190k sub-basins; display on map & list WH cities contained
 - WH Cities: dropdown selection returns sig, options for similar cities (env + semantic)
 - WH Sites: dropdown selection returns sig, options for similar sites
@@ -41,6 +41,21 @@ HydroATLAS basin data. Building a proof-of-concept for funding partners (ISHI/Pi
 - `docs/edop_database_schema.md` — comprehensive schema reference
 - `docs/session_log_*.md` — detailed work per day
 - `scripts/load_basin_pca_vectors.py` — loads PCA coords into pgvector
+- `misc/dump_for_deploy.sh` — database export for deployment
+- `misc/restore_on_droplet.sh` — database restore on server
+
+## Deployment
+- **Production**: edop.kgeographer.org (Digital Ocean droplet)
+- **Stack**: nginx → gunicorn:8001 → FastAPI/uvicorn
+- **Database**: PostgreSQL 5432 with PostGIS, pgvector, pg_trgm
+- **Service**: systemd (`/etc/systemd/system/edop.service`)
+- **Environment**: `/etc/edop/edop.env` or inline in service file
+- **Code**: `/var/www/edop` (git checkout main)
+
+**Key differences local vs server:**
+- Local PostgreSQL: port 5435 (non-standard)
+- Server PostgreSQL: port 5432 (standard)
+- Environment vars must use `PGHOST`, `PGPORT`, etc. (not `DB_HOST`, `DB_PORT`)
 
 ## Tech Stack
 FastAPI, PostgreSQL/PostGIS, pgvector, Python (scikit-learn, openai, anthropic, wikipediaapi)
