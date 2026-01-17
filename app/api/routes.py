@@ -1434,21 +1434,28 @@ def eco_bioregions(subrealm_id: int):
             sr = cur.fetchone()
             subrealm_name = sr[0] if sr else None
 
+            # Join with bioregion_meta for titles and OneEarth links
             cur.execute("""
-                SELECT b.bioregions, COUNT(e.eco_id) as ecoregion_count
+                SELECT b.bioregions, COUNT(e.eco_id) as ecoregion_count,
+                       m.title, m.url_slug
                 FROM gaz."Bioregions2023" b
                 LEFT JOIN gaz."Ecoregions2017" e ON e.bioregion = b.bioregions
+                LEFT JOIN gaz.bioregion_meta m ON m.bioregion_id = b.bioregions
                 WHERE b.subrealm_id = %s
-                GROUP BY b.bioregions
+                GROUP BY b.bioregions, m.title, m.url_slug
                 ORDER BY b.bioregions
             """, (subrealm_id,))
             results = []
             for row in cur.fetchall():
-                results.append({
+                bioregion = {
                     "id": row[0],
-                    "name": row[0],
+                    "name": row[2] if row[2] else row[0],  # Use title if available, else code
+                    "code": row[0],
                     "ecoregion_count": row[1]
-                })
+                }
+                if row[3]:  # url_slug
+                    bioregion["oneearth_url"] = f"https://www.oneearth.org/{row[3]}"
+                results.append(bioregion)
             return {"subrealm_id": subrealm_id, "subrealm_name": subrealm_name, "count": len(results), "bioregions": results}
 
     except Exception as e:
@@ -1523,6 +1530,141 @@ def eco_realms_geom():
             features.append({
                 "type": "Feature",
                 "properties": {"name": row[0], "id": row[1]},
+                "geometry": row[2]
+            })
+
+        return {
+            "type": "FeatureCollection",
+            "features": features
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+@router.get("/eco/subrealms/geom")
+def eco_subrealms_geom(realm: str):
+    """Get GeoJSON FeatureCollection of subrealm geometries within a realm."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT subrealmid, subrealm_n, ST_AsGeoJSON(geom)::json
+                FROM gaz."Subrealm2023"
+                WHERE biogeorelm = %s
+                ORDER BY subrealm_n
+            """, (realm,))
+            rows = cur.fetchall()
+
+        features = []
+        for row in rows:
+            features.append({
+                "type": "Feature",
+                "properties": {"id": row[0], "name": row[1]},
+                "geometry": row[2]
+            })
+
+        return {
+            "type": "FeatureCollection",
+            "features": features
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+@router.get("/eco/bioregions/geom")
+def eco_bioregions_geom(subrealm_id: int):
+    """Get GeoJSON FeatureCollection of bioregion geometries within a subrealm."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            # Join with bioregion_meta for titles
+            cur.execute("""
+                SELECT b.bioregions, ST_AsGeoJSON(b.geom)::json, m.title
+                FROM gaz."Bioregions2023" b
+                LEFT JOIN gaz.bioregion_meta m ON m.bioregion_id = b.bioregions
+                WHERE b.subrealm_id = %s
+                ORDER BY b.bioregions
+            """, (subrealm_id,))
+            rows = cur.fetchall()
+
+        features = []
+        for row in rows:
+            features.append({
+                "type": "Feature",
+                "properties": {
+                    "id": row[0],
+                    "name": row[2] if row[2] else row[0],  # Title if available, else code
+                    "code": row[0]
+                },
+                "geometry": row[1]
+            })
+
+        return {
+            "type": "FeatureCollection",
+            "features": features
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+@router.get("/eco/ecoregions/geom")
+def eco_ecoregions_geom(bioregion: str):
+    """Get GeoJSON FeatureCollection of ecoregion geometries within a bioregion."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT eco_id, eco_name, ST_AsGeoJSON(geom)::json
+                FROM gaz."Ecoregions2017"
+                WHERE bioregion = %s
+                ORDER BY eco_name
+            """, (bioregion,))
+            rows = cur.fetchall()
+
+        features = []
+        for row in rows:
+            features.append({
+                "type": "Feature",
+                "properties": {"id": row[0], "name": row[1]},
                 "geometry": row[2]
             })
 

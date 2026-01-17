@@ -239,6 +239,7 @@
           </div>
         </div>
 
+        <!-- ECOREGIONS TAB (OneEarth hierarchy) -->
         <div class="tab-pane fade" id="panel-eco" role="tabpanel" aria-labelledby="tab-eco">
           <h4 class="mb-1">Ecoregions Hierarchy</h4>
           <p class="subhead5">Data from <a href="https://www.oneearth.org/bioregions/" target="_blank">OneEarth Bioregions</a> (847 ecoregions in 185 bioregions, 53 subrealms, 14 realms)</p>
@@ -2841,18 +2842,31 @@
               <span class="badge bg-secondary rounded-pill">${s.bioregion_count} bioregions</span>
             </a>
           `).join('');
+          // Load subrealm geometries for map
+          const geomResp = await fetch(`/api/eco/subrealms/geom?realm=${encodeURIComponent(state.id)}`);
+          const geomData = await geomResp.json();
+          displayEcoFeatures(geomData, items);
         } else if (state.level === 'bioregions') {
           url = `/api/eco/bioregions?subrealm_id=${encodeURIComponent(state.id)}`;
           const resp = await fetch(url);
           data = await resp.json();
           items = data.bioregions || [];
           level = 'bioregion';
-          ecoList.innerHTML = items.map(b => `
+          // Add OneEarth subtitle + list
+          const hasAnyOneEarth = items.some(b => b.oneearth_url);
+          const subtitle = hasAnyOneEarth
+            ? `<h5 class="text-muted mb-1">Bioregions <a href="https://www.oneearth.org/bioregions/" target="_blank" class="text-decoration-none fs-6">OneEarth framework</a> <i class="bi bi-box-arrow-up-right small"></i></h5>`
+            : '';
+          ecoList.innerHTML = subtitle + items.map(b => `
             <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-eco-level="bioregion" data-eco-id="${escapeHtml(b.id)}">
-              ${escapeHtml(b.name)}
+              <span>${escapeHtml(b.name)}${b.oneearth_url ? `<span class="ms-1 text-muted" style="cursor:pointer;" title="View on OneEarth" onclick="event.preventDefault(); event.stopPropagation(); window.open('${escapeHtml(b.oneearth_url)}', '_blank');"><i class="bi bi-box-arrow-up-right small"></i></span>` : ''}</span>
               <span class="badge bg-secondary rounded-pill">${b.ecoregion_count} ecoregions</span>
             </a>
           `).join('');
+          // Load bioregion geometries for map
+          const geomResp = await fetch(`/api/eco/bioregions/geom?subrealm_id=${encodeURIComponent(state.id)}`);
+          const geomData = await geomResp.json();
+          displayEcoFeatures(geomData, items);
         } else if (state.level === 'ecoregions') {
           url = `/api/eco/ecoregions?bioregion=${encodeURIComponent(state.id)}`;
           const resp = await fetch(url);
@@ -2865,6 +2879,10 @@
               <br><span class="small text-muted">${escapeHtml(e.biome || '')}</span>
             </a>
           `).join('');
+          // Load ecoregion geometries for map
+          const geomResp = await fetch(`/api/eco/ecoregions/geom?bioregion=${encodeURIComponent(state.id)}`);
+          const geomData = await geomResp.json();
+          displayEcoFeatures(geomData, items);
         }
 
         if (!items.length) {
@@ -2879,10 +2897,7 @@
             const itemId = item.getAttribute('data-eco-id');
             const itemName = item.textContent.trim().split('\n')[0];
 
-            // Load and show geometry
-            await showEcoGeom(itemLevel, itemId, itemName);
-
-            // If not at ecoregion level, drill down
+            // Drill down to next level (loadEcoLevel handles showing child geometries)
             if (itemLevel === 'realm') {
               ecoBreadcrumbState.push({ level: 'subrealms', label: itemName, id: itemId });
               renderEcoBreadcrumb();
@@ -2895,8 +2910,10 @@
               ecoBreadcrumbState.push({ level: 'ecoregions', label: itemName, id: itemId });
               renderEcoBreadcrumb();
               await loadEcoLevel({ level: 'ecoregions', id: itemId });
+            } else if (itemLevel === 'ecoregion') {
+              // Ecoregion is leaf - show single geometry with details
+              await showEcoGeom(itemLevel, itemId, itemName);
             }
-            // Ecoregion is leaf - just show on map
           });
         });
 
@@ -2904,6 +2921,57 @@
         ecoSetStatus(String(e));
         ecoList.innerHTML = '<div class="text-danger">Error loading data.</div>';
       }
+    }
+
+    // Color palette for distinguishing multiple features
+    const ecoColors = [
+      '#2e7d32', '#1565c0', '#c62828', '#6a1b9a', '#ef6c00',
+      '#00838f', '#558b2f', '#ad1457', '#4527a0', '#d84315'
+    ];
+
+    function displayEcoFeatures(geomData, items) {
+      clearEcoLayer();
+      if (ecoSelectedInfo) ecoSelectedInfo.style.display = 'none';
+
+      if (!geomData.features || geomData.features.length === 0) return;
+
+      ecoLayer = L.geoJSON(geomData, {
+        style: (feature) => {
+          // Assign color based on feature index
+          const idx = geomData.features.indexOf(feature);
+          const color = ecoColors[idx % ecoColors.length];
+          return {
+            color: color,
+            weight: 2,
+            fillColor: color,
+            fillOpacity: 0.25
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const name = feature.properties.name || feature.properties.id;
+          layer.bindTooltip(name, { sticky: true });
+
+          // Highlight on hover
+          layer.on('mouseover', () => {
+            layer.setStyle({ weight: 3, fillOpacity: 0.4 });
+            // Highlight corresponding list item
+            const listItem = ecoList.querySelector(`[data-eco-id="${feature.properties.id}"]`);
+            if (listItem) listItem.classList.add('active');
+          });
+          layer.on('mouseout', () => {
+            ecoLayer.resetStyle(layer);
+            const listItem = ecoList.querySelector(`[data-eco-id="${feature.properties.id}"]`);
+            if (listItem) listItem.classList.remove('active');
+          });
+          // Click to drill down (same as clicking list item)
+          layer.on('click', () => {
+            const listItem = ecoList.querySelector(`[data-eco-id="${feature.properties.id}"]`);
+            if (listItem) listItem.click();
+          });
+        }
+      }).addTo(map);
+
+      map.fitBounds(ecoLayer.getBounds().pad(0.1));
     }
 
     async function showEcoGeom(level, id, name) {

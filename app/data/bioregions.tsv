@@ -1,0 +1,48 @@
+bioregion_id	title	url_slug	subrealm_id	subrealm	realm	slug_realm
+NA01	Greenland	bioregions/greenland-na1/	1	Greenland	Subarctic America	subarctic-america
+NA02	Canadian Tundra	bioregions/canadian-tundra-na2/	2	Canadian Tundra	Subarctic America	subarctic-america
+NA03	North Alaskan Tundra	bioregions/north-alaskan-tundra-na3/	3	Alaska	Subarctic America	subarctic-america
+NA04	Greater Alaska Taiga & Tundra	bioregions/greater-alaska-taiga-tundra-na4/	3	Alaska	Subarctic America	subarctic-america
+NA05	Far Northern Pacific Coast	bioregions/far-northern-pacific-coast-na5	3	Alaska	Subarctic America	subarctic-america
+NA06	Greater Yukon	bioregions/greater-yukon-na6/	4	Canadian Boreal Forests	Subarctic America	subarctic-america
+NA07	Northwest Canadian Taiga, Lakes, & Wetlands	bioregions/northwest-canadian-taiga-lakes-wetlands-na7/	4	Canadian Boreal Forests	Subarctic America	subarctic-america
+NA08	Mid-Canada Boreal Plains & Foothill Forests	bioregions/mid-canada-boreal-plains-foothill-forests-na8/	4	Canadian Boreal Forests	Subarctic America	subarctic-america
+NA09	Canadian Shield & Coastal Taiga-Forests	bioregions/canadian-shield-coastal-taiga-forests-na9/	4	Canadian Boreal Forests	Subarctic America	subarctic-america
+NA15	Pacific Northwest Coastal Forests	bioregions/pacific-northwest-coastal-forests-na15/	5	North Pacific Coast	Northern America	northern-america
+NA16	Cascades Mountain Forests & Valleys	bioregions/cascades-mountain-forests-valleys-na16/	5	North Pacific Coast	Northern America	northern-america
+NA31	Greater California	bioregions/greater-california-na31/	5	North Pacific Coast	Northern America	northern-america
+NA13	Greater Rockies & Mountain Forests	bioregions/greater-rockies-mountain-forests-na13/	6	American West	Northern America	northern-america
+NA14	Northwest Intermountain Conifer Forests	bioregions/northwest-intermountain-conifer-forests-na14/	6	American West	Northern America	northern-america
+NA17	Columbia Plateau & Blue Mountains	bioregions/columbia-plateau-blue-mountains-na17/	6	American West	Northern America	northern-america
+NA18	Great Basin & Columbia Steppe	bioregions/great-basin-columbia-steppe-na18/	6	American West	Northern America	northern-america
+NA19	Colorado Plateau & Mountain Forests	bioregions/colorado-plateau-mountain-forests-na19/	6	American West	Northern America	northern-america
+NA29	Sierra Madre Forests & Mexican Drylands	bioregions/sierra-madre-forests-mexican-drylands-na29/	7	Mexican Drylands	Northern America	northern-america
+NA30	Baja California & Southern Deserts	bioregions/baja-california-southern-deserts-na30/	7	Mexican Drylands	Northern America	northern-america
+NA12	Northern Prairie & Aspen Forests	bioregions/northern-prairie-aspen-forests-na12/	8	Great Plains	Northern America	northern-america
+NA20	Southern Prairie Mixed Grasslands	bioregions/southern-prairie-mixed-grasslands-na20/	8	Great Plains	Northern America	northern-america
+NA21	Midwestern Tallgrass Prairie & Forest Transition bioregion	bioregions/midwestern-tallgrass-prairie-forest-transition-na21/	8	Great Plains	Northern America	northern-america
+NA10	Northeastern American Mixed Forests	bioregions/northeastern-american-mixed-forests-na10/	9	Northeast American Forests	Northern America	northern-america
+NA11	Northern Great Lakes Forests	bioregions/northern-great-lakes-forests-na11/	9	Northeast American Forests	Northern America	northern-america
+NA23	Interior Plateau & Southern Great Lakes Forests	bioregions/interior-plateau-southern-great-lakes-forests-na23/	9	Northeast American Forests	Northern America	northern-america
+NA24	Appalachia & Allegheny Interior Forests	bioregions/appalachia-allegheny-interior-forests-na24/	9	Northeast American Forests	Northern America	northern-america
+NA22	Ozarks Mixed Forests	bioregions/ozarks-mixed-forests-na22/	10	Southeast US Savannas & Forests	Northern America	northern-america
+NA25	Southeast Savannas & Riparian Forests	bioregions/southeast-savannas-riparian-forests-na25/	10	Southeast US Savannas & Forests	Northern America	northern-america
+NA26	Bermuda	bioregions/bermuda-na26/	10	Southeast US Savannas & Forests	Northern America	northern-america
+NA27	Western Gulf Coastal Grasslands	bioregions/western-gulf-coastal-grasslands-na27/	10	Southeast US Savannas & Forests	Northern America	northern-america
+NA28	Southern Mixed Forests & Blackland Prairies	bioregions/southern-mixed-forests-blackland-prairies-na28/	10	Southeast US Savannas & Forests	Northern America	northern-america
+PA47	Japanese Forest Islands	bioregions/japan-forest-islands-pa47/	36	Japanese Islands	Eastern Eurasia	eastern-eurasia
+PA45	Dzhagdy Mountain Conifer Forests	bioregions/dzhagdy-mountain-conifer-forests-pa45/	37	Northeast Asian Forests	Eastern Eurasia	eastern-eurasia
+PA46	Manchuria-Ussuri Mixed Forests & Meadow Steppes	bioregions/manchuria-ussuri-mixed-forests-meadow-steppes-pa46/	37	Northeast Asian Forests	Eastern Eurasia	eastern-eurasia
+PA48	Korean Peninsula Mixed Forests	bioregions/korean-peninsula-mixed-forests-pa48/	37	Northeast Asian Forests	Eastern Eurasia	eastern-eurasia
+PA42	Ordos Plateau Steppe & Mountain Conifer Forests	bioregions/ordos-plateau-steppe-mountain-conifer-forests-pa42/	38	Mongolian Grasslands	Eastern Eurasia	eastern-eurasia
+PA44	Mongolian Grasslands, Alpine Meadows & Forest Steppe	bioregions/mongolian-grasslands-alpine-meadows-forest-steppe-pa44/	38	Mongolian Grasslands	Eastern Eurasia	eastern-eurasia
+PA49	Loess Plateau & Huang He Plain Mixed Forests	bioregions/loess-plateau-huang-he-plain-mixed-forests-pa49/	39	Central East Asian Forests	Eastern Eurasia	eastern-eurasia
+PA50	Chang Jiang Plain Evergreen Forests	bioregions/chang-jiang-plain-evergreen-forests-pa50/	39	Central East Asian Forests	Eastern Eurasia	eastern-eurasia
+PA51	Sichuan Basin & Central Mountain Forests	bioregions/sichuan-basin-central-mountain-forests-pa51/	39	Central East Asian Forests	Eastern Eurasia	eastern-eurasia
+PA52	Guizhou & Yunnan Subtropical Forest Plateaus	bioregions/guizhou-yunnan-subtropical-forest-plateaus-pa52/	39	Central East Asian Forests	Eastern Eurasia	eastern-eurasia
+PA53	Hengduan Mountain Conifer Forests	bioregions/hengduan-mountain-conifer-forests-pa53/	39	Central East Asian Forests	Eastern Eurasia	eastern-eurasia
+PA40	Greater Tibetan Plateau	bioregions/greater-tibetan-plateau-alpine-meadows-shrublands-pa40/	40	Tibetan Plateau	Eastern Eurasia	eastern-eurasia
+PA41	Himalayan-Pamir Alpine Shrub & Meadows	bioregions/himalayan-pamir-alpine-shrub-meadows-pa41/	40	Tibetan Plateau	Eastern Eurasia	eastern-eurasia
+PA38	Junggar & Alashan Semi-deserts	bioregions/junggar-semi-desert-ermin-valley-steppe-pa38/	41	East Asian Deserts	Eastern Eurasia	eastern-eurasia
+PA39	Taklimakan Desert & Lowland Forests	bioregions/taklimakan-desert-lowland-deciduous-forests-pa39/	41	East Asian Deserts	Eastern Eurasia	eastern-eurasia
+PA43	Mongolian Desert Steppes	bioregions/greater-gobi-desert-pa43/	41	East Asian Deserts	Eastern Eurasia	eastern-eurasia

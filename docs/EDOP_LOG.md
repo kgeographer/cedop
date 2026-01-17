@@ -1,5 +1,14 @@
 ### EDOP LOG
 ----
+#### 16 Jan 2026
+- overhauled Ecoregions tab UX: map now shows child features matching the list (not parent geometry)
+- added 3 new geometry endpoints: `/api/eco/subrealms/geom`, `/api/eco/bioregions/geom`, `/api/eco/ecoregions/geom`
+- created `displayEcoFeatures()` function with 10-color palette, tooltips, bidirectional hover highlighting
+- wired up `gaz.bioregion_meta` table: bioregion list shows human-readable titles where available
+- added OneEarth external links with icon indicators (Bootstrap Icons CDN)
+- fixed nested `<a>` tag issue in bioregion list rendering (invalid HTML → `<span>` with onclick)
+- **added click-to-drill-down on map features** — clicking a polygon triggers same navigation as clicking list item
+
 #### 15 Jan 2026
 - diagnosed Wikipedia extraction issue: MediaWiki's `exlimit` silently limits full-text extracts to 1 page per batch request
 - fixed `scripts/refetch_wiki_extracts.py` to fetch one title at a time (0.2s delay, ~3 min for 847 titles)

@@ -24,7 +24,7 @@ HydroATLAS basin data. Building a proof-of-concept for funding partners (ISHI/Pi
   - Coordinates: manual lon/lat entry
   - Pill-specific explainer text (hides when signature displayed)
 - Basins: list 20 clusters of 190k sub-basins; display on map & list WH cities contained
-- Ecoregions: OneEarth biogeographic hierarchy drill-down (Realms → Subrealms → Bioregions → Ecoregions)
+- Ecoregions: OneEarth biogeographic hierarchy drill-down (Realms → Subrealms → Bioregions → Ecoregions); map shows child features with distinct colors, hover/click sync between map and list, OneEarth external links for bioregions
 - WH Cities: dropdown selection returns sig, options for similar cities (env + semantic)
 - WH Sites: dropdown selection returns sig, options for similar sites
 
@@ -37,6 +37,7 @@ HydroATLAS basin data. Building a proof-of-concept for funding partners (ISHI/Pi
 - `gaz."Subrealm2023"` — 53 subrealms (FK to realm via biogeorelm)
 - `gaz."Bioregions2023"` — 185 bioregions (FK to subrealm via subrealm_fk)
 - `gaz."Ecoregions2017"` — 847 ecoregions (FK to bioregion via bioregion_fk)
+- `gaz.bioregion_meta` — human-readable titles and OneEarth URL slugs for bioregions
 - `public.eco_wikitext` — Wikipedia extracts for 821/847 ecoregions (96.9% coverage), FK to Ecoregions2017
 
 ## Key Findings
@@ -67,10 +68,13 @@ Wikipedia text harvested for ecoregions to enable semantic enrichment of hierarc
 ## Ecoregions API Endpoints
 - `GET /api/eco/realms` — list realms with subrealm counts
 - `GET /api/eco/subrealms?realm=X` — list subrealms with bioregion counts
-- `GET /api/eco/bioregions?subrealm_id=X` — list bioregions with ecoregion counts
+- `GET /api/eco/bioregions?subrealm_id=X` — list bioregions with ecoregion counts (includes title from bioregion_meta)
 - `GET /api/eco/ecoregions?bioregion=X` — list ecoregions with biome info
 - `GET /api/eco/geom?level=X&id=Y` — GeoJSON geometry for any hierarchy level
 - `GET /api/eco/realms/geom` — FeatureCollection of all realm geometries
+- `GET /api/eco/subrealms/geom?realm=X` — FeatureCollection of subrealms within a realm
+- `GET /api/eco/bioregions/geom?subrealm_id=X` — FeatureCollection of bioregions within a subrealm
+- `GET /api/eco/ecoregions/geom?bioregion=X` — FeatureCollection of ecoregions within a bioregion
 
 ## Deployment
 - **Production**: edop.kgeographer.org (Digital Ocean droplet)
