@@ -29,18 +29,35 @@
 
 <!-- About Modal -->
 <div class="modal fade" id="about-modal" tabindex="-1" aria-labelledby="about-modal-label" aria-hidden="true">
-  <div class="modal-dialog" style="max-width: 75%;">
+  <div class="modal-dialog modal-dialog-scrollable" style="max-width: 75%;">
     <div class="modal-content">
       <div class="modal-header">
         <h4 class="modal-title" id="about-modal-label">About EDOP</h4>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <h5>Technical</h5>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-        <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        <h5 style="color:#993333;">Technical</h5>
+        <p>EDOP assigns environmental signatures to geographic coordinates by identifying the HydroATLAS sub-basin (level 08, ~190k globally) containing each point. Each signature comprises 47 attributes spanning climate, terrain, hydrology, land cover, and soil characteristics—organized into persistence tiers from geological (stable over millennia) to anthropogenic (changing within decades).</p>
 
-        <h5 class="mt-4">Project Mission</h5>
+        <p><strong>Data Sources</strong></p>
+        <ul>
+          <li><strong>BasinATLAS</strong> (WWF/McGill): 1.5M sub-basins with 281 environmental attributes; we use level 08 (~190k basins, median 200 km²)</li>
+          <li><strong>OneEarth Bioregions</strong>: 847 ecoregions in a 4-level hierarchy (Realms → Subrealms → Bioregions → Ecoregions)</li>
+          <li><strong>Wikipedia</strong>: LLM-summarized descriptions for 821 ecoregions (96.9% coverage)</li>
+          <li><strong>World Historical Gazetteer</strong>: Place name resolution and coordinate matching</li>
+        </ul>
+
+        <p><strong>Stack</strong></p>
+        <ul>
+          <li>FastAPI + PostgreSQL/PostGIS + pgvector</li>
+          <li>50-dimensional PCA vectors enable continuous similarity ranking via cosine distance</li>
+          <li>No frontend framework; vanilla JavaScript + Leaflet + Bootstrap</li>
+        </ul>
+
+        <p><strong>API</strong><br>
+        RESTful endpoints return signatures, similarity rankings, and ecoregion metadata. Documentation at <a href="/docs" target="_blank">/docs</a>. Code at <a href="https://github.com/kgeographer/edop" target="_blank">github.com/kgeographer/edop</a>.</p>
+
+        <h5 class="mt-4" style="color:#993333;">Project Mission</h5>
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
         <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
       </div>

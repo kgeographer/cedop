@@ -3,11 +3,15 @@ NEXT 15 Jan, 9am
 BUGS
 ----
 - strategy for 1st 10 results for "Denver" in US don't include Colorado capitol
+- last ecoregion polygons remain on map; need to clear map of features on tab/pill switch
+- WHG place record link persists between tab changes
+- realm geometries show sometimes on other tabs
 /- filter WH cities dropdown (under #tab-whc) where basin_id in wh_cities is null
 
 
 GUI
 ---
+- 
 /- title "Environmental profile" should appear only after resolving a place
 /- "resolved" place div unnecessary, but payload upon WHG place resolution should be available as tooltip from a link
 /- header <h3> should restore main tab (home)
