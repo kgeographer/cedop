@@ -69,7 +69,28 @@ Band D (Anthropocene markers: GDP, HDI, etc.) shows strong correlations but is *
 ## Demo Narrative
 > "EDOP assigns environmental signatures to any geographic location. When linked to D-PLACE's 1,291 ethnographically documented societies, environmental dimensions—particularly temperature and water availability—explain substantial variance in subsistence strategies. Warm climates enabled agriculture; arid environments supported camelid pastoralism; wet environments supported pig husbandry. These correlations use signature fields organized by persistence bands, excluding modern Anthropocene markers to focus on historically relevant constraints."
 
-## Next Steps
-- Consider UI for D-PLACE exploration (new tab?)
-- API endpoints for society lookup
-- Map visualization with society points colored by subsistence type
+## Societies Tab UI
+
+### New Tab Added
+- **Societies** tab with 1,291 D-PLACE societies displayed as map markers
+- Explanatory text describing D-PLACE data and EDOP integration
+
+### Spatial Join: Bioregions
+- Added `bioregion_id` column to `dplace_societies` (varchar, e.g., 'AT20')
+- 1,281/1,291 (99.2%) assigned via ST_Contains join to Bioregions2023
+- Better coverage than basins since bioregion polygons include more islands
+
+### API Endpoint
+- `GET /api/societies` — returns all societies with coordinates, bioregion, and EA042 subsistence data
+- Includes `subsistence_categories` with counts for UI
+
+### Subsistence Filter (EA042)
+- Accordion-style query panel with "Dominant subsistence (EA042)" header
+- Click to expand: 8 radio buttons (All + 7 subsistence types)
+- Categories: Gathering, Hunting, Fishing, Pastoralism, Extensive agriculture, Intensive agriculture, Agriculture type unknown
+- Excluded "Two or more sources" as it indicates provenance, not subsistence
+- Default: all societies with data colored by subsistence type; no-data greyed out
+- Filter: selected category colored, others faded (reduced opacity)
+
+### Output
+- `output/dplace/unassigned_societies.csv` — 158 societies outside basin coverage for QGIS review

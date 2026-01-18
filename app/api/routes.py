@@ -1780,3 +1780,87 @@ def eco_wikitext(eco_id: int):
     finally:
         if 'conn' in locals():
             conn.close()
+
+
+# -----------------------
+# D-PLACE Societies
+# -----------------------
+
+@router.get("/societies")
+def societies():
+    """Return all D-PLACE societies with coordinates, bioregion, and cultural variables."""
+    import psycopg
+    import os
+
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5435"),
+            dbname=os.environ.get("PGDATABASE", "edop"),
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+        )
+        with conn.cursor() as cur:
+            # Get societies with bioregion and EA042 (dominant subsistence)
+            cur.execute("""
+                SELECT s.id, s.name, s.region, s.bioregion_id,
+                       m.title as bioregion_name,
+                       ST_X(s.geom) as lon, ST_Y(s.geom) as lat,
+                       c.name as subsistence
+                FROM gaz.dplace_societies s
+                LEFT JOIN gaz.bioregion_meta m ON m.bioregion_id = s.bioregion_id
+                LEFT JOIN gaz.dplace_data d ON d.soc_id = s.id AND d.var_id = 'EA042'
+                LEFT JOIN gaz.dplace_codes c ON c.id = d.code_id
+                    AND c.name NOT IN ('Missing data', '', 'Missing for at least 1 activity', 'Two or more sources')
+                ORDER BY s.bioregion_id, s.name
+            """)
+            rows = cur.fetchall()
+
+            societies = []
+            for row in rows:
+                societies.append({
+                    "id": row[0],
+                    "name": row[1],
+                    "region": row[2],
+                    "bioregion_id": row[3],
+                    "bioregion_name": row[4],
+                    "lon": row[5],
+                    "lat": row[6],
+                    "subsistence": row[7]
+                })
+
+            # Get unique bioregions for legend
+            bioregions = []
+            seen = set()
+            for s in societies:
+                if s["bioregion_id"] and s["bioregion_id"] not in seen:
+                    seen.add(s["bioregion_id"])
+                    bioregions.append({
+                        "id": s["bioregion_id"],
+                        "name": s["bioregion_name"]
+                    })
+            bioregions.sort(key=lambda x: x["id"])
+
+            # Get subsistence categories with counts
+            subsistence_counts = {}
+            for s in societies:
+                sub = s["subsistence"]
+                if sub:
+                    subsistence_counts[sub] = subsistence_counts.get(sub, 0) + 1
+            subsistence_categories = [
+                {"name": k, "count": v}
+                for k, v in sorted(subsistence_counts.items(), key=lambda x: -x[1])
+            ]
+
+            return {
+                "count": len(societies),
+                "bioregions": bioregions,
+                "subsistence_categories": subsistence_categories,
+                "societies": societies
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'conn' in locals():
+            conn.close()

@@ -36,6 +36,19 @@ pre {
 .nav-item .nav-link {
   border: gainsboro 1px solid;
 }
+/*.nav-tabs {*/
+/*    --bs-nav-link-padding-x: 0.6rem;*/
+/*    --bs-nav-link-padding-y: 0.4rem;*/
+/*}*/
+
+.nav-tabs .nav-link {
+    padding: 0.6rem;
+}
+
+.breadcrumb-item .breadcrumb-item active{
+  font-size: 0.7rem !important;
+}
+
 .edop-subtitle {
   font-size: 1rem;
   white-space: nowrap;
