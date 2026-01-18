@@ -1,5 +1,13 @@
 ### EDOP LOG
 ----
+#### 18 Jan 2026
+- integrated D-PLACE cultural database: 1,291 societies, 94 anthropological variables, 121k observations
+- spatial join: added `basin_id` and `eco_id` to `dplace_societies` (87% coverage)
+- created correlation scripts: `dplace_env_correlations_signature.py` uses EDOP signature fields by band
+- **key finding**: temperature explains 40% of variance in agriculture intensity; runoff explains 17% of domestic animal type
+- excluded Band D (Anthropocene markers) as anachronistic for historical inquiry
+- output: `output/dplace/correlations_signature_bands_ABC.csv`, `analysis_narrative_18Jan2026.md`
+
 #### 17 Jan 2026
 - created `scripts/summarize_ecoregion_text.py` — Claude Sonnet batch summarization of ecoregion Wikipedia text
 - added `summary` column to `eco_wikitext` table; generated 821 summaries (150-200 words, geo/eco focus)

@@ -39,6 +39,10 @@ HydroATLAS basin data. Building a proof-of-concept for funding partners (ISHI/Pi
 - `gaz."Ecoregions2017"` — 847 ecoregions (FK to bioregion via bioregion_fk)
 - `gaz.bioregion_meta` — human-readable titles and OneEarth URL slugs for bioregions
 - `public.eco_wikitext` — Wikipedia extracts for 821/847 ecoregions (96.9% coverage), FK to Ecoregions2017; includes `summary` column with LLM-generated 150-200 word summaries
+- `gaz.dplace_societies` — 1,291 D-PLACE societies with basin_id and eco_id FKs (87% coverage)
+- `gaz.dplace_variables` — 94 anthropological variables
+- `gaz.dplace_codes` — coded values for categorical variables
+- `gaz.dplace_data` — 121k observations linking societies to variable values
 
 ## Key Findings
 - Environmental and text similarity are complementary (45% cluster agreement)
@@ -66,6 +70,24 @@ When user drills down to ecoregion level, the detail card shows:
 **API:** `GET /api/eco/wikitext?eco_id=X` returns `{eco_id, eco_name, summary, wiki_url}`
 
 **Realm ordering:** Priority realms (Subarctic America, North America, Eastern Eurasia) sorted to top with note about bioregion data completeness.
+
+## D-PLACE Integration (18 Jan 2026)
+D-PLACE (Database of Places, Language, Culture, and Environment) integrated to explore environment-culture correlations.
+
+**Data:** 1,291 societies, 94 anthropological variables, 121k coded observations. Focal years 1850-1940.
+
+**Spatial joins:** `basin_id` and `eco_id` added to `dplace_societies` via PostGIS ST_Contains (87% coverage).
+
+**Scripts:**
+- `scripts/dplace_env_correlations_signature.py` — correlations using EDOP signature fields by band
+- `scripts/dplace_env_correlations_exploratory.py` — exploratory analysis with hand-picked basin08 variables
+
+**Key findings (Bands A-C, excluding D):**
+- Temperature → agriculture intensity (η² = 0.40): warm climates enable farming
+- Runoff → domestic animal type (η² = 0.17): camelids in arid, pigs in wet
+- Band D (Anthropocene markers) excluded as anachronistic for historical inquiry
+
+**Output:** `output/dplace/correlations_signature_bands_ABC.csv`, `analysis_narrative_18Jan2026.md`
 
 ## Key Files
 - `docs/edop_database_schema.md` — comprehensive schema reference
