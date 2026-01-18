@@ -11,6 +11,8 @@
 - `/api/societies` endpoint returns societies with bioregion and EA042 subsistence data
 - accordion-style subsistence filter (EA042): 7 categories with color-coded radio buttons
 - markers colored by subsistence type; filtered view fades non-matching markers
+- **top ecoregions by realm**: selecting subsistence filter shows top 3 ecoregions per realm in 2-column display
+- API joins through OneEarth hierarchy (Bioregions2023 → Subrealm2023 → Realm2023) for proper realm names
 
 #### 17 Jan 2026
 - created `scripts/summarize_ecoregion_text.py` — Claude Sonnet batch summarization of ecoregion Wikipedia text

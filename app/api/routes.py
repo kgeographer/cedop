@@ -1801,23 +1801,33 @@ def societies():
             password=os.environ.get("PGPASSWORD", ""),
         )
         with conn.cursor() as cur:
-            # Get societies with bioregion and EA042 (dominant subsistence)
+            # Get societies with bioregion, ecoregion, realm, and EA042 (dominant subsistence)
             cur.execute("""
                 SELECT s.id, s.name, s.region, s.bioregion_id,
                        m.title as bioregion_name,
                        ST_X(s.geom) as lon, ST_Y(s.geom) as lat,
-                       c.name as subsistence
+                       c.name as subsistence,
+                       s.eco_id, e.eco_name,
+                       r.realm
                 FROM gaz.dplace_societies s
                 LEFT JOIN gaz.bioregion_meta m ON m.bioregion_id = s.bioregion_id
                 LEFT JOIN gaz.dplace_data d ON d.soc_id = s.id AND d.var_id = 'EA042'
                 LEFT JOIN gaz.dplace_codes c ON c.id = d.code_id
                     AND c.name NOT IN ('Missing data', '', 'Missing for at least 1 activity', 'Two or more sources')
+                LEFT JOIN gaz."Ecoregions2017" e ON e.eco_id = s.eco_id
+                LEFT JOIN gaz."Bioregions2023" b ON b.bioregions = s.bioregion_id
+                LEFT JOIN gaz."Subrealm2023" sr ON sr.subrealmid = b.subrealm_id
+                LEFT JOIN gaz."Realm2023" r ON r.biogeorelm = sr.biogeorelm
                 ORDER BY s.bioregion_id, s.name
             """)
             rows = cur.fetchall()
 
             societies = []
             for row in rows:
+                # Strip parenthetical content from realm
+                realm = row[10]
+                if realm and '(' in realm:
+                    realm = realm.split('(')[0].strip()
                 societies.append({
                     "id": row[0],
                     "name": row[1],
@@ -1826,7 +1836,10 @@ def societies():
                     "bioregion_name": row[4],
                     "lon": row[5],
                     "lat": row[6],
-                    "subsistence": row[7]
+                    "subsistence": row[7],
+                    "eco_id": row[8],
+                    "eco_name": row[9],
+                    "realm": realm
                 })
 
             # Get unique bioregions for legend

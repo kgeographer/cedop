@@ -54,3 +54,11 @@ pre {
   white-space: nowrap;
   padding: 2px;
 }
+
+#soc_blurb {
+  font-size: smaller;
+}
+
+.red-subhead {
+  color: #993333;
+}

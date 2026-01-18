@@ -94,3 +94,11 @@ Band D (Anthropocene markers: GDP, HDI, etc.) shows strong correlations but is *
 
 ### Output
 - `output/dplace/unassigned_societies.csv` — 158 societies outside basin coverage for QGIS review
+
+### Top Ecoregions by Realm Display
+- When user selects a subsistence filter, displays top 3 ecoregions per realm below the map
+- Grouped by OneEarth realm names in 2-column layout
+- API enhanced to join through bioregion hierarchy: Bioregions2023 → Subrealm2023 → Realm2023
+- Realm names stripped of parenthetical content (e.g., "South America" not "South America (lower Neotropic)")
+- 14 realms represented: Afrotropics (496), North America (234), Australasia (100), etc.
+- Generic `dplace-results` container created for reuse with future query outputs
