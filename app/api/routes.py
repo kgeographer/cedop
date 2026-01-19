@@ -1716,7 +1716,7 @@ def eco_geom(level: str, id: str):
                 """, (id,))
             elif level == 'ecoregion':
                 cur.execute("""
-                    SELECT eco_name, ST_AsGeoJSON(geom)::json, oneearth_slug
+                    SELECT eco_name, ST_AsGeoJSON(geom)::json
                     FROM gaz."Ecoregions2017" WHERE eco_id = %s
                 """, (int(id),))
 
@@ -1724,16 +1724,12 @@ def eco_geom(level: str, id: str):
             if not row:
                 return {"error": "Not found"}
 
-            result = {
+            return {
                 "level": level,
                 "id": id,
                 "name": row[0],
                 "geometry": row[1]
             }
-            # Add oneearth_slug for ecoregions
-            if level == 'ecoregion' and len(row) > 2 and row[2]:
-                result["oneearth_slug"] = row[2]
-            return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

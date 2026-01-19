@@ -3092,12 +3092,12 @@
 
       socLayer.addTo(map);
 
-      // Fit map to markers on initial load only
+      // Fit map to markers on initial load only (zoomed out a bit for context)
       const isAllFilter = (socActiveQuery === 'religion' ? socReligionFilter : socSubsistenceFilter) === 'all';
       if (isAllFilter && data.societies.length > 0) {
         const bounds = socLayer.getBounds();
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [20, 20] });
+          map.fitBounds(bounds.pad(0.15), { padding: [20, 20] });
         }
       }
 
