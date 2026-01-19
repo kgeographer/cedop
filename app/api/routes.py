@@ -1801,14 +1801,15 @@ def societies():
             password=os.environ.get("PGPASSWORD", ""),
         )
         with conn.cursor() as cur:
-            # Get societies with bioregion, ecoregion, realm, and EA042 (dominant subsistence)
+            # Get societies with bioregion, ecoregion, realm, basin cluster, and EA042 (dominant subsistence)
             cur.execute("""
                 SELECT s.id, s.name, s.region, s.bioregion_id,
                        m.title as bioregion_name,
                        ST_X(s.geom) as lon, ST_Y(s.geom) as lat,
                        c.name as subsistence,
                        s.eco_id, e.eco_name,
-                       r.realm
+                       r.realm,
+                       ba.cluster_id
                 FROM gaz.dplace_societies s
                 LEFT JOIN gaz.bioregion_meta m ON m.bioregion_id = s.bioregion_id
                 LEFT JOIN gaz.dplace_data d ON d.soc_id = s.id AND d.var_id = 'EA042'
@@ -1818,6 +1819,7 @@ def societies():
                 LEFT JOIN gaz."Bioregions2023" b ON b.bioregions = s.bioregion_id
                 LEFT JOIN gaz."Subrealm2023" sr ON sr.subrealmid = b.subrealm_id
                 LEFT JOIN gaz."Realm2023" r ON r.biogeorelm = sr.biogeorelm
+                LEFT JOIN basin08 ba ON ba.hybas_id::bigint = s.basin_id
                 ORDER BY s.bioregion_id, s.name
             """)
             rows = cur.fetchall()
@@ -1839,7 +1841,8 @@ def societies():
                     "subsistence": row[7],
                     "eco_id": row[8],
                     "eco_name": row[9],
-                    "realm": realm
+                    "realm": realm,
+                    "cluster_id": row[11]
                 })
 
             # Get unique bioregions for legend

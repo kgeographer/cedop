@@ -278,6 +278,18 @@
               <div id="soc-subsistence-radios" class="d-flex flex-wrap gap-2">
                 <!-- Radio buttons populated by JS -->
               </div>
+              <hr class="my-2">
+              <div class="d-flex align-items-center small">
+                <span class="text-muted me-2">Show:</span>
+                <div class="form-check form-check-inline mb-0">
+                  <input class="form-check-input" type="radio" name="soc-display-mode" id="soc-mode-eco" value="ecoregions" checked>
+                  <label class="form-check-label" for="soc-mode-eco">Ecoregions by realm</label>
+                </div>
+                <div class="form-check form-check-inline mb-0">
+                  <input class="form-check-input" type="radio" name="soc-display-mode" id="soc-mode-basin" value="basins">
+                  <label class="form-check-label" for="soc-mode-basin">Basin clusters</label>
+                </div>
+              </div>
             </div>
           </div>
           <div id="soc-content"></div>
@@ -1070,28 +1082,28 @@
   let basinClusters = [];
   let selectedClusterId = null;
 
-  // Pattern labels derived from city distributions and basin characteristics
+  // Environmental cluster labels based on temperature, moisture, and elevation
   const CLUSTER_LABELS = {
-    0: 'Temperate continental',
-    1: 'Arctic highlands',
-    2: 'Desert/arid',
-    3: 'Volcanic/tectonic highlands',
-    4: 'Hot desert',
-    5: 'Subarctic/boreal',
-    6: 'Subtropical seasonal',
-    7: 'Major river floodplains',
-    8: 'Semi-arid highlands',
-    9: 'Arctic alpine',
-    10: 'Tropical plateau',
-    11: 'Mediterranean',
-    12: 'Nordic fjord/coastal',
-    13: 'High Andes',
-    14: 'Mexican highlands',
-    15: 'Subarctic continental',
-    16: 'Tropical coastal',
-    17: 'Sahel/tropical dry',
+    0: 'Cool humid lowland',
+    1: 'Frigid highland',
+    2: 'Warm semi-arid',
+    3: 'Cool humid upland',
+    4: 'Hot arid',
+    5: 'Cold boreal',
+    6: 'Hot seasonal humid',
+    7: 'Warm wet floodplain',
+    8: 'Warm subhumid upland',
+    9: 'Frigid alpine',
+    10: 'Hot humid upland',
+    11: 'Warm semi-arid upland',
+    12: 'Cold subhumid lowland',
+    13: 'Cold high plateau',
+    14: 'Warm humid highland',
+    15: 'Frigid montane',
+    16: 'Hot wet lowland',
+    17: 'Hot subhumid lowland',
     18: 'Cold semi-arid',
-    19: 'Central Asian steppe'
+    19: 'Cool semi-arid upland'
   };
 
   function basinSetStatus(msg) {
@@ -2839,6 +2851,7 @@
     const NO_DATA_COLOR = '#999';
 
     let socSubsistenceFilter = 'all';  // Current filter: 'all' or a subsistence name
+    let socDisplayMode = 'ecoregions';  // 'ecoregions' or 'basins'
 
     async function loadSocieties() {
       if (socData) {
@@ -2872,6 +2885,16 @@
           chevron.classList.toggle('bi-chevron-down', isOpen);
           chevron.classList.toggle('bi-chevron-up', !isOpen);
         }
+      });
+
+      // Wire display mode radios
+      document.querySelectorAll('input[name="soc-display-mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          socDisplayMode = e.target.value;
+          if (socData && socSubsistenceFilter !== 'all') {
+            renderDplaceResults(socData);
+          }
+        });
       });
     }
 
@@ -2962,8 +2985,16 @@
         }
       }
 
-      // Update top ecoregions display
-      renderTopEcoregions(data);
+      // Update results display (ecoregions or basin clusters)
+      renderDplaceResults(data);
+    }
+
+    function renderDplaceResults(data) {
+      if (socDisplayMode === 'basins') {
+        renderBasinClusters(data);
+      } else {
+        renderTopEcoregions(data);
+      }
     }
 
     function renderTopEcoregions(data) {
@@ -3017,6 +3048,56 @@
         realmTotals.map(r => {
           const items = r.ecos.map(e => `<li>${escapeHtml(e.name)} (${e.count})</li>`).join('');
           return `<div class="col-6 mb-2"><strong>${escapeHtml(r.realm)}</strong><ol class="mb-0 ps-3">${items}</ol></div>`;
+        }).join('') +
+        '</div>';
+
+      content.innerHTML = html;
+      container.style.display = 'block';
+    }
+
+    function renderBasinClusters(data) {
+      const container = document.getElementById('dplace-results');
+      const heading = document.getElementById('dplace-results-heading');
+      const content = document.getElementById('dplace-results-content');
+      if (!container || !heading || !content) return;
+
+      if (socSubsistenceFilter === 'all') {
+        container.style.display = 'none';
+        return;
+      }
+
+      // Count societies per cluster for selected subsistence
+      const clusterCounts = {};  // cluster_id → count
+      data.societies.forEach(soc => {
+        if (soc.subsistence === socSubsistenceFilter && soc.cluster_id != null) {
+          const cid = soc.cluster_id;
+          clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
+        }
+      });
+
+      if (Object.keys(clusterCounts).length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      // Sort by count descending
+      const sorted = Object.entries(clusterCounts)
+        .map(([cid, count]) => ({ cluster_id: parseInt(cid), count }))
+        .sort((a, b) => b.count - a.count);
+
+      // Render heading
+      heading.textContent = `Basin clusters for ${socSubsistenceFilter}`;
+
+      // Render as list with badges (similar to Basins tab)
+      const html = '<div class="list-group list-group-flush small">' +
+        sorted.map(c => {
+          const label = CLUSTER_LABELS[c.cluster_id] || `Cluster ${c.cluster_id}`;
+          return `
+            <div class="list-group-item d-flex justify-content-between align-items-center py-1 px-2">
+              <span>${escapeHtml(label)}</span>
+              <span class="badge bg-primary">${c.count}</span>
+            </div>
+          `;
         }).join('') +
         '</div>';
 
