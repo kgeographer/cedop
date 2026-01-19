@@ -8,7 +8,7 @@
     <div class="col-12 col-lg-6">
       <ul class="nav nav-tabs" id="edopTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-main" data-bs-toggle="tab" data-bs-target="#panel-main" type="button" role="tab" aria-controls="panel-main" aria-selected="false">Main</button>
+          <button class="nav-link active" id="tab-main" data-bs-toggle="tab" data-bs-target="#panel-main" type="button" role="tab" aria-controls="panel-main" aria-selected="true">Main</button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="tab-basins" data-bs-toggle="tab" data-bs-target="#panel-basins" type="button" role="tab" aria-controls="panel-basins" aria-selected="false">Basins</button>
@@ -17,20 +17,20 @@
           <button class="nav-link" id="tab-eco" data-bs-toggle="tab" data-bs-target="#panel-eco" type="button" role="tab" aria-controls="panel-eco" aria-selected="false">Ecoregions</button>
         </li>
         <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-soc" data-bs-toggle="tab" data-bs-target="#panel-soc" type="button" role="tab" aria-controls="panel-soc" aria-selected="false">Societies</button>
+        </li>
+        <li class="nav-item" role="presentation">
           <button class="nav-link" id="tab-whc" data-bs-toggle="tab" data-bs-target="#panel-whc" type="button" role="tab" aria-controls="panel-whc" aria-selected="false">WH Cities</button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="tab-wh" data-bs-toggle="tab" data-bs-target="#panel-wh" type="button" role="tab" aria-controls="panel-wh" aria-selected="false">WH Sites</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="tab-soc" data-bs-toggle="tab" data-bs-target="#panel-soc" type="button" role="tab" aria-controls="panel-soc" aria-selected="true">Societies</button>
         </li>
       </ul>
 
       <div class="tab-content pt-3" id="edopTabContent">
 
         <!-- MAIN TAB -->
-        <div class="tab-pane fade" id="panel-main" role="tabpanel" aria-labelledby="tab-main">
+        <div class="tab-pane fade show active" id="panel-main" role="tabpanel" aria-labelledby="tab-main">
           <h5 class="mb-2 d-flex justify-content-between align-items-center">
             Resolve place
             <a href="#" id="whg-reset-filter" class="small text-muted" style="display:none;">reset filter</a>
@@ -265,7 +265,7 @@
         </div>
 
         <!-- SOCIETIES TAB (D-PLACE) -->
-        <div class="tab-pane fade show active" id="panel-soc" role="tabpanel" aria-labelledby="tab-soc">
+        <div class="tab-pane fade" id="panel-soc" role="tabpanel" aria-labelledby="tab-soc">
           <h4 class="mb-1">D-PLACE Societies</h4>
           <p class="subhead5">1,291 ethnographically documented societies from <a href="https://d-place.org/" target="_blank">D-PLACE</a></p>
           <p class="text-muted" id="soc_blurb"><b>D-PLACE</b> (Database of Places, Language, Culture, and Environment) provides coded observations for 94 anthropological variables across subsistence strategies, settlement patterns, kinship systems, and social organization. Focal years are typically 1850–1940, representing the "ethnographic present." Of these societies, 87% have been spatially joined to EDOP's environmental signatures, enabling exploration of environment-culture relationships. 158 (13%) lack basin assignments (islands, coastal locations). Initial marker colors differentiate <a href="https://www.oneearth.org/bioregions/" target="_blank"> OneEarth Bioregions</a>.</p>
@@ -3506,8 +3506,6 @@
       }
     }
 
-    // Load societies since Societies tab is active on page load (temporary during development)
-    loadSocieties();
 
   });
 </script>

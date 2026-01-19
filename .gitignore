@@ -15,6 +15,7 @@ articles/*.pdf
 
 output/basin08_pca_coords.npy
 misc/DEPLOYING.txt
+pitches/
 
 # Optional: also ignore large derived spreadsheets if you don't want them tracked
 # metadata/*.xlsx

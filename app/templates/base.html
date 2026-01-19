@@ -19,10 +19,10 @@
 <header class="ms-3">
   <h3 class="d-flex align-items-center justify-content-between">
     <a href="#" id="site-title" class="text-decoration-none text-reset" style="cursor:pointer;">Environmental Dimensions of Place (EDOP)</a>
-    <span class="d-flex align-items-center gap-2 fs-5">
-      <a href="#" data-bs-toggle="modal" data-bs-target="#about-modal">About</a>
-      <a href="http://edop.kgeographer.org/docs" target="_blank">API docs</a>
-      <span class="badge bg-primary fw-normal">v0.1 prototype, Jan. 2026</span>
+    <span class="d-flex align-items-center gap-2">
+      <a href="#" class="fs-6 fw-normal me-2" data-bs-toggle="modal" data-bs-target="#about-modal">About</a>
+      <a href="http://edop.kgeographer.org/docs" target="_blank" class="fs-6 fw-normal me-3">API docs</a>
+      <span class="badge rounded-pill bg-secondary fw-normal fs-6">v0.1 prototype, Jan. 2026</span>
     </span>
   </h3>
 </header>
@@ -36,14 +36,18 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <h5 style="color:#993333;">About EDOP</h5>
+        <p>EDOP (Environmental Dimensions of Place) is an experimental platform for exploring the environmental context of historical and contemporary places. Building on geographer Carl Sauer's concept of cultural landscape—the mutually shaping relationship between physical environment and human activity—EDOP generates environmental "signatures" for locations worldwide using multi-scale datasets from global geographic realms to ecoregions down to 40km² subbasins. These signatures draw from over 190,000 hydrological units characterized across four temporal "persistence bands": physiographic bedrock (long-term geology and topography), hydro-climatic baselines (drainage, runoff, aridity), bioclimatic proxies (vegetation and productivity indicators), and Anthropocene markers (modern land use and human modification). This allows researchers to selectively query environmental conditions relevant to different historical periods and research questions.</p>
+        <p>Beyond environmental profiling, EDOP links these signatures with cultural and semantic data—including anthropological variables from the D-PLACE project covering subsistence, settlement, and social organization for over 1,200 documented societies, and for heritage cities, Wikipedia-derived discourse patterns across environment, history, culture, and modern themes. The platform supports queries like "Which ancient cities shared similar environmental constraints?" or "How does environmental context correlate with cultural patterns?" All functionality is exposed via API endpoints, enabling integration with existing gazetteer infrastructure such as the World Historical Gazetteer and Pleiades. EDOP is under active development and welcomes scholarly partnerships and institutional support.</p>
         <h5 style="color:#993333;">Technical</h5>
         <p>EDOP assigns environmental signatures to geographic coordinates by identifying the HydroATLAS sub-basin (level 08, ~190k globally) containing each point. Each signature comprises 47 attributes spanning climate, terrain, hydrology, land cover, and soil characteristics—organized into persistence tiers from geological (stable over millennia) to anthropogenic (changing within decades).</p>
 
         <p><strong>Data Sources</strong></p>
         <ul>
-          <li><strong>BasinATLAS</strong> (WWF/McGill): 1.5M sub-basins with 281 environmental attributes; we use level 08 (~190k basins, median 200 km²)</li>
-          <li><strong>OneEarth Bioregions</strong>: 847 ecoregions in a 4-level hierarchy (Realms → Subrealms → Bioregions → Ecoregions)</li>
-          <li><strong>Wikipedia</strong>: LLM-summarized descriptions for 821 ecoregions (96.9% coverage)</li>
+          <li><a href="https://www.hydrosheds.org/products/hydrobasins" target="_blank">
+            <strong>BasinATLAS Framework</strong></a>: 190,000 sub-basins with 300 environmental attributes; we use level 08 (~190k basins, median 200 km²) and a subset of 47 attributes.</li>
+          <li><a href="https://www.oneearth.org/bioregions-2023/" target="_blank"><strong>OneEarth Bioregions</strong></a>: 847 ecoregions in a 4-level hierarchy (Realms → Subrealms → Bioregions → Ecoregions)</li>
+          <li><strong>Wikipedia</strong>: LLM-summarized descriptions for 821 ecoregions (96.9% coverage) and selected World Heritage sites and cities</li>
           <li><strong>World Historical Gazetteer</strong>: Place name resolution and coordinate matching</li>
         </ul>
 
@@ -51,15 +55,12 @@
         <ul>
           <li>FastAPI + PostgreSQL/PostGIS + pgvector</li>
           <li>50-dimensional PCA vectors enable continuous similarity ranking via cosine distance</li>
-          <li>No frontend framework; vanilla JavaScript + Leaflet + Bootstrap</li>
+          <li>Frontend: Vanilla JavaScript + Leaflet + Bootstrap</li>
         </ul>
 
         <p><strong>API</strong><br>
         RESTful endpoints return signatures, similarity rankings, and ecoregion metadata. Documentation at <a href="/docs" target="_blank">/docs</a>. Code at <a href="https://github.com/kgeographer/edop" target="_blank">github.com/kgeographer/edop</a>.</p>
 
-        <h5 class="mt-4" style="color:#993333;">Project Mission</h5>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-        <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
