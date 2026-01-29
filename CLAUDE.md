@@ -1,107 +1,76 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Read this first when starting a Claude Code session.
 
 ## Project Overview
 
-EDOP (Environmental Dimensions of Place) is a Python/FastAPI web application that provides environmental analytics for spatial humanities research. It exposes global physical geographic and climatic data from the BasinATLAS dataset as normalized "environmental signatures" for any geographic location.
+EDOP (Environmental Dimensions of Place) is a Python/FastAPI web application providing environmental analytics for spatial humanities research. It exposes global physical geographic and climatic data from BasinATLAS as normalized "environmental signatures" for any location, with integrations to D-PLACE cultural data, OneEarth ecoregions, and World Heritage Cities.
 
-## Tech Stack
-
-- **Backend**: FastAPI 0.1, Python 3.10+
-- **Database**: PostgreSQL 12+ with PostGIS extension
-- **Frontend**: Vanilla JavaScript, Bootstrap 5.3.3, Leaflet 1.9.4 (CDN)
-- **Package Manager**: pip
-
-## Running the Application
+## Quick Start
 
 ```bash
-# Install dependencies
 pip install fastapi uvicorn psycopg[binary] python-dotenv certifi
-
-# Run development server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Open http://localhost:8000
-
-## Environment Variables
-
-Create a `.env` file with:
-```
-PGHOST=localhost
-PGPORT=5435
-PGDATABASE=edop
-PGUSER=postgres
-PGPASSWORD=
-WHG_API_TOKEN=<token>
-```
-
-## Database Setup
-
-Run SQL scripts in order:
-```bash
-psql -h localhost -p 5435 -U postgres -d edop < sql/basin_atlas_08.sql
-psql -h localhost -p 5435 -U postgres -d edop < sql/ecoregion_view.sql
-psql -h localhost -p 5435 -U postgres -d edop < sql/overrides.sql
-```
+Requires `.env` with `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `WHG_API_TOKEN`.
 
 ## Architecture
 
 ```
 app/
-├── main.py           # FastAPI app init, mounts routers and static files
-├── settings.py       # Loads .env, exposes WHG_API_TOKEN
-├── api/routes.py     # REST endpoints (/api/signature, /api/resolve, etc.)
-├── db/signature.py   # Core data logic: PostgreSQL queries, elevation APIs, profile formatting
-├── web/pages.py      # Jinja2 template routes (GET /)
-├── templates/        # HTML templates (base.html, index.html)
-└── static/           # CSS, JS, vendor assets
+├── main.py              # FastAPI app init
+├── settings.py          # Environment config
+├── api/routes.py        # All REST endpoints (~30 routes)
+├── db/signature.py      # Core signature query logic
+├── web/pages.py         # Jinja2 template routes
+├── templates/           # HTML (index.html is main UI)
+└── static/              # CSS, JS, vendor assets
+
+scripts/                 # Data pipelines, clustering, corpus generation
+sql/                     # Schema definitions, views
+metadata/*.tsv           # Lookup tables for categorical fields
+output/                  # Generated artifacts (PCA, clusters, embeddings)
 ```
 
-### Key Data Flow
+### UI Tabs
 
-1. User inputs coordinates, place name, or selects World Heritage site
-2. Backend queries PostgreSQL with PostGIS `ST_Covers()` for basin containing point
-3. External APIs (OpenTopoData → Open-Meteo fallback) provide point elevation
-4. Response includes 47+ BasinATLAS fields organized into profile_summary and profile_groups (A-D categories)
+- **Main**: Coordinate/place lookup → environmental signature
+- **Compare**: 20 World Heritage pilot sites with env/text similarity
+- **WHC Cities**: 258 World Heritage Cities with clustering
+- **Ecoregions**: OneEarth hierarchy browser (Realm → Subrealm → Bioregion → Ecoregion)
+- **Societies**: 1,291 D-PLACE societies with subsistence/religion filters
 
-### API Endpoints
+### Key Endpoints
 
-- `GET /api/health` - Health check
-- `GET /api/signature?lat=X&lon=Y` - Returns environmental signature for coordinates
-- `GET /api/resolve?name=X` - Place name resolution via WHG API
-- `GET /api/wh-sites` - Returns 20 World Heritage seed sites
+```
+/api/signature?lat=X&lon=Y    Environmental signature for coordinates
+/api/resolve?name=X           Place name resolution (WHG API)
+/api/societies                D-PLACE societies with filters
+/api/eco/*                    Ecoregion hierarchy and geometries
+/api/whc-*                    World Heritage Cities data
+/api/similar, /api/similar-text   Pilot site similarity
+```
 
 ## Testing
 
 ```bash
-# Health check
 curl http://localhost:8000/api/health
-
-# Signature for Timbuktu (canonical test coordinate)
-curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"
-
-# Place resolution
-curl "http://localhost:8000/api/resolve?name=Timbuktu"
+curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Timbuktu
 ```
 
-## Key Files
+## Session Context Files
 
-- **app/db/signature.py** (440 lines): Core signature query logic, elevation API integration, profile grouping. Uses psycopg3 for database connections.
-- **app/templates/index.html** (677 lines): Main UI with 3-tab layout (Main, Compare, World Heritage) and Leaflet map
-- **app/static/js/main.js** (670 lines): Client-side logic for map, forms, API calls
-- **metadata/*.tsv**: 11 lookup tables for decoding categorical field IDs to labels
+For context when resuming work, read these files:
 
-## External APIs
+- **`docs/EDOP_LOG.md`** - Development journal with dated entries (features, decisions, findings)
+- **`prompts/seed-prompt-ongoing.md`** - Running prompt/context notes
 
-- **WHG (World Historical Gazetteer)**: Place resolution, uses WHG_API_TOKEN
-- **OpenTopoData**: Point elevation (Mapzen 30m DEM)
-- **Open-Meteo**: Fallback elevation (Copernicus GLO-90)
+Detailed per-session logs in `logs/session_log_*.md` can be consulted if needed but aren't required for initial context.
 
-## Notes
+## External Dependencies
 
-- Timbuktu coordinates (16.76618535, -3.00777252) are the canonical test location
-- WHG API calls happen server-side only; token never sent to browser
-- Elevation cache is in-process LRU (512 entries), lost on restart
-- Static files mount requires running from project root
+- **WHG** (World Historical Gazetteer): Place resolution
+- **OpenTopoData / Open-Meteo**: Point elevation
+- **D-PLACE**: Cultural/anthropological database
+- **OneEarth**: Ecoregion taxonomy and metadata
