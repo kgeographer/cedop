@@ -137,9 +137,39 @@ Created LLM extraction pipeline with schema:
 
 ---
 
-## Next Steps (identified but not started)
+## Part 5: Triage and Batch Extraction
 
-1. **Scale LLM extraction** - Process all 566 nomination documents
+### Triage Results
+Ran quality triage on 566 nomination documents:
+
+| Tier | Description | Count | % |
+|------|-------------|-------|---|
+| A | Has explicit coordinates | 21 | 3.7% |
+| B | Has "Geographic location" section | 51 | 9.0% |
+| C | Long doc with place indicators | 201 | 35.5% |
+| D | Short or vague | 293 | 51.8% |
+
+Note: Tier D classification was over-pessimistic due to regex bias toward English/Chinese admin terms.
+
+### Tier A+B Extraction (72 docs)
+- 72/72 successful (100%)
+- 25 with explicit coordinates (35%)
+- Avg 9.8 practice locations per doc
+- Avg 1.6 diaspora locations per doc
+- 54% have clean practice-only geography (no diaspora)
+
+### Tier D Sample (10 docs)
+- 10/10 successful
+- 8/10 (80%) have 3+ practice locations = salvageable
+- 7/10 have environmental features
+
+**Estimated salvage rate for full corpus: ~86% (487/566 docs)**
+
+---
+
+## Next Steps
+
+1. **Full extraction** - Run remaining 494 docs (~$10)
 2. **Design storage schema** - `cdop.ich_locations_llm` table
 3. **Geocoding pipeline** - Convert extracted locations to coordinates
 4. **EDOP linkage** - Connect ICH locations to environmental signatures
