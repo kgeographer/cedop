@@ -7,6 +7,7 @@ import ssl
 import certifi
 
 from app.db.signature import get_signature
+from app.db.connection import db_connect
 from app.settings import settings
 
 from pathlib import Path
@@ -23,7 +24,7 @@ def _http_get_json(url: str, timeout_sec: int = 20) -> Dict[str, Any]:
     ctx = ssl.create_default_context(cafile=certifi.where())
     req = urllib.request.Request(url, headers={
         "Accept": "application/json",
-        "User-Agent": "EDOP/1.0"
+        "User-Agent": "CEDOP/1.0"
     })
     with urllib.request.urlopen(req, timeout=timeout_sec, context=ctx) as resp:
         raw = resp.read().decode("utf-8")
@@ -37,7 +38,7 @@ def _http_post_json(url: str, payload: Dict[str, Any], headers: Dict[str, str] =
     req_headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "EDOP/1.0"
+        "User-Agent": "CEDOP/1.0"
     }
     if headers:
         req_headers.update(headers)
@@ -330,17 +331,8 @@ def _load_wh_seed() -> list[Dict[str, Any]]:
 
 def _get_cluster_labels() -> Dict[int, str]:
     """Fetch cluster labels for WH sites from database."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT s.id_no, c.cluster_label
@@ -599,17 +591,8 @@ def wh_sites():
 @router.get("/similar")
 def similar(id_no: int, limit: int = 5):
     """Return most similar WH sites to the given site by id_no."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
@@ -651,17 +634,8 @@ def similar(id_no: int, limit: int = 5):
 @router.get("/similar-text")
 def similar_text(id_no: int, limit: int = 5):
     """Return most similar WH sites by text/semantic similarity."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
@@ -707,17 +681,8 @@ def similar_text(id_no: int, limit: int = 5):
 @router.get("/whc-cities")
 def whc_cities():
     """Return World Heritage Cities with coordinates and cluster info (excludes 4 without basin data)."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
@@ -763,17 +728,8 @@ def whc_cities():
 @router.get("/whc-similar")
 def whc_similar(city_id: int, limit: int = 5):
     """Return most similar WH cities by environmental signature."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # whc_similarity stores upper triangle (city_a < city_b)
             # Need to query both directions
@@ -834,17 +790,8 @@ def whc_similar_env_by_coord(lon: float, lat: float, limit: int = 5):
     Uses basin-level PCA vectors (pgvector) to find WH cities in environmentally
     similar basins to the input point.
     """
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # First, find which basin contains this point
             cur.execute("""
@@ -964,21 +911,12 @@ def whc_similar_env_by_coord(lon: float, lat: float, limit: int = 5):
 @router.get("/whc-similar-text")
 def whc_similar_text(city_id: int, band: str = "composite", limit: int = 5):
     """Return most similar WH cities by text/semantic similarity."""
-    import psycopg
-    import os
-
     valid_bands = ['history', 'environment', 'culture', 'modern', 'composite']
     if band not in valid_bands:
         raise HTTPException(status_code=400, detail=f"Invalid band. Must be one of: {valid_bands}")
 
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
@@ -1023,17 +961,8 @@ def whc_similar_text(city_id: int, band: str = "composite", limit: int = 5):
 @router.get("/whc-summaries")
 def whc_summaries(city_id: int):
     """Return band summaries for a WH city."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # Get city name
             cur.execute("SELECT city, country FROM gaz.wh_cities WHERE id = %s", (city_id,))
@@ -1084,17 +1013,8 @@ def whc_summaries(city_id: int):
 @router.get("/basin-clusters")
 def basin_clusters():
     """Return all basin clusters with basin and city counts."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
@@ -1128,17 +1048,8 @@ def basin_clusters():
 @router.get("/basin-clusters/{cluster_id}/cities")
 def basin_cluster_cities(cluster_id: int):
     """Return cities in basins of a given cluster."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
@@ -1185,22 +1096,13 @@ def basin_cluster_cities(cluster_id: int):
 @router.get("/gaz-similar")
 def gaz_similar(gaz_id: int, limit: int = 10):
     """Find environmentally similar gazetteer places using PCA vector distance."""
-    import psycopg
-    import os
-
     if limit < 1:
         limit = 1
     elif limit > 25:
         limit = 25
 
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # Get the source place's basin
             cur.execute("""
@@ -1284,9 +1186,6 @@ def gaz_similar(gaz_id: int, limit: int = 10):
 @router.get("/gaz-suggest")
 def gaz_suggest(q: str, limit: int = 10):
     """Search the edop_gaz gazetteer for autocomplete suggestions."""
-    import psycopg
-    import os
-
     q = (q or "").strip()
     if not q or len(q) < 3:
         return {"results": []}
@@ -1297,13 +1196,7 @@ def gaz_suggest(q: str, limit: int = 10):
         limit = 25
 
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # Case-insensitive prefix search on title
             cur.execute("""
@@ -1342,17 +1235,8 @@ def gaz_suggest(q: str, limit: int = 10):
 @router.get("/eco/realms")
 def eco_realms():
     """List all realms (top level of hierarchy)."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT r.realm, r.biogeorelm, COUNT(s.subrealmid) as subrealm_count
@@ -1380,17 +1264,8 @@ def eco_realms():
 @router.get("/eco/subrealms")
 def eco_subrealms(realm: str):
     """List subrealms within a realm."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT s.subrealmid, s.subrealm_n, COUNT(b.bioregions) as bioregion_count
@@ -1419,17 +1294,8 @@ def eco_subrealms(realm: str):
 @router.get("/eco/bioregions")
 def eco_bioregions(subrealm_id: int):
     """List bioregions within a subrealm."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # Get subrealm name for context
             cur.execute('SELECT subrealm_n FROM gaz."Subrealm2023" WHERE subrealmid = %s', (subrealm_id,))
@@ -1470,17 +1336,8 @@ def eco_bioregions(subrealm_id: int):
 @router.get("/eco/ecoregions")
 def eco_ecoregions(bioregion: str):
     """List ecoregions within a bioregion."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT e.eco_id, e.eco_name, e.biome_name, e.realm
@@ -1508,17 +1365,8 @@ def eco_ecoregions(bioregion: str):
 @router.get("/eco/realms/geom")
 def eco_realms_geom():
     """Get GeoJSON FeatureCollection of all realm geometries."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT realm, biogeorelm, ST_AsGeoJSON(geom)::json
@@ -1550,17 +1398,8 @@ def eco_realms_geom():
 @router.get("/eco/subrealms/geom")
 def eco_subrealms_geom(realm: str):
     """Get GeoJSON FeatureCollection of subrealm geometries within a realm."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT subrealmid, subrealm_n, ST_AsGeoJSON(geom)::json
@@ -1593,17 +1432,8 @@ def eco_subrealms_geom(realm: str):
 @router.get("/eco/bioregions/geom")
 def eco_bioregions_geom(subrealm_id: int):
     """Get GeoJSON FeatureCollection of bioregion geometries within a subrealm."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # Join with bioregion_meta for titles
             cur.execute("""
@@ -1642,17 +1472,8 @@ def eco_bioregions_geom(subrealm_id: int):
 @router.get("/eco/ecoregions/geom")
 def eco_ecoregions_geom(bioregion: str):
     """Get GeoJSON FeatureCollection of ecoregion geometries within a bioregion."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT eco_id, eco_name, ST_AsGeoJSON(geom)::json
@@ -1685,21 +1506,12 @@ def eco_ecoregions_geom(bioregion: str):
 @router.get("/eco/geom")
 def eco_geom(level: str, id: str):
     """Get GeoJSON geometry for a hierarchy level item."""
-    import psycopg
-    import os
-
     valid_levels = ['realm', 'subrealm', 'bioregion', 'ecoregion']
     if level not in valid_levels:
         raise HTTPException(status_code=400, detail=f"Invalid level. Must be one of: {valid_levels}")
 
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             if level == 'realm':
                 cur.execute("""
@@ -1743,17 +1555,8 @@ def eco_geom(level: str, id: str):
 @router.get("/eco/wikitext")
 def eco_wikitext(eco_id: int):
     """Get Wikipedia summary and URL for an ecoregion."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT e.eco_name, w.summary, w.wiki_url
@@ -1787,17 +1590,8 @@ def eco_wikitext(eco_id: int):
 @router.get("/societies")
 def societies():
     """Return all D-PLACE societies with coordinates, bioregion, and cultural variables."""
-    import psycopg
-    import os
-
     try:
-        conn = psycopg.connect(
-            host=os.environ.get("PGHOST", "localhost"),
-            port=os.environ.get("PGPORT", "5435"),
-            dbname=os.environ.get("PGDATABASE", "edop"),
-            user=os.environ.get("PGUSER", "postgres"),
-            password=os.environ.get("PGPASSWORD", ""),
-        )
+        conn = db_connect()
         with conn.cursor() as cur:
             # Get societies with bioregion, ecoregion, realm, basin cluster, EA042 (subsistence), EA034 (religion)
             cur.execute("""

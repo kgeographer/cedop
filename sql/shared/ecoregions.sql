@@ -3,6 +3,9 @@
 --Southeast US mixed woodlands and savannas; southeast-us-conifer-savannas
 --Serengeti volcanic grasslands
 --Rock and Ice
+
+select eco_id, eco_name from gaz."Ecoregions2017" order by eco_name;
+
 set search_path = public, gaz;
 select * from gaz.matched84;
 select count(*) from oneearth_links ol where slug is null;
@@ -22,9 +25,14 @@ select * from gaz.mapping where oe_title is null order by eco_name;
 select gm.eco_name, m.oe_title, m.oe_slug from  
 	gaz."mapping" gm join gaz.matched84 m 
 	on gm.eco_name = m.eco_name;
-
-update gaz."Ecoregions2017" set oneearth_slug = m.oe_slug
-	from gaz.matched84 m
+--set search_path = public, gaz;
+-- update matching table
+update mapping m set oe_slug = ma.oe_slug from 
+	matched84 ma
+	where m.eco_name = ma.eco_name;
+-- update Ecoregions2017
+update gaz."Ecoregions2017" er
+	set oneearth_slug = m.oe_slug from gaz.mapping m
 	where er.eco_name = m.eco_name;
 
 select ol.title, ol.slug from oneearth_links ol

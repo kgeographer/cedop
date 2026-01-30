@@ -1,10 +1,54 @@
+"""
+Database utilities for CEDOP (Computing Place) modules.
+
+Provides centralized database connection management for both EDOP and CDOP modules.
+"""
 import os
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
 load_dotenv()  # reads .env from project root
+
+
+def db_connect(schema: Optional[str] = None) -> psycopg.Connection:
+    """
+    Return a database connection using environment variables.
+
+    Environment variables used:
+        PGHOST: Database host (default: localhost)
+        PGPORT: Database port (default: 5432)
+        PGDATABASE: Database name (default: cedop)
+        PGUSER: Database user
+        PGPASSWORD: Database password
+
+    Args:
+        schema: If provided, sets search_path to this schema plus public.
+                E.g., schema="cdop" sets search_path to "cdop, public".
+
+    Returns:
+        psycopg.Connection: An open database connection.
+
+    Example:
+        conn = db_connect()
+        conn = db_connect(schema="cdop")
+    """
+    conn = psycopg.connect(
+        host=os.environ.get("PGHOST", "localhost"),
+        port=os.environ.get("PGPORT", "5432"),
+        dbname=os.environ.get("PGDATABASE", "cedop"),
+        user=os.environ.get("PGUSER"),
+        password=os.environ.get("PGPASSWORD"),
+    )
+    if schema:
+        conn.execute(f"SET search_path TO {schema}, public")
+    return conn
+
+
+# -----------------------
+# Legacy signature query (from edop_db.py)
+# -----------------------
 
 SIGNATURE_SQL = """
 SELECT

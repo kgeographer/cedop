@@ -25,4 +25,4 @@ app/data/world_heritage*.*
 
 # Large Cliopatria files (exceeds GitHub 100MB limit)
 app/data/clio/cliopatria_lpf.json
-app/data/clio/cliopatria_polities_only.geojson
+app/data/clio/cliopatria_polities_only.geojsonoutput/edop/basin08_pca_coords.npy

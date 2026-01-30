@@ -1,5 +1,14 @@
 ### EDOP LOG
 ----
+#### 29 Jan 2026
+- **CEDOP restructuring**: reorganized repository to support future CDOP module
+- new directory structure: `scripts/edop/`, `scripts/cdop/`, `scripts/shared/`; same pattern for `output/` and `sql/`
+- created centralized `db_connect()` function in `scripts/shared/db_utils.py` and `app/db/connection.py`
+- refactored `app/api/routes.py`: replaced 20+ inline `psycopg.connect()` calls with `db_connect()`
+- updated User-Agent from `EDOP/1.0` to `CEDOP/1.0`
+- default database name changed from `edop` to `cedop` in connection logic
+- updated `CLAUDE.md` with new architecture documentation
+
 #### 19 Jan 2026
 - **pre-launch bug fixes** for v0.1 demo to Pitt collaborators
 - fixed ecoregion geometry: removed non-existent `oneearth_slug` column from `/api/eco/geom` query

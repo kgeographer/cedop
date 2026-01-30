@@ -1,8 +1,11 @@
-# EDOP Session Seed
+# CEDOP Session Seed
 
 ## Project Goal
-EDOP (Environmental Dimensions of Place) generates environmental signatures for historical locations using
-HydroATLAS basin data. Building a proof-of-concept for funding partners (ISHI/Pitt, KNAW/CLARIAH) demonstrating:
+**CEDOP (Computing Place)** is an umbrella project containing:
+- **EDOP (Environmental Dimensions of Place)**: Environmental signatures for historical locations using HydroATLAS basin data
+- **CDOP (Cultural Dimensions of Place)**: Future module for cultural/historical analytics
+
+Building a proof-of-concept for funding partners (ISHI/Pitt, KNAW/CLARIAH) demonstrating:
 - Environmental profiling at scale
 - Meaningful similarity detection (environmental + textual)
 - Clean API design for gazetteer integration
@@ -108,9 +111,12 @@ D-PLACE (Database of Places, Language, Culture, and Environment) integrated to e
 
 ## Key Files
 - `docs/edop_database_schema.md` — comprehensive schema reference
+- `docs/EDOP_LOG.md` — development journal with dated entries
 - `logs/session_log_*.md` — detailed work per day
 - `prompts/seed-prompt-ongoing.md` — this file; session context for Claude
-- `scripts/load_basin_pca_vectors.py` — loads PCA coords into pgvector
+- `scripts/edop/load_basin_pca_vectors.py` — loads PCA coords into pgvector
+- `scripts/shared/db_utils.py` — centralized `db_connect()` for scripts
+- `app/db/connection.py` — centralized `db_connect()` for app
 - `misc/dump_for_deploy.sh` — database export for deployment
 - `misc/restore_on_droplet.sh` — database restore on server
 
@@ -126,17 +132,39 @@ D-PLACE (Database of Places, Language, Culture, and Environment) integrated to e
 - `GET /api/eco/ecoregions/geom?bioregion=X` — FeatureCollection of ecoregions within a bioregion
 
 ## Deployment
-- **Production**: edop.kgeographer.org (Digital Ocean droplet)
+- **Production**: edop.kgeographer.org (Digital Ocean droplet) — server updates deferred
 - **Stack**: apache2 → gunicorn:8001 → FastAPI/uvicorn
-- **Database**: PostgreSQL 5432 with PostGIS, pgvector, pg_trgm
+- **Database**: PostgreSQL with PostGIS, pgvector, pg_trgm
+  - Local: `cedop` on port 5435
+  - Server: still `edop` on port 5432 (rename deferred)
 - **Service**: systemd (`/etc/systemd/system/edop.service`)
 - **Environment**: `/etc/edop/edop.env` or inline in service file
 - **Code**: `/var/www/edop` (git checkout main)
 
 **Key differences local vs server:**
-- Local PostgreSQL: port 5435 (non-standard)
-- Server PostgreSQL: port 5432 (standard)
-- Environment vars must use `PGHOST`, `PGPORT`, etc. (not `DB_HOST`, `DB_PORT`)
+- Local PostgreSQL: port 5435, database `cedop`
+- Server PostgreSQL: port 5432, database `edop` (rename deferred)
+- Environment vars: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`
+
+## CEDOP Restructuring (29 Jan 2026)
+Repository reorganized to support future CDOP module:
+
+**Directory structure:**
+- `scripts/edop/` — EDOP data pipelines (moved from `scripts/`)
+- `scripts/cdop/` — CDOP scripts (placeholder)
+- `scripts/shared/` — shared utilities including `db_utils.py`
+- `output/edop/` — EDOP artifacts (moved from `output/`)
+- `sql/edop/` — EDOP schemas (moved from `sql/`)
+- `sql/shared/` — shared schemas (ecoregions, cliopatria)
+
+**Database connections centralized:**
+- `scripts/shared/db_utils.py` → `db_connect()` for scripts
+- `app/db/connection.py` → `db_connect()` for app routes
+- Default database: `cedop`
+
+**Other changes:**
+- User-Agent: `CEDOP/1.0`
+- GitHub repo: to be renamed `cedop`
 
 ## Tech Stack
 FastAPI, PostgreSQL/PostGIS, pgvector, Python (scikit-learn, openai, anthropic, wikipediaapi)
