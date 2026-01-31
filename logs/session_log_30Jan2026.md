@@ -167,13 +167,36 @@ Note: Tier D classification was over-pessimistic due to regex bias toward Englis
 
 ---
 
+## Part 6: Full Corpus Extraction (Tier C+D)
+
+Ran LLM extraction on remaining 494 documents (Tier C: 201, Tier D: 293).
+
+### Results
+- 494/494 successful (100%) - one initial failure (00743) was retried and fixed
+- 6 with explicit coordinates
+- Avg 5.2 practice locations per doc
+- Avg 0.9 diaspora locations per doc
+
+### Final Corpus Summary
+
+| Tier | Docs | Successful | Coords | Avg Practice |
+|------|------|------------|--------|--------------|
+| A+B | 72 | 72 (100%) | 25 | 9.8 |
+| C+D | 494 | 494 (100%) | 6 | 5.2 |
+| **Total** | **566** | **566 (100%)** | **31** | **5.8** |
+
+**Output:** `output/cdop/ich_llm_extractions_tier_cd.json`
+
+**Script:** `scripts/cdop/ich_llm_extract_batch_cd.py`
+
+---
+
 ## Next Steps
 
-1. **Full extraction** - Run remaining 494 docs (~$10)
-2. **Design storage schema** - `cdop.ich_locations_llm` table
-3. **Geocoding pipeline** - Convert extracted locations to coordinates
-4. **EDOP linkage** - Connect ICH locations to environmental signatures
-5. **Embeddings** - Generate from full nomination text for similarity search
+1. **Design storage schema** - `cdop.ich_locations_llm` table
+2. **Geocoding pipeline** - Convert extracted locations to coordinates
+3. **EDOP linkage** - Connect ICH locations to environmental signatures
+4. **Embeddings** - Generate from full nomination text for similarity search
 
 ---
 
