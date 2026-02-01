@@ -46,6 +46,9 @@ Building a proof-of-concept for funding partners (ISHI/Pitt, KNAW/CLARIAH) demon
 - `gaz.dplace_variables` — 94 anthropological variables
 - `gaz.dplace_codes` — coded values for categorical variables
 - `gaz.dplace_data` — 121k observations linking societies to variable values
+- `cdop.ich_elements` — 865 ICH elements with ccodes, concepts (2008-2025)
+- `cdop.ich_summaries` — landing page summaries for ICH elements
+- `cdop.ich_toponyms_cleaner` — 5,116 cleaned toponyms from NER extraction
 
 ## Key Findings
 - Environmental and text similarity are complementary (45% cluster agreement)
@@ -111,7 +114,7 @@ D-PLACE (Database of Places, Language, Culture, and Environment) integrated to e
 
 ## Key Files
 - `docs/edop_database_schema.md` — comprehensive schema reference
-- `docs/EDOP_LOG.md` — development journal with dated entries
+- `docs/CEDOP_LOG.md` — development journal with dated entries
 - `logs/session_log_*.md` — detailed work per day
 - `prompts/seed-prompt-ongoing.md` — this file; session context for Claude
 - `scripts/edop/load_basin_pca_vectors.py` — loads PCA coords into pgvector
@@ -145,6 +148,25 @@ D-PLACE (Database of Places, Language, Culture, and Environment) integrated to e
 - Local PostgreSQL: port 5435, database `cedop`
 - Server PostgreSQL: port 5432, database `edop` (rename deferred)
 - Environment vars: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`
+
+## ICH Corpus Update (31 Jan 2026)
+Extended UNESCO Intangible Cultural Heritage corpus from 730 to 865 elements.
+
+**Pipeline:**
+1. Crawled UNESCO ICH website for 2024-2025 inscriptions (135 new elements)
+2. Downloaded and extracted text from 167 nomination documents (new + gap-fill)
+3. LLM-cleaned documents with strict verbatim extraction
+4. Ran structured LLM extraction (practice_locations, diaspora_locations, environmental_features, coordinates)
+5. Consolidated all extractions: 733 total → `output/cdop/ich_extractions/consolidated_all.json`
+6. Scraped landing pages for concepts and country codes
+7. Updated `ich_elements` and `ich_summaries` tables
+
+**Scripts:** `scripts/cdop/ich_corpus_update.py`, `ich_clean_batch.py`, `ich_llm_extract_new.py`, `ich_consolidate_extractions.py`, `ich_load_new_elements.py`, `ich_scrape_concepts.py`
+
+**Database:**
+- `cdop.ich_elements` — 865 rows (with ccodes, primary_concepts, secondary_concepts)
+- `cdop.ich_summaries` — 865 rows
+- Extractions kept as JSON (not in database) due to complex nested structure
 
 ## CEDOP Restructuring (29 Jan 2026)
 Repository reorganized to support future CDOP module:

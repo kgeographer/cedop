@@ -1,5 +1,17 @@
-### EDOP LOG
+### CEDOP LOG
 ----
+#### 31 Jan 2026
+- **ICH Corpus Update**: Extended UNESCO Intangible Cultural Heritage corpus from 730 to 865 elements
+- Crawled UNESCO ICH website for 2024-2025 inscriptions (66 from 2024, 69 from 2025)
+- Gap-fill check: identified 32 pre-2024 elements with newly available nomination docs
+- Downloaded and extracted text from 167 new nomination documents
+- LLM-cleaned documents using strict verbatim extraction prompts (preserved original text)
+- Ran structured LLM extraction (Claude Sonnet) for practice_locations, diaspora_locations, environmental_features, coordinates
+- **Consolidated extractions**: 733 total (72 tier_ab + 494 tier_cd + 167 tier_new) → `output/cdop/ich_extractions/consolidated_all.json`
+- Scraped landing pages for concepts and country codes (135 new elements)
+- Updated database: `ich_elements` and `ich_summaries` tables now include 2024-2025 data with ccodes and concepts
+- **Scripts**: `ich_corpus_update.py`, `ich_clean_batch.py`, `ich_llm_extract_new.py`, `ich_consolidate_extractions.py`, `ich_load_new_elements.py`, `ich_scrape_concepts.py`
+
 #### 29 Jan 2026
 - **CEDOP restructuring**: reorganized repository to support future CDOP module
 - new directory structure: `scripts/edop/`, `scripts/cdop/`, `scripts/shared/`; same pattern for `output/` and `sql/`
