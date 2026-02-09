@@ -25,3 +25,7 @@ print("TEMPLATES_DIR =", TEMPLATES_DIR)
 @router.get("/")
 def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@router.get("/edop")
+def edop(request: Request):
+    return templates.TemplateResponse("edop.html", {"request": request})
