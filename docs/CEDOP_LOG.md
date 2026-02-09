@@ -1,5 +1,15 @@
 ### CEDOP LOG
 ----
+#### 08 Feb 2026
+- **Git cleanup**: expanded `.gitignore` for large data (`app/data/clio/`, `app/data/ich/`, `output/`), binary files, and lock files; removed `.DS_Store` and `__pycache__` from tracking
+- **Repository reorganization commit**: moved `library/` → `articles/`, `docs/prospectus*` → `docs/cdop/`, removed old `prompts/`; added logos, Computing Place images, CDOP docs
+- **Computing Place splash page**: new `index.html` landing page with project description and three module tiles (EDOP active, CDOP and Integrations disabled)
+- Created `base_cedop.html` lightweight base template (no Leaflet/main.js); existing EDOP app moved to `edop.html` served at `/edop`
+- Added `/about` page with architecture diagram
+- Updated `base.html` EDOP header: logo links back to `/`, title updated to "EDOP | Computing Place"
+- Updated FastAPI metadata from "EDOP Pilot" to "Computing Place"
+- **Deployment**: DNS changed from `edop.kgeographer.org` to `cedop.kgeographer.org`; renamed database `edop` → `cedop`, working directory `/var/www/edop` → `/var/www/cedop`, systemd service `edop` → `cedop`; updated Apache vhost
+
 #### 31 Jan 2026
 - **ICH Corpus Update**: Extended UNESCO Intangible Cultural Heritage corpus from 730 to 865 elements
 - Crawled UNESCO ICH website for 2024-2025 inscriptions (66 from 2024, 69 from 2025)
