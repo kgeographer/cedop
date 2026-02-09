@@ -1,0 +1,66 @@
+# make a level 10 extract from basins
+ogr2ogr -f GPKG -overwrite basin10_sig.gpkg BasinATLAS_v10.gdb BasinATLAS_v10_lev10 \
+  -select "HYBAS_ID,SUB_AREA,ele_mt_smn,ele_mt_smx,slp_dg_sav,sgr_dk_sav,kar_pc_sse,dis_m3_pyr,dis_m3_pmn,dis_m3_pmx,ria_ha_ssu,run_mm_syr,gwt_cm_sav,cly_pc_sav,slt_pc_sav,snd_pc_sav,tmp_dc_syr,tmp_dc_smn,tmp_dc_smx,pre_mm_syr,ari_ix_sav,wet_pc_sg1,wet_pc_sg2,prm_pc_sse,crp_pc_sse,ppd_pk_sav,hft_ix_s09,gdp_ud_sav,hdi_ix_sav,tec_cl_smj,fec_cl_smj,cls_cl_smj,glc_cl_smj,clz_cl_smj,lit_cl_smj,tbi_cl_smj,fmh_cl_smj,wet_cl_smj" \
+  -lco SPATIAL_INDEX=YES
+
+level 08
+--------
+ogr2ogr -f GPKG -overwrite tmp_basin08_clip.gpkg basin08.gpkg BasinATLAS_v10_lev08 \
+  -clipsrc ../polity.geojson
+
+ogrinfo -so tmp_basin08_clip.gpkg BasinATLAS_v10_lev08 | grep "Feature Count"
+# 71
+
+sqlite3 tmp_basin08_clip.gpkg \
+"SELECT COUNT(*),
+        MIN(SUB_AREA),
+        AVG(SUB_AREA),
+        MAX(SUB_AREA)
+ FROM BasinATLAS_v10_lev08;"
+# 71|8.1|680.649295774648|3643.2
+
+level 10
+--------
+ogr2ogr -f GPKG -overwrite tmp_basin10_clip.gpkg basin10.gpkg BasinATLAS_v10_lev10 \
+  -clipsrc ../polity.geojson
+
+ogrinfo -so tmp_basin10_clip.gpkg BasinATLAS_v10_lev10 | grep "Feature Count"
+# 225
+
+sqlite3 tmp_basin10_clip.gpkg \
+"SELECT COUNT(*),
+        MIN(SUB_AREA),
+        AVG(SUB_AREA),
+        MAX(SUB_AREA)
+ FROM BasinATLAS_v10_lev10;"
+# level 10: 225|0.5|139.632444444444|580.0 vs level 08 71|8.1|680.649295774648|3643.2
+
+======================
+# replace AREA_COL with the real column name
+sqlite3 basins10.gpkg "SELECT AVG(SUB_AREA) FROM BasinATLAS_v10_lev10;" 
+# 143.472480797269
+
+sqlite3 basins08.gpkg "SELECT AVG(SUB_AREA) FROM BasinATLAS_v10_lev08;" 
+# lev08: 708.046262488528, lev10: 143.472480797269
+
+
+ogrinfo -so basins10.gpkg BasinATLAS_v10_lev10
+
+
+ogr2ogr -f PostgreSQL \
+  "PG:host=localhost dbname=edop port=5435 user=postgres" \
+  cliopatria_polities_only.geojson \
+  -nln clio_polities \
+  -lco SCHEMA=gaz \
+  -lco GEOMETRY_NAME=geom \
+  -lco FID=id \
+  -nlt PROMOTE_TO_MULTI \
+  -oo FLATTEN_NESTED_ATTRIBUTES=YES \
+  -progress \
+  -gt 65536
+
+ogr2ogr -f GPKG cleopatra.gpkg cliopatria_polities_only.geojson \
+  -nln clio_polities \
+  -nlt PROMOTE_TO_MULTI \
+  -lco SPATIAL_INDEX=YES \
+  -progress

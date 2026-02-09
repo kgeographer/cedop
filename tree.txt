@@ -1,0 +1,282 @@
+.
+├── CLAUDE.md
+├── app
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── main.cpython-312.pyc
+│   │   └── settings.cpython-312.pyc
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   └── routes.py
+│   ├── data
+│   │   ├── LP-TSV template for WHG v3.xlsx
+│   │   ├── bioregions.tsv
+│   │   ├── bioregions.xlsx
+│   │   ├── clio
+│   │   ├── dkatlas_whg_20.tsv
+│   │   ├── dkatlas_whg_dataset_20.tsv
+│   │   ├── ecoregions_847.tsv
+│   │   ├── edop.qgz
+│   │   ├── section_consistency_report.csv
+│   │   ├── wh_cities.tsv
+│   │   ├── wh_cities_for-whg.tsv
+│   │   ├── wh_cities_raw.html
+│   │   ├── wh_cities_urls.txt
+│   │   ├── wh_cities_whg.tsv
+│   │   ├── wh_wikipedia_leads.tsv
+│   │   ├── wh_wikipedia_sections.json
+│   │   ├── whc_258_geom.tsv
+│   │   ├── whc_258_geom.xlsx
+│   │   ├── whc_id_lookup.html
+│   │   ├── whg_dataset_1698.2.tsv
+│   │   ├── whg_dataset_1698.lpf
+│   │   ├── whg_dataset_1698.tsv
+│   │   ├── whg_dataset_1698_pretty.json
+│   │   ├── whg_dataset_23.lpf
+│   │   ├── world_heritage_2025.txt
+│   │   ├── world_heritage_2025_clean.tsv
+│   │   ├── world_heritage_seed.json
+│   │   └── ~$bioregions.xlsx
+│   ├── db
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   └── signature.py
+│   ├── main.py
+│   ├── settings.py
+│   ├── static
+│   │   ├── css
+│   │   ├── data
+│   │   ├── js
+│   │   └── vendor
+│   ├── templates
+│   │   ├── base.html
+│   │   └── index.html
+│   └── web
+│       ├── __init__.py
+│       ├── __pycache__
+│       └── pages.py
+├── articles
+│   ├── Balee_2006_HistoricalEcology.pdf
+│   ├── Balee_historical-ecology.pdf
+│   ├── Comber_Spatial interpolation using areal features.pdf
+│   ├── Crumley_Historical_Ecology_Integrated_Thinking_a.pdf
+│   ├── Lam_an-evaluation-of-areal-interpolation-methods.pdf
+│   ├── Metzger et al. - 2012 - A high-resolution bioclimate map of the world.pdf
+│   ├── Szabo_historicl ecology.pdf
+│   └── cliopatria.pdf
+├── docs
+│   ├── EDOP_LOG.md
+│   ├── EDOP_LOG.txt
+│   ├── PCA_next_steps.md
+│   ├── cliopatria_claude.md
+│   ├── competency questions (Claude).md
+│   ├── cross-tab-eval.txt
+│   ├── edop_database_schema.md
+│   ├── pca_clusters.png
+│   ├── pca_results.md
+│   ├── pca_sites_2d.png
+│   ├── pca_sites_3d.png
+│   ├── pca_variance.png
+│   ├── persistence_matrix.md
+│   ├── progress_3Jan.md
+│   ├── prospectus_29Dec2025.md
+│   ├── prospectus_29Dec2025_Claude-reaction.md
+│   └── wiki_corpus_path.md
+├── library
+│   ├── 2021-07-06-Subjects-in-eHRAF.pdf
+│   ├── EDOP_Sauer_Possibilism_Starter_Bibliography.md
+│   ├── Sauer_Morphology.pdf
+│   ├── Sauer_Morphology_all.docx
+│   ├── Sauer_Morphology_all.md
+│   ├── Sauer_Morphology_all.pdf
+│   ├── bibliography_claude.md
+│   ├── bibliography_gpt.md
+│   ├── cultural landscape geneaology.md
+│   ├── quotes.txt
+│   └── ~$uer_Morphology_all.docx
+├── logs
+│   ├── session_log_11Jan2026.md
+│   ├── session_log_12Jan2026.md
+│   ├── session_log_13Jan2026.md
+│   ├── session_log_14Jan2026.md
+│   ├── session_log_15Jan2026.md
+│   ├── session_log_16Jan2026.md
+│   ├── session_log_17Jan2026.md
+│   ├── session_log_18Jan2026.md
+│   ├── session_log_19Jan2026.md
+│   ├── session_log_3Jan2026.md
+│   ├── session_log_4Jan2026.md
+│   ├── session_log_4Jan2026_gpt.md
+│   ├── session_log_5Jan2026.md
+│   ├── session_log_6Jan2026.md
+│   ├── session_log_7Jan2026.md
+│   ├── session_log_8Jan2026.md
+│   └── session_log_9Jan2026.md
+├── metadata
+│   ├── BasinATLAS_Catalog_v10_optimized.pdf
+│   ├── atlas_contents.txt
+│   ├── basin_atlas_fields.pdf
+│   ├── basin_atlas_fields.tsv
+│   ├── basin_atlas_fields.xlsx
+│   ├── lu_cls.tsv
+│   ├── lu_clz.tsv
+│   ├── lu_fec.tsv
+│   ├── lu_fmh.tsv
+│   ├── lu_gad.tsv
+│   ├── lu_glc.tsv
+│   ├── lu_lit.tsv
+│   ├── lu_pnv.tsv
+│   ├── lu_tbi.tsv
+│   ├── lu_tec.tsv
+│   ├── lu_wet.tsv
+│   ├── river_atlas_fields.pdf
+│   └── signature_fields.txt
+├── misc
+│   ├── DEPLOYING.txt
+│   ├── NEXT.txt
+│   ├── basin10_export.txt
+│   ├── data_outline.txt
+│   ├── dump_for_deploy.sh
+│   ├── eco847_names.tsv
+│   ├── eco847_oneearth_ambiguous.tsv
+│   ├── eco847_oneearth_lookup.tsv
+│   ├── eco847_oneearth_unmatched.tsv
+│   ├── matched84.tsv
+│   ├── missing88.tsv
+│   ├── missing88_matched.tsv
+│   ├── next_9Jan2026.txt
+│   ├── one-earth-link.tsv
+│   ├── one-earth-links.html
+│   ├── oneearth.qgz
+│   ├── oneearth_slugs.tsv
+│   ├── post-8Jan_seed-prompt.md
+│   ├── restore_on_droplet.sh
+│   ├── sahelian-acacia-savanna.html
+│   ├── slug_override.tsv
+│   └── whg_strategy.txt
+├── output
+│   ├── basin08_basin_ids.npy
+│   ├── basin08_cluster_analysis.json
+│   ├── basin08_cluster_analysis.png
+│   ├── basin08_cluster_assignments.npy
+│   ├── basin08_cluster_centroids.npy
+│   ├── basin08_cluster_labels.json
+│   ├── basin08_cluster_labels_manual.json
+│   ├── basin08_cluster_metadata.json
+│   ├── basin08_famd_comparison.json
+│   ├── basin08_famd_coords_sample.npy
+│   ├── basin08_feature_names.json
+│   ├── basin08_pca_coords.npy
+│   ├── basin08_pca_loadings.npy
+│   ├── basin08_pca_variance.json
+│   ├── basin08_sparse_matrix.npz
+│   ├── corpus
+│   │   ├── band_embeddings_pilot.json
+│   │   ├── band_mapping_draft.json
+│   │   ├── band_summaries_pilot.json
+│   │   ├── cluster_results.txt
+│   │   ├── coverage_report_pilot.tsv
+│   │   ├── pilot_sites.tsv
+│   │   ├── unmapped_sections.tsv
+│   │   └── wiki_sections_pilot.json
+│   ├── corpus_258
+│   │   ├── band_embeddings.json
+│   │   ├── band_summaries.json
+│   │   ├── basin_cluster_observations.md
+│   │   ├── coverage_report.tsv
+│   │   ├── env_clusters.png
+│   │   └── wiki_sections.json
+│   ├── dplace
+│   │   ├── analysis_narrative_18Jan2026.md
+│   │   ├── correlations_signature_bands_ABC.csv
+│   │   └── unassigned_societies.csv
+│   ├── missing_for_review.tsv
+│   ├── missing_for_review_with_extracts.tsv
+│   ├── missing_for_review_with_extracts.xlsx
+│   ├── missing_triage.tsv
+│   ├── missing_wiki_reviewed.tsv
+│   ├── reviewed_extracts.jsonl
+│   └── wiki_extracts_refilled.jsonl
+├── pitches
+│   ├── EDOP_2pager.docx
+│   ├── EDOP_narrative_interpretation_summary.md
+│   ├── draft01_ISHI.txt
+│   ├── draft01_ISHI_1pager.docx
+│   ├── draft01_ISHI_1pager.txt
+│   ├── draft02_ISHI_2pager.docx
+│   ├── pitch001_gpt.md
+│   ├── pitch002_gpt.md
+│   ├── ~$OP_2pager_kg.txt
+│   ├── ~$aft01_ISHI_1pager.docx
+│   └── ~$aft02_ISHI_2pager.docx
+├── prompts
+│   └── seed-prompt-ongoing.md
+├── requirements.txt
+├── scripts
+│   ├── basin08_cluster.py
+│   ├── basin08_cluster_analysis.py
+│   ├── basin08_cluster_labels.py
+│   ├── basin08_clustering_k20.py
+│   ├── basin08_famd_comparison.py
+│   ├── basin08_pca.py
+│   ├── basin08_sparse_matrix.py
+│   ├── clean_whdump.py
+│   ├── cliopatria_to_lpf.py
+│   ├── corpus
+│   │   ├── embed_whc.py
+│   │   ├── generate_band_embeddings.py
+│   │   ├── harvest_sections.py
+│   │   ├── harvest_whc.py
+│   │   ├── summarize_bands.py
+│   │   └── summarize_whc.py
+│   ├── dplace_env_correlations_exploratory.py
+│   ├── dplace_env_correlations_signature.py
+│   ├── ecoregion_slugmatch.py
+│   ├── edop_db.py
+│   ├── fetch_review_extracts.py
+│   ├── fetch_reviewed_extracts.py
+│   ├── fetch_wikipedia_wh.py
+│   ├── generate_lookup.py
+│   ├── generate_text_embeddings.py
+│   ├── harvest_ecoregion_wikipedia.py
+│   ├── load_basin_pca_vectors.py
+│   ├── load_eco_wikitext.py
+│   ├── parse_slugs.py
+│   ├── parse_wh_cities.py
+│   ├── pca_analysis.py
+│   ├── pca_cluster_persist.py
+│   ├── persist_loadings.py
+│   ├── populate_matrix.py
+│   ├── populate_whc_band.py
+│   ├── populate_whc_matrix.py
+│   ├── refetch_wiki_extracts.py
+│   ├── summarize_ecoregion_text.py
+│   ├── summarize_wiki_extracts.py
+│   ├── triage_missing_ecoregions.py
+│   ├── update_wh_cities_geom.py
+│   ├── utils.py
+│   ├── whc_pca_cluster.py
+│   └── wiki_sections.py
+├── sql
+│   ├── basin_atlas_08.sql
+│   ├── cliopatria.sql
+│   ├── eco_wikitext.sql
+│   ├── ecoregion_view.sql
+│   ├── ecoregions.sql
+│   ├── edop_gaz.sql
+│   ├── edop_gaz_create.sql
+│   ├── edop_gaz_whg_export.sql
+│   ├── edop_gaz_whg_import.sql
+│   ├── edop_matrix_schema.sql
+│   ├── edop_pca_schema.sql
+│   ├── housekeeping_11jan.sql
+│   ├── overrides.sql
+│   ├── persistence_matrix.sql
+│   ├── whc_band_schema.sql
+│   ├── whc_matrix_schema.sql
+│   └── world-heritage.sql
+└── tree.txt
+
+31 directories, 248 files

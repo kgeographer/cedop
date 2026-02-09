@@ -12,17 +12,26 @@ __pycache__/
 # Local/binary reference material (do not version)
 metadata/*.pdf
 articles/*.pdf
+articles/*.docx
 
-output/basin08_pca_coords.npy
+# Regenerable analysis output
+output/
+
+# Large data files
+app/data/world_heritage*.*
+app/data/clio/
+app/data/ich/
+
+# Large binary/design files
+logos/*.afphoto
+logos/*.afphoto~lock~
+logos/favicon.png
+misc/*.qgz
+docs/computing_place/*.docx
+
+# Scraped web pages
+metadata/ich.unesco.org*
+
+# Misc
 misc/DEPLOYING.txt
 pitches/
-
-# Optional: also ignore large derived spreadsheets if you don't want them tracked
-# metadata/*.xlsx
-# metadata/*.tsv
-
-app/data/world_heritage*.*
-
-# Large Cliopatria files (exceeds GitHub 100MB limit)
-app/data/clio/cliopatria_lpf.json
-app/data/clio/cliopatria_polities_only.geojsonoutput/edop/basin08_pca_coords.npy

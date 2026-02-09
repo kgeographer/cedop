@@ -2932,8 +2932,11 @@
       // Subsistence (EA042)
       const subIcon = document.getElementById('soc-info-subsistence');
       if (subIcon && varInfo['EA042']) {
-        subIcon.setAttribute('title', varInfo['EA042'].description);
-        new bootstrap.Tooltip(subIcon, { placement: 'right', trigger: 'hover' });
+        new bootstrap.Tooltip(subIcon, {
+          title: varInfo['EA042'].description,
+          placement: 'right',
+          trigger: 'hover'
+        });
         // Prevent click from toggling accordion
         subIcon.addEventListener('click', (e) => e.stopPropagation());
       }
@@ -2941,8 +2944,11 @@
       // Religion (EA034)
       const relIcon = document.getElementById('soc-info-religion');
       if (relIcon && varInfo['EA034']) {
-        relIcon.setAttribute('title', varInfo['EA034'].description);
-        new bootstrap.Tooltip(relIcon, { placement: 'right', trigger: 'hover' });
+        new bootstrap.Tooltip(relIcon, {
+          title: varInfo['EA034'].description,
+          placement: 'right',
+          trigger: 'hover'
+        });
         relIcon.addEventListener('click', (e) => e.stopPropagation());
       }
     }

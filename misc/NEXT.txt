@@ -1,17 +1,25 @@
-NEXT 15 Jan, 9am
+NEXT 19 Jan, 12pm
 ================
+
 BUGS
 ----
-- strategy for 1st 10 results for "Denver" in US don't include Colorado capitol
-- last ecoregion polygons remain on map; need to clear map of features on tab/pill switch
-- WHG place record link persists between tab changes
-- realm geometries show sometimes on other tabs
+/- strategy for 1st 10 WHG results for "Denver" in US don't include Colorado capitol
+/- last stage of ecoregion drilldown (from bioregion list of ecoregions) does not render an individual ecoregion geometry
+/- zoom of map when societies tab is active should go out one step
+/- last ecoregion polygons remain on map; need to clear map of features on tab/pill switch
+/- realm geometries show sometimes on other tabs
+/- WHG place record link persists between tab changes
 /- filter WH cities dropdown (under #tab-whc) where basin_id in wh_cities is null
 
 
 GUI
 ---
-- 
+- popover explainers for society attributes, from dplace_variables.description (adds to payload!)
+- explainers for WH cities and WH sites tabs
+- map for main (on page load) could use light layer of bioregions w/popovers
+
+/- load of societies map data takes 6-7 seconds, need a spinner b/c the accordions are inactive until the load complets; is there a way to cache that initial load. I presume it has a payload that is used for various things on the page.
+/- close link or "X" for WHG place record modal on main tab
 /- title "Environmental profile" should appear only after resolving a place
 /- "resolved" place div unnecessary, but payload upon WHG place resolution should be available as tooltip from a link
 /- header <h3> should restore main tab (home)
@@ -19,12 +27,14 @@ GUI
 
 FEATURES
 --------
-\- "About" link to a modal long explainer
-- how many ecoregion pages in Wikipedia?
-- wire eco847 signatures
+/- LLM summary of a wiki ecosystem text?
+/- LLM summary of a signature?
+/- "About" link to a modal long explainer
+- compute, wire eco847 signatures
 - LLM summary of a signature?
 - add ssl to edop.kgeographer
 - distribution of WH sites in basin clusters? ecoregions?
+/- how many ecoregion pages in Wikipedia?
 /- home page explainer for EDOP (div below tab-content? #similar-results below map; change for each tab)
 /- wire new Ecoregions tab (#tab-eco, 
 /- Ideally: "Similar (env)" button for WHG API, comapres to WH cities at this time.

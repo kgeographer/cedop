@@ -1,0 +1,118 @@
+Yep — and I did read it. Treating your prospectus as “what the other three people in the room just put on the whiteboard,” here’s my response to what’s on offer so far, plus what I think is missing / how I’d steer an initial research agenda for ICH inside Computing Place / CDOP.
+
+1) The prospectus is right about the core move: ICH footprints are not polygons
+
+Your framing of discontinuous spatial footprints with semantic qualifiers is the right “native geometry” for ICH:
+	•	Practice locations (hearth / rooted performance) are the closest thing you have to EDOP-compatible anchors.
+	•	Diaspora locations are not noise; they’re a second topology (mobility + persistence).
+	•	The implication you state — “rather than forcing a single footprint, keep a structured set of loci + relationships” — is exactly how this should live in CDOP.
+
+If CDOP is about “cultural dimensions of place,” ICH is a poster child dataset — but it wants to be modeled as a networked place assemblage, not a point-in-polygon exercise.
+
+2) I’d split the agenda into “EDOP-linkable subset” vs “ICH-native analyses”
+
+This is the practical way to honor your constraint (“not all cultural data must be directly relatable with basin signatures”) while still extracting real value.
+
+Track A — EDOP-linkable subset (don’t overpromise, but do it well)
+
+You’ve got three “precision tiers” already (implicit in your extraction):
+	1.	Explicit coordinates (you noted ~31/566): this is the cleanest pilot set.
+	2.	High-specificity practice locations (villages/towns + admin context): geocodeable with reasonable effort.
+	3.	Country-only / vague: treat as non-linkable to EDOP except at coarse scales.
+
+That naturally yields an early “good science / low drama” program:
+	•	Build a “linkability score” per element (based on presence of coordinates, number of specific practice locations, presence of admin parents, proportion diaspora-only mentions, etc.).
+	•	Only run EDOP correlation experiments on tiers 1–2 and explicitly label them as such.
+
+Your two sample objects are perfect illustrations:
+	•	Otomí-Chichimecas: rich hearth geometry + explicit bbox-ish coordinates but also shows why you need automated coordinate sanity checks (that W 103° anomaly).
+	•	La Gomera whistled language: no explicit coords, but (a) practice locations are island-bounded (easy), and (b) diaspora is explicit and interpretively meaningful.
+
+Track B — ICH-native analyses (where the dataset is strongest)
+
+Your prospectus already points to three very strong lines that don’t require heroic geocoding; I’d elevate them to first-class CDOP workstreams:
+	1.	Environmental vocabulary as cultural-environment perception
+This is the sleeper hit. Nomination texts aren’t “environmental measurements,” they’re environmental salience.
+So: treat environmental_features / environmental_summary as a corpus about how communities narrate landscapes as enabling constraints, risks, affordances, sacred geographies, etc.
+That’s CDOP gold, even when EDOP linkage is messy.
+	2.	Spatial precision as signal (not just a nuisance variable)
+Your “precision gradient” idea is more than metadata: it might reflect:
+	•	the boundedness of a practice,
+	•	how UNESCO nomination rhetoric works in different contexts,
+	•	political sensitivities,
+	•	whether the practice is intrinsically localized vs. diffusible.
+This can become an analytical axis in its own right.
+	3.	Hearth–diaspora network topology (diffusion, corridors, mechanisms)
+Your diffusion section is on target, and the key extra is: the diaspora context field makes this more than lines-on-a-map.
+You can classify mechanisms (labor migration, colonial ties, trade routes, tourism, exile, archipelago mobility, etc.) and ask:
+	•	which practices diffuse with what mechanism?
+	•	do certain practice domains show characteristic diaspora topologies?
+
+3) The D-PLACE bridge is plausible, but I’d treat it as “bridge experiments,” not a core dependency
+
+I like the idea of overlap tests with D-PLACE societies, but I’d keep it as a secondary analytic layer until you’ve stabilized the ICH footprint logic.
+
+Reason: D-PLACE brings its own temporal anchoring assumptions and sampling epistemology (ethnographer observation, “society as unit,” etc.). ICH brings nomination-date presentism + heritage politics + curated narrative. The comparison will be illuminating — but it can also turn into a methodological swamp if you try to “integrate” too early.
+
+So I’d define D-PLACE linkage as:
+	•	“bridge queries” and case-study joins (where geography is clean and interpretive payoff is high),
+not as an expectation of systematic, global correlation.
+
+4) What I think you should add (the prospectus hints at it, but it needs to be explicit)
+
+A. A “portability vs. environmental binding” typology
+
+You’re already circling this: some practices are plausibly constrained by terrain/hydrology/ecology; others are essentially portable.
+
+Make it an explicit CDOP output:
+	•	A portability index derived from (a) diaspora presence, (b) diversity of environments referenced, (c) number of distinct practice locations, (d) how “instrumental” the environmental features are in the nomination text.
+	•	Then your EDOP question becomes not “does environment produce culture?” but:
+	•	which cultural practices appear environmentally bound vs portable, and how does UNESCO text signal that?
+
+This directly addresses your earlier “are we after cultural hearths?” worry by turning it into a measured property rather than a binary stance.
+
+B. A reliability layer for extracted geography
+
+You already have “extraction notes.” Formalize that into CDOP practice:
+	•	Sanity checks: coordinate outliers, country mismatch, impossible bounding boxes, lat/lon swapped, etc.
+	•	Ambiguity flags: generic toponyms (“Eastern Region”), multi-admin collisions.
+	•	Diaspora contamination risk: elements where diaspora toponyms dominate the place-mentions.
+
+If CDOP is going to publish/serve these footprints, you want a transparent “confidence surface” even if it’s just categorical (A/B/C).
+
+C. Treat geocoding as interpretive work, but don’t let it stall the whole agenda
+
+Your own doc says this (good). Operationally: commit to two pipelines:
+	•	Pipeline 1: lightweight / scalable
+	•	geocode only places with strong constraints (islands, distinctive multiword names, admin-parent present)
+	•	accept some nulls
+	•	Pipeline 2: curated / high-value
+	•	a shortlist of ~25–50 “exemplar elements” that become CDOP flagship cases (your Otomí-Chichimecas and La Gomera type examples)
+	•	these become the “hero demos” of what CDOP can do with ICH.
+
+5) My “in-the-room” reaction to your colleagues’ ideas
+
+If I respond directly to the prospectus sections as written:
+	•	Discontinuous footprints: yes — and it should become a named CDOP concept (a thing you can explain in one graphic).
+	•	Environmental signatures & hearths: yes, but only after you’ve formalized linkability/precision and credibility checks. Otherwise it’s too easy to generate spurious “correlations.”
+	•	Diffusion analysis: strongly yes; ICH is unusually good for this because multinational inscriptions + diaspora contexts are already semi-structured.
+	•	Multi-scale: yes, and I’d emphasize “scale as rhetoric” as much as “scale as geography.”
+	•	Cross-corpus linkage: yes, but “bridge experiments” initially (D-PLACE, WH, WHG), not a required deliverable.
+	•	Nomination text as environmental perception: I’d promote this to top tier. It’s the most CDOP-native contribution and sidesteps the hardest geocoding pain.
+	•	Methodological precedent / epistemological tensions: keep them — this is exactly where you can make the project feel intellectually honest rather than “AI extracted some places, look correlations!”
+
+6) Better way to put this forward for commentary
+
+What you’re doing now is already workable, but for faster iteration among “three collaborators,” the best format is:
+	1.	A 1-page agenda skeleton (workstreams + 2–3 exemplar queries each)
+	2.	A short “exemplar packet” of ~10 elements in 3 bins:
+	•	high-precision hearth (coords or tight place list)
+	•	messy/hearth+diaspora
+	•	diffuse/multinational (falconry / Nowruz-type)
+	3.	A single rubric: linkability score + confidence flag + portability index (even if rough)
+
+That structure keeps discussion from collapsing into geocoding despair, and it lets you decide what CDOP is claiming now vs what’s aspirational.
+
+⸻
+
+If you want, I can turn the above into a compact ICH-in-CDOP research agenda markdown (workstreams, staged milestones, and “hero exemplar packet” outline) so it drops straight into your notes.

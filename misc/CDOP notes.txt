@@ -1,0 +1,25 @@
+HRAF: Human Relations Area Files
+University of Pittsburgh, Pittsburgh, Pennsylvania – Stephanie Love
+
+
+D-PLACE Ethnographic Atlas
+==========================
+Category 	number of variables
+Economy 	44
+Kinship 	25
+Labour 	24
+Marriage 	19
+Community organization 	16
+Gender 	15
+Politics 	12
+Housing 	11
+Subsistence 	11
+Ritual 	7
+Ecology 	6
+Class 	6
+Wealth transactions 	6
+Property 	4
+Leadership 	4
+Settlement 	2
+Population 	2
+Games 	1

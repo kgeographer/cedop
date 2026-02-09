@@ -1,0 +1,172 @@
+.
+├── _notes
+│   └── Docker:Milvus to dharma.txt
+├── _older
+│   ├── extracted_sections.tsv
+│   ├── extracted_text
+│   │   └── 00675_extracted.txt
+│   ├── links_failed_pass2.tsv
+│   ├── links_failed.tsv
+│   └── save_inspect.py
+├── _prompts
+│   └── prompts.txt
+├── data
+│   ├── culture
+│   │   ├── my001.txt
+│   │   ├── my0010.txt
+│   │   ├── my0011.txt
+│   │   ├── my002.txt
+│   │   ├── my003.txt
+│   │   ├── my004.txt
+│   │   ├── my005.txt
+│   │   ├── my006.txt
+│   │   ├── my007.txt
+│   │   ├── my008.txt
+│   │   └── my009.txt
+│   ├── intangible
+│   │   ├── CLASSIFICATION_CODES.TXT
+│   │   ├── combined_listings
+│   │   ├── country_codes.csv
+│   │   ├── counts.tsv
+│   │   ├── elements_ichcode.tsv
+│   │   ├── elements.csv
+│   │   ├── elements.xlsx
+│   │   ├── extracted_clean_01
+│   │   ├── extracted_clean_02
+│   │   ├── extracted_sentences
+│   │   ├── graph_en.json
+│   │   ├── ich_730_full.tsv
+│   │   ├── ich_730.tsv
+│   │   ├── ich_lptsv_raw.tsv
+│   │   ├── ich_lptsv.xlsx
+│   │   ├── links.tsv
+│   │   ├── out
+│   │   ├── sources
+│   │   ├── summaries_730.tsv
+│   │   ├── toponyms_ner.tsv
+│   │   └── unesco_concepts.xlsx
+│   └── sites
+│       ├── _older
+│       ├── ~$whc-sites-2023.xlsx
+│       ├── classified_sites_comparison.csv
+│       ├── classified_sites_sample.tsv
+│       ├── classified_sites_sorted.tsv
+│       ├── cleaned_sites.tsv
+│       ├── fclasses.tsv
+│       ├── names.tsv
+│       ├── new_indicative_words.txt
+│       ├── sites_2023_lptsv.tsv
+│       ├── sites_2023_lptsv.tsv.zip
+│       ├── sites_2023_lptsv.xlsx
+│       ├── sites_with_feature_class.csv
+│       ├── sites2023_fields.txt
+│       └── whc-sites-2023.xlsx
+├── logs
+│   ├── failed.log
+│   └── processed_files.log
+├── out
+│   ├── bertopic_model
+│   └── intangible
+│       ├── combined_topic_distributions.csv
+│       ├── cultural_practices_malaysia.csv
+│       ├── ich_id_lists_by_concept.json
+│       ├── ich_id_lists_by_concept.txt
+│       ├── lda_concept_topic_distributions.csv
+│       ├── lda_topic_distributions.csv
+│       ├── normalized_topic_distributions_max.csv
+│       ├── normalized_topic_distributions.csv
+│       ├── tfidf_results_filtered.json
+│       ├── topics_corpus.csv
+│       ├── topics_distribution_Drylands.csv
+│       ├── topics_distribution_Forests.csv
+│       ├── topics_distribution_Grasslands_savannahs.csv
+│       ├── topics_distribution_Grazing_land.csv
+│       ├── topics_distribution_Inland_wetlands.csv
+│       ├── topics_distribution_Islands.csv
+│       ├── topics_distribution_Marine_coastal_and_island_areas.csv
+│       ├── topics_distribution_Oases.csv
+│       ├── topics_distribution_Steppe.csv
+│       ├── topics_distribution_Tropical_forests.csv
+│       ├── topics_distribution_Tundra.csv
+│       ├── topics_Drylands.csv
+│       ├── topics_Forests.csv
+│       ├── topics_Grasslands_savannahs.csv
+│       ├── topics_Grazing_land.csv
+│       ├── topics_Inland_wetlands.csv
+│       ├── topics_Islands.csv
+│       ├── topics_Marine_coastal_and_island_areas.csv
+│       ├── topics_Oases.csv
+│       ├── topics_Steppe.csv
+│       ├── topics_summary.csv
+│       ├── topics_Tropical_forests.csv
+│       ├── topics_Tundra.csv
+│       ├── wordcloud_Drylands.png
+│       ├── wordcloud_Forests.png
+│       ├── wordcloud_Grasslands_savannahs.png
+│       ├── wordcloud_Grazing_land.png
+│       ├── wordcloud_Inland_wetlands.png
+│       ├── wordcloud_Islands.png
+│       ├── wordcloud_Marine_coastal_and_island_areas.png
+│       ├── wordcloud_Oases.png
+│       ├── wordcloud_Steppe.png
+│       ├── wordcloud_Tropical_forests.png
+│       └── wordcloud_Tundra.png
+├── src
+│   ├── culture
+│   │   ├── malaysia_matrix.ipynb
+│   │   └── malaysia_matrix.py
+│   ├── errors.py
+│   ├── intangible
+│   │   ├── chromadb.py
+│   │   ├── claude01.py
+│   │   ├── download_intangible.py
+│   │   ├── download_links.py
+│   │   ├── embedding_per_file.py
+│   │   ├── embedding_per_line.py
+│   │   ├── extract_ich.py
+│   │   ├── extracted_clean_01-02.py
+│   │   ├── extracted_clean_01.py
+│   │   ├── extracted_clean_02_to_sentences.py
+│   │   ├── extracted_counts.py
+│   │   ├── ich_concepts.py
+│   │   ├── ich_eco.py
+│   │   ├── ich_eco2.py
+│   │   ├── ich_eda.py
+│   │   ├── ich_tfidf.py
+│   │   ├── ich.py
+│   │   ├── merge_sources.py
+│   │   ├── milvus and the fucked up copilot bot.py
+│   │   ├── milvus_gpt.py
+│   │   ├── milvus_test.py
+│   │   ├── milvus01.py
+│   │   ├── milvus02.py
+│   │   ├── ner_extracted_compare.py
+│   │   ├── ner_extracted.py
+│   │   ├── ner_summaries.py
+│   │   ├── normalize01.py
+│   │   ├── per-file_one-file.py
+│   │   ├── per-line_one-file.py
+│   │   ├── save_inspect_2_bak.py
+│   │   ├── save_inspect_2.py
+│   │   ├── save_inspect_3.py
+│   │   ├── scraper.py
+│   │   └── store_embeddings.py
+│   ├── intangible_topics
+│   │   ├── bertopic_viz01.py
+│   │   ├── bertopic_viz02.py
+│   │   ├── bertopic.py
+│   │   ├── fubar.py
+│   │   └── lda_topics.py
+│   └── sites
+│       ├── classify sample.py
+│       ├── classify_openai_2.py
+│       ├── classify_openai.py
+│       ├── classify_openia_3.py
+│       ├── classify_sites.py
+│       ├── classify.py
+│       ├── clean_import_file.py
+│       └── clean_whsites.py
+├── tree_heritage.txt
+└── tree.txt
+
+23 directories, 146 files
