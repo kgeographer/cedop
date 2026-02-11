@@ -16,6 +16,8 @@
   - Northern Song (962–980 CE): 3 territorial phases, 1407→2506→4217 basins
   - Generates static maps (aridity-colored basins within polity boundaries) and signature comparison chart
   - **Slide series mode**: fixed spatial extent (980 CE bbox) and shared color scale across 3 PNGs for slide animation showing expansion + environmental shift (precip 691→1117 mm/yr, aridity 64→102)
+  - CSV export of polity signatures to `output/edop/polity_overlay/`
+- **Discussion doc**: `docs/edop/polity_signature_distributions.md` — approaches for comparing polity environmental signatures as distributions rather than monolithic means (Wasserstein distance, summary statistics, point clouds, typological histograms over basin clusters); for discussion with ISHI and Seshat collaborators
 
 #### 31 Jan 2026
 - **ICH Corpus Update**: Extended UNESCO Intangible Cultural Heritage corpus from 730 to 865 elements
