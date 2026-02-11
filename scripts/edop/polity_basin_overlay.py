@@ -352,8 +352,24 @@ def main():
     max_extent = max_geom.bounds  # (minx, miny, maxx, maxy)
     plot_slide_series(slide_data, COLOR_FIELD, COLOR_LABEL, max_extent, OUTPUT_DIR)
 
+    # Save signatures to CSV
+    sig_csv = OUTPUT_DIR / "northern_song_signatures.csv"
+    rows = []
+    for year, sig in signatures.items():
+        row = {"polity": POLITY_NAME, "year": year, "n_basins": len([d for d in slide_data if d[0] == year][0][2])}
+        for f, label in SIG_FIELDS.items():
+            val = sig[f]
+            csv_label = label
+            if "Temp" in label:
+                val = val / 10  # convert to °C
+                csv_label = label.replace("°C×10", "°C")
+            row[csv_label] = round(val, 2)
+        rows.append(row)
+    pd.DataFrame(rows).to_csv(sig_csv, index=False)
+    print(f"\nSaved signatures: {sig_csv}")
+
     # Signature comparison chart
-    print("\nGenerating signature comparison chart...")
+    print("Generating signature comparison chart...")
     plot_signature_comparison(signatures, SIG_FIELDS, SIG_FIELDS, OUTPUT_DIR / "northern_song_signatures.png")
 
     conn.close()
