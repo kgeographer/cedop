@@ -234,16 +234,94 @@ def plot_signature_comparison(signatures, sig_fields, sig_labels, outpath):
     print(f"  Saved: {outpath}")
 
 
+def plot_slide_series(slide_data, color_field, color_label, max_extent, outdir):
+    """
+    Generate a series of identically-framed maps for slide animation.
+
+    Each map uses the same spatial extent (max_extent) and color scale,
+    but shows only that year's polity boundary and its basins.
+
+    slide_data: list of (year, polity_geom, basins_gdf)
+    max_extent: (minx, miny, maxx, maxy) — shared bounding box
+    """
+    # Compute shared color scale across all basins from all years
+    all_vals = pd.concat([d[2][color_field] for d in slide_data])
+    vmin = all_vals.quantile(0.05)
+    vmax = all_vals.quantile(0.95)
+
+    minx, miny, maxx, maxy = max_extent
+    pad_x = (maxx - minx) * 0.05
+    pad_y = (maxy - miny) * 0.05
+
+    for year, polity_geom, basins_gdf in slide_data:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+
+        # Plot clipped basin fragments colored by signature field
+        clipped_gdf = basins_gdf.set_geometry("clipped_geometry")
+        clipped_gdf.plot(
+            ax=ax,
+            column=color_field,
+            cmap="RdYlBu",
+            edgecolor="gray",
+            linewidth=0.3,
+            alpha=0.8,
+            vmin=vmin,
+            vmax=vmax,
+            legend=True,
+            legend_kwds={"label": color_label, "shrink": 0.5},
+        )
+
+        # Plot polity outline
+        polity_gdf = gpd.GeoDataFrame([{"geometry": polity_geom}], crs="EPSG:4326")
+        polity_gdf.plot(
+            ax=ax,
+            facecolor="none",
+            edgecolor="#993333",
+            linewidth=2.5,
+        )
+
+        # Lock extent to the largest territory
+        ax.set_xlim(minx - pad_x, maxx + pad_x)
+        ax.set_ylim(miny - pad_y, maxy + pad_y)
+
+        ax.set_title(
+            f"{POLITY_NAME} — {year} CE",
+            fontsize=16, fontweight="bold",
+        )
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+
+        n_basins = len(basins_gdf)
+        ax.annotate(
+            f"{n_basins} intersecting basins",
+            xy=(0.02, 0.02), xycoords="axes fraction",
+            fontsize=11, color="#666666",
+        )
+
+        plt.tight_layout()
+        outpath = outdir / f"slide_{year}.png"
+        fig.savefig(outpath, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {outpath}")
+
+
 def main():
     conn = db_connect()
     print(f"Querying polity geometries for '{POLITY_NAME}'...")
     polities = get_polity_geometries(conn, POLITY_NAME)
     print(f"  Found {len(polities)} time slices")
 
+    # Select the 3 representative years
+    slide_years = [962, 970, 980]
+
     signatures = {}
+    slide_data = []
 
     for _, row in polities.iterrows():
         year = row["from_year"]
+        if year not in slide_years:
+            continue
+
         print(f"\nProcessing {POLITY_NAME} @ {year}...")
 
         basins = get_intersecting_basins(conn, row["geometry"], SIG_FIELDS)
@@ -260,10 +338,19 @@ def main():
             else:
                 print(f"    {label}: {val:.1f}")
 
-        # Generate map
+        # Generate individual map
         year_label = f"{year} CE"
         outpath = OUTPUT_DIR / f"northern_song_{year}.png"
         plot_overlay(row["geometry"], basins, year_label, COLOR_FIELD, COLOR_LABEL, outpath)
+
+        slide_data.append((year, row["geometry"], basins))
+
+    # Generate slide series (fixed extent, fixed color scale)
+    print("\nGenerating slide series...")
+    # Use the 980 CE polity bounds as the shared extent
+    max_geom = [d[1] for d in slide_data if d[0] == 980][0]
+    max_extent = max_geom.bounds  # (minx, miny, maxx, maxy)
+    plot_slide_series(slide_data, COLOR_FIELD, COLOR_LABEL, max_extent, OUTPUT_DIR)
 
     # Signature comparison chart
     print("\nGenerating signature comparison chart...")
