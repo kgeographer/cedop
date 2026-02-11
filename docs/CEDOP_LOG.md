@@ -8,7 +8,14 @@
 - Added `/about` page with architecture diagram
 - Updated `base.html` EDOP header: logo links back to `/`, title updated to "EDOP | Computing Place"
 - Updated FastAPI metadata from "EDOP Pilot" to "Computing Place"
-- **Deployment**: DNS changed from `edop.kgeographer.org` to `cedop.kgeographer.org`; renamed database `edop` → `cedop`, working directory `/var/www/edop` → `/var/www/cedop`, systemd service `edop` → `cedop`; updated Apache vhost
+- **Deployment**: DNS changed from `edop.kgeographer.org` to `cedop.kgeographer.org`; renamed database `edop` → `cedop`, working directory `/var/www/edop` → `/var/www/cedop`, systemd service `edop` → `cedop`; updated Apache vhost; enabled SSL via certbot
+- Added `README.md` for GitHub repo with project description and logo
+- **Polity-basin overlay script** (`scripts/edop/polity_basin_overlay.py`): areal interpolation demo
+  - Queries Cliopatria temporal polity geometries, finds intersecting basin08 sub-basins
+  - Computes area-weighted composite environmental signatures per time slice
+  - Northern Song (962–980 CE): 3 territorial phases, 1407→2506→4217 basins
+  - Generates static maps (aridity-colored basins within polity boundaries) and signature comparison chart
+  - **Slide series mode**: fixed spatial extent (980 CE bbox) and shared color scale across 3 PNGs for slide animation showing expansion + environmental shift (precip 691→1117 mm/yr, aridity 64→102)
 
 #### 31 Jan 2026
 - **ICH Corpus Update**: Extended UNESCO Intangible Cultural Heritage corpus from 730 to 865 elements
