@@ -1110,28 +1110,29 @@
   let basinClusters = [];
   let selectedClusterId = null;
 
-  // Environmental cluster labels based on temperature, moisture, and elevation
+  // Fallback cluster labels (Jan 2026 k=20 run, from basin08_cluster_labels_manual.json).
+  // Preferred source is the label returned by /api/basin-clusters from the DB table.
   const CLUSTER_LABELS = {
-    0: 'Cool humid lowland',
-    1: 'Frigid highland',
-    2: 'Warm semi-arid',
-    3: 'Cool humid upland',
-    4: 'Hot arid',
-    5: 'Cold boreal',
-    6: 'Hot seasonal humid',
-    7: 'Warm wet floodplain',
-    8: 'Warm subhumid upland',
-    9: 'Frigid alpine',
-    10: 'Hot humid upland',
-    11: 'Warm semi-arid upland',
-    12: 'Cold subhumid lowland',
-    13: 'Cold high plateau',
-    14: 'Warm humid highland',
-    15: 'Frigid montane',
-    16: 'Hot wet lowland',
-    17: 'Hot subhumid lowland',
-    18: 'Cold semi-arid',
-    19: 'Cool semi-arid upland'
+    0: 'Warm Desert',
+    1: 'Boreal Continental',
+    2: 'Tropical Dry',
+    3: 'Arctic Tundra',
+    4: 'Tropical Moist Lowland',
+    5: 'Hot Hyper-arid Desert',
+    6: 'Tropical Moist Highland',
+    7: 'Mediterranean / Warm Temperate',
+    8: 'Subtropical Desert',
+    9: 'Tropical Coastal',
+    10: 'Temperate Steppe / Grassland',
+    11: 'Temperate / Mediterranean',
+    12: 'High-altitude Permafrost',
+    13: 'Tropical Savanna',
+    14: 'Hot Desert (Middle East / N. Africa)',
+    15: 'Saharan / Arabian Hyper-arid',
+    16: 'Tropical Semi-arid (Sahel / Andes)',
+    17: 'Boreal / Cool Temperate',
+    18: 'Extreme Desert (Empty Quarter)',
+    19: 'Northern Boreal / Subarctic'
   };
 
   function basinSetStatus(msg) {
@@ -1173,7 +1174,7 @@
 
     // Render as list items
     const html = sorted.map(c => {
-      const label = CLUSTER_LABELS[c.cluster_id] || `Cluster ${c.cluster_id}`;
+      const label = c.label || CLUSTER_LABELS[c.cluster_id] || `Cluster ${c.cluster_id}`;
       const cityBadge = c.city_count > 0
         ? `<span class="badge bg-primary">${c.city_count}</span>`
         : `<span class="badge bg-secondary">0</span>`;
@@ -1211,7 +1212,8 @@
       }
     });
 
-    const label = CLUSTER_LABELS[clusterId] || `Cluster ${clusterId}`;
+    const clusterData = basinClusters.find(c => c.cluster_id === clusterId);
+    const label = (clusterData && clusterData.label) || CLUSTER_LABELS[clusterId] || `Cluster ${clusterId}`;
     basinSetStatus('Loading cities...');
 
     try {

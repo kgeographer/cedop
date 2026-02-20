@@ -1012,7 +1012,7 @@ def whc_summaries(city_id: int):
 
 @router.get("/basin-clusters")
 def basin_clusters():
-    """Return all basin clusters with basin and city counts."""
+    """Return all basin clusters with basin counts, city counts, and labels."""
     try:
         conn = db_connect()
         with conn.cursor() as cur:
@@ -1020,11 +1020,13 @@ def basin_clusters():
                 SELECT
                     b.cluster_id,
                     COUNT(DISTINCT b.id) as basin_count,
-                    COUNT(DISTINCT c.id) as city_count
+                    COUNT(DISTINCT c.id) as city_count,
+                    lbl.label
                 FROM basin08 b
                 LEFT JOIN gaz.wh_cities c ON c.basin_id = b.id
+                LEFT JOIN basin_cluster_labels lbl ON lbl.cluster_id = b.cluster_id
                 WHERE b.cluster_id IS NOT NULL
-                GROUP BY b.cluster_id
+                GROUP BY b.cluster_id, lbl.label
                 ORDER BY b.cluster_id
             """)
 
@@ -1033,7 +1035,8 @@ def basin_clusters():
                 clusters.append({
                     "cluster_id": row[0],
                     "basin_count": row[1],
-                    "city_count": row[2]
+                    "city_count": row[2],
+                    "label": row[3]
                 })
 
             return {"clusters": clusters}
