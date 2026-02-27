@@ -1,5 +1,10 @@
 ### CEDOP LOG
 ----
+#### 21 Feb 2026
+- **Research direction**: `pitches/EDOP_outline_revised.pdf` submitted to ISHI group (Pitt) and PhD advisor Goodchild (UCSB) as pre-grant proposal framing EDOP as GIScience infrastructure. Outlines full design intent including area-based signatures, multi-scale basin evaluation (MAUP), spatial autocorrelation treatment, and temporal mismatch handling. Awaiting response before committing to next phase scope.
+- **Cliopatria geometry analysis**: explored redundancy in `gaz.clio_polities` — 15,690 rows, 1,618 polities, only 11,864 globally distinct geometries (24% redundancy). Parenthesized names (97 distinct) largely co-exist with plain versions and likely represent different spatial readings of the same entity; deferred to Cliopatria team. Planned approach: distinct geometry table with FK, keyed by `MD5(ST_AsBinary(geom))`, reducing areal interpolation jobs by ~24%.
+- **Basin cluster label fix**: hardcoded JS `CLUSTER_LABELS` were mismatched after Jan 2026 re-clustering. Fixed by adding `basin_cluster_labels` DB table, `populate_basin_cluster_labels.py` script, and updating `/api/basin-clusters` to return labels from DB. JS now uses API label with hardcoded map as fallback. (branch: `basins_fix`, merged to main)
+
 #### 08 Feb 2026
 - **Git cleanup**: expanded `.gitignore` for large data (`app/data/clio/`, `app/data/ich/`, `output/`), binary files, and lock files; removed `.DS_Store` and `__pycache__` from tracking
 - **Repository reorganization commit**: moved `library/` → `articles/`, `docs/prospectus*` → `docs/cdop/`, removed old `prompts/`; added logos, Computing Place images, CDOP docs

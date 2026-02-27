@@ -115,6 +115,7 @@ curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Ti
 
 - **`docs/CEDOP_LOG.md`** — Development journal with dated entries
 - **`prompts/seed-prompt-ongoing.md`** — Running prompt/context notes
+- **`pitches/EDOP_outline_revised.pdf`** — Pre-grant research direction document (GIScience framing); describes full design intent including unimplemented sections marked [*]. Pending response from ISHI group (Pitt) and advisor Goodchild (UCSB). Use as context for technical decisions around scale sensitivity, areal interpolation, and methodological rigor — but treat aspirational sections as conditional, not committed.
 
 ## External Dependencies
 
