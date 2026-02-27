@@ -115,7 +115,7 @@ curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Ti
 
 - **`docs/CEDOP_LOG.md`** — Development journal with dated entries
 - **`prompts/seed-prompt-ongoing.md`** — Running prompt/context notes
-- **`pitches/EDOP_outline_revised.pdf`** — Pre-grant research direction document (GIScience framing); describes full design intent including unimplemented sections marked [*]. Pending response from ISHI group (Pitt) and advisor Goodchild (UCSB). Use as context for technical decisions around scale sensitivity, areal interpolation, and methodological rigor — but treat aspirational sections as conditional, not committed.
+- **`pitches/EDOP_outline_v3.md`** — Current authoritative research direction document (v3, Feb 2026), revised after consultation with PhD advisor Michael Goodchild. Core conceptual shift: from *geographic enrichment* (what surrounds a place) to *process-aware environmental characterization* (what a place experiences through directed spatial processes). Key additions over prior versions: (1) local/upstream `s`/`u` duality as a first-class signature feature; (2) distance-weighted upstream profiling via `next_sink` drainage DAG, with topological depth as POC decay proxy and HydroRIVERS as rigorous metric extension; (3) process-type typology for spatial influence (hydrological, atmospheric, acoustic, social — hydrological first); (4) settlement correspondence as external validation and parameter-tuning objective (Section 9); (5) drainage topology implementation plan with recursive CTE and exponential decay weighting (Section 10). Scale sensitivity study across basin levels designated as first paper contribution. Treat [*] sections as conditional research agenda pending ISHI/Pitt support.
 
 ## External Dependencies
 

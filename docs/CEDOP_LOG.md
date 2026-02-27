@@ -1,5 +1,16 @@
 ### CEDOP LOG
 ----
+#### 26 Feb 2026
+- **Goodchild consultation**: shared EDOP outline with PhD advisor Michael Goodchild (UCSB); his response reframed the central conceptual problem. Key points: scale is not just a MAUP issue but a question of *convolution functions* — the spatial extent of environmental influence on a place depends on the underlying process (water quality, air pollution, noise, social familiarity). Goes beyond Esri-style geographic enrichment (no distance) or the exposome literature (also no distance). Goodchild identifies "action-at-a-distance" as the core issue: different processes have different geometries and decay characteristics; GWR addresses this but conceptual underpinnings remain vague.
+- **Outline revised to v3** (`pitches/EDOP_outline_v3.md`); key additions over v2 and the earlier PDF:
+  - **Conceptual framing**: EDOP repositioned as *process-aware environmental characterization* — what a place experiences, not merely what surrounds it; explicit contrast with commercial enrichment tools
+  - **Local/upstream duality**: `s`/`u` fields in HydroATLAS treated as a first-class architectural feature, not a data detail; divergence between local and upstream values is itself environmentally meaningful
+  - **Distance-weighted upstream profiles** (Section 7, expanded): `next_sink` DAG traversal with topological depth as POC decay proxy; exponential decay `exp(-λ × depth)` preferred over inverse-depth; HydroRIVERS polylines as rigorous metric extension and independent signature dimension
+  - **Process-type typology** (Section 7): hydrological (network-constrained), atmospheric (Euclidean directional), acoustic (rapid Euclidean decay), social/acquaintance (network-structured); hydrological designated first implementation
+  - **Section 9 (new)**: Signature validation via settlement correspondence — historical settlement patterns (Reba et al. urban dataset, Cliopatria polities, D-PLACE societies) as external validation signal and objective function for parameter tuning; scale sensitivity and decay-parameter experiments become testable
+  - **Section 10 (new)**: Drainage topology implementation — `next_sink` DAG, recursive CTE for upstream catchment retrieval, three neighborhood types (siblings, catchment, downstream corridor); spot-check on Tigris-Euphrates recommended before building aggregation logic
+  - Scale sensitivity study across HydroATLAS levels designated as first paper contribution
+
 #### 21 Feb 2026
 - **Research direction**: `pitches/EDOP_outline_revised.pdf` submitted to ISHI group (Pitt) and PhD advisor Goodchild (UCSB) as pre-grant proposal framing EDOP as GIScience infrastructure. Outlines full design intent including area-based signatures, multi-scale basin evaluation (MAUP), spatial autocorrelation treatment, and temporal mismatch handling. Awaiting response before committing to next phase scope.
 - **Cliopatria geometry analysis**: explored redundancy in `gaz.clio_polities` — 15,690 rows, 1,618 polities, only 11,864 globally distinct geometries (24% redundancy). Parenthesized names (97 distinct) largely co-exist with plain versions and likely represent different spatial readings of the same entity; deferred to Cliopatria team. Planned approach: distinct geometry table with FK, keyed by `MD5(ST_AsBinary(geom))`, reducing areal interpolation jobs by ~24%.
