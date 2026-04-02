@@ -1,7 +1,7 @@
 # EDOP: Environmental Dimensions of Place
-*Prospectus — updated April 2026. Seeded from working outline v3 (February 2026); prior additions and refinements marked* **[NEW]** *or* **[REVISED]***
+*Prospectus — 02 April 2026*
 
-*EDOP is a research program developed by Karl Grossner under the aegis of the Institute for Spatial History Innovation (ISHI), University of Pittsburgh, directed by Ruth Mostern. Development is supported by ISHI beginning April 2026.*
+*EDOP is a research program conceived and developed by Karl Grossner, now proposed to be supported and maintained by the Institute for Spatial History Innovation (ISHI), University of Pittsburgh (Ruth Mostern, Director) beginning April 2026.*
 
 ---
 
@@ -9,17 +9,15 @@
 
 Environmental Dimensions of Place (EDOP) is a computational service for generating standardized, reproducible environmental "signatures" for geographic locations. The core objective is to operationalize environmental context in a form suitable for comparative analysis, linking and integration with cultural datasets, and exploratory modeling of relationships between environmental patterns and human phenomena.
 
-EDOP is designed as infrastructure: a generalizable method for computing environmental descriptors of place at multiple spatial scales. A working prototype has been implemented and is publicly accessible. This prospectus describes the full design intent; the current prototype implements a working subset. Sections describing capabilities not yet implemented are marked with an asterisk [*].
+EDOP is designed as infrastructure: a generalizable method for computing environmental descriptors of place at multiple spatial scales. A [working prototype](https://cedop.kgeographer.org/edop) has been implemented and is publicly accessible. This prospectus describes the full evolving design intent; the current prototype implements a working subset. Sections describing capabilities not yet implemented are marked with an asterisk [*].
 
-EDOP is one module of the broader **Computing Place** research initiative, paired with a **CDOP** (Cultural Dimensions of Place) module. The two are related but distinct in scope: EDOP's use of cultural datasets (settlement records, ethnographic societies, historical polities) is instrumental — these serve as external probes for validating environmental signature quality, not as objects of cultural inquiry in themselves. CDOP addresses the cultural inquiry directly: investigating relationships between cultural practices and environmental settings. Development of the two modules proceeds at independent paces.
-
----
+EDOP is one module of the broader **Computing Place** research initiative, paired with a **CDOP** (Cultural Dimensions of Place) module. The two are related but distinct in scope: EDOP's use of cultural datasets (settlement records, ethnographic societies, historical polities) is instrumental — these serve as external probes for validating environmental signature quality, not as objects of cultural inquiry in themselves. CDOP addresses the cultural inquiry directly: investigating relationships between cultural practices and environmental settings. Development of the two modules proceeds in parallel at independent paces.
 
 ## 2. Conceptual Premise
 
-EDOP takes as a formative premise that each inhabited area of the Earth lies within or is itself a cultural landscape, in much the same sense described by geographer Carl Sauer a century ago (1925). In this framing, physical geography and ecological characteristics (i.e. landscape) are the setting for human activity (i.e. culture), in a continually evolving bi-directional relationship. This close association is well-known to environmental historians, archaeologists, and many others studying the past in the humanities and social sciences. That said, environmental context is typically invoked qualitatively in cultural, historical, and archaeological research.
+EDOP takes as a formative premise that each inhabited area of the Earth lies within or is itself a cultural landscape, in much the same sense described by geographer Carl Sauer a century ago (1925). In this framing, physical geography and ecological characteristics (i.e. landscape) are the setting for human activity (i.e. culture) in a continually evolving bi-directional relationship. This close association is well-known to environmental historians, archaeologists, and many others studying the past in the humanities and social sciences. That said, environmental context is typically invoked qualitatively in cultural, historical, and archaeological research.
 
-EDOP treats environmental context as a computable, multidimensional construct derived from globally consistent geospatial datasets. In this framework, place descriptions include a computable vector of environmental dimensions extracted from standardized environmental variables. These dimensions include, for example:
+EDOP treats environmental context as a computable, multidimensional construct derived from globally consistent geospatial datasets. In this framework, place descriptions can include an EDOP "signature" (EDOPS) — a structured representation of environmental conditions extracted from standardized environmental variables. These dimensions include, for example:
 
 - Hydrological indicators
 - Climate variables
@@ -27,105 +25,142 @@ EDOP treats environmental context as a computable, multidimensional construct de
 - Land cover or ecoregional classification
 - Bioclimatic indices
 
-The resulting "signature" is not a classification label but a structured representation of environmental conditions. These can in turn be expressed in natural language summaries, as required for some applications.
+The resulting signature is not a classification label but a structured, self-describing document (serialized as JSON) suitable for downstream analysis, comparison, and natural language interpretation.
 
-**[NEW]** EDOP is positioned in explicit contrast to commercial geographic enrichment services (e.g. Esri's ArcGIS Enrichment Service), which augment point locations with attribute values from overlapping layers but do not consider conditions at a distance or the directional, process-mediated flows that connect a location to its surroundings. EDOP's goal is *process-aware environmental characterization* — what a place experiences, not merely what surrounds it. This distinction constitutes a methodological novelty relative to current commercial and open-source tools.
+EDOP is positioned in explicit contrast to commercial geographic enrichment services (e.g. Esri's ArcGIS Enrichment Service), which augment point locations with attribute values from overlapping layers but do not consider conditions at a distance or the directional, process-mediated flows that connect a location to its surroundings. EDOP's goal is *process-aware environmental characterization* — what a place experiences, not merely what surrounds it. This distinction constitutes a methodological novelty relative to current commercial and open-source tools.
 
----
+## 3. The Environmental Signature
 
-## 3. Units of Analysis
+### Variable Selection and Structure
 
-EDOP accommodates two primary input types:
-
-### A. Area-based units [*]
-
-For polygons (e.g. administrative regions, historical polities, archaeological territories), the environmental signature is computed across the defined spatial extent using area-weighted aggregation over hydrologic basin units (HydroATLAS; level 08, ~190k sub-basins).
-
-**[REVISED]** Rather than returning only an area-weighted mean vector, EDOP returns a *distribution* over intersecting basin signatures — including quantiles of each variable and, optionally, a clustering of intersecting basins into environmental sub-zones. A single summary vector remains available as a convenience, but is explicitly flagged as a lossy reduction. This preserves within-unit environmental variation (e.g. north/south gradients, highland/lowland contrasts) that is often of direct historical interest and is lost in scalar summaries.
-
-### B. Point-based locations
-
-For point locations (e.g. settlements, heritage sites, ethnographic societies), a neighborhood must be defined explicitly [*]. The default neighborhood model uses hydrologic basin containment at a specified HydroATLAS level, which provides physically grounded, globally consistent spatial envelopes. Alternative models include:
-
-- Fixed-radius buffers
-- Ecological zones
-- Other analytically justified spatial envelopes
-
-**[REVISED]** Basin level selection is a methodological choice with direct consequences for signature content. Level 10 (small sub-basins, typically tens of km²) is the appropriate default for point inputs; level 08 is more appropriate for larger area inputs. The scale-sensitivity of any given signature — how much it changes across basin levels — is itself an informative property of the location, particularly for settlements at environmental boundaries (confluences, piedmont edges, coastal zones), and is reported alongside the signature.
-
-Neighborhood definition is treated as a transparent, swappable parameter rather than a technical default. Edge cases — confluence cities, coastal settlements, polities spanning major basin boundaries — are documented explicitly as instances requiring particular care.
-
-**[NEW]** A systematic scale sensitivity study is planned as a first analytical output, examining how signatures vary across basin levels for a set of representative point locations. This constitutes a natural first paper contribution, with methodological implications for all downstream uses of the service.
-
----
-
-## 4. Variable Selection and Dimensional Structure
-
-EDOP relies on globally available, spatially consistent environmental datasets. Primary sources include HydroATLAS (hydrological and climate variables at multiple basin levels), digital elevation models (terrain metrics), and established ecoregion frameworks (One Earth, WWF). Because such datasets contain hundreds of potentially collinear variables, the service includes:
+EDOPS relies on globally available, spatially consistent environmental datasets. Primary sources to date include HydroATLAS (hydrological and climate variables at multiple basin levels), digital elevation models (terrain metrics), and the ecoregion frameworks developed by One Earth. Because such datasets contain hundreds of potentially collinear variables, the service applies:
 
 - Statistical screening to reduce redundancy
 - Dimensionality reduction (e.g. principal components analysis or related methods)
 - Optional banding or stratification for interpretability
 
-The goal is a compact, interpretable environmental signature that preserves meaningful environmental gradients — where "meaningful" is operationally defined through validation against independent signals (e.g. semantic similarity of place descriptions and expert evaluation) rather than assumed from the variable set alone.
+Variables are grouped in four temporally scoped "bands" that correspond to relative persistence and applicability to successive historical eras: *A — Physiographic bedrock*, *B — Hydroclimatic baselines*, *C — Bioclimatic proxies*, *D — Anthropocene markers*. This banding allows for a relatively coarse temporal scoping of queries: analyses of pre-industrial periods can suppress or qualify Group D variables, which reflect modern land cover and human pressure.
 
-**[NEW]** HydroATLAS provides, for most variable categories, both a local value (`s`: conditions within the sub-basin only) and an upstream catchment value (`u`: area-weighted accumulation across all upstream contributing basins). This local/upstream duality is a first-class architectural feature of EDOP signatures, not merely a data detail. The contrast between `s` and `u` for a given variable is itself environmentally meaningful: a settlement where local aridity (`s`) diverges sharply from upstream catchment aridity (`u`) occupies a qualitatively different environmental position than one where the two converge.
+The goal is a compact, interpretable signature that preserves meaningful environmental gradients — where "meaningful" is operationally defined through validation against independent signals rather than assumed from the variable set alone.
 
-**[NEW]** Beyond the pre-computed `u` values, the HydroATLAS basin network encodes explicit upstream-downstream topology via `hybas_id` and `next_down` fields, which form a crawlable directed acyclic graph. This enables computation of *distance-stratified upstream profiles* not available in the standard dataset — for instance, near-upstream aggregates (within N hops or K km of flow distance) weighted to reflect proximity rather than contributing area. The `next_sink` field (terminal drainage outlet) provides a free macro-watershed partition key useful for similarity queries and traversal validation. Distance-weighted upstream profiling is designated as a named research extension (see Section 7).
+### Local and Upstream Duality
 
----
+HydroATLAS provides, for most variable categories, both a local value (`s`: conditions within the sub-basin only) and an upstream catchment value (`u`: area-weighted accumulation across all upstream contributing basins). This local/upstream duality is a first-class architectural feature of EDOP signatures. The contrast between `s` and `u` for a given variable is itself environmentally meaningful: a settlement where local aridity (`s`) diverges sharply from upstream catchment aridity (`u`) occupies a qualitatively different environmental position than one where the two converge.
+
+The Tigris-Euphrates basin illustrates this clearly: Ur's local environment is hyper-arid (~94mm/yr precipitation), but its upstream catchment receives substantially more, sustaining the riverine flow that made the site viable. That divergence is not a nuance of the data — it is the central environmental fact about alluvial civilizations.
+
+Beyond the pre-computed `u` values, the HydroATLAS basin network encodes explicit upstream-downstream topology via `hybas_id` and `next_down` fields, forming a crawlable directed acyclic graph. This enables computation of *distance-stratified upstream profiles* not available in the standard dataset — near-upstream aggregates weighted to reflect proximity rather than contributing area. Distance-weighted upstream profiling is a designated research extension (see Section 7).
+
+### Downstream Connectivity and Coastality
+
+The upstream dimension captures what flows *to* a place. A complementary dimension captures what a place can *reach and send* — its connectivity to the sea via the downstream drainage network. This coastality dimension is not incidental: for many historically significant locations, marine access is the primary environmental affordance, not a secondary feature.
+
+The conceptual core of coastality is what may be called **terrestrial-marine decoupling**: in coastal environments, marine affordance and terrestrial affordance are independent dimensions that can point in opposite directions. Settlement viability is a function of their combination, not either alone.
+
+The Yaghan (Yamana) of Tierra del Fuego present this case in its sharpest form. Their territory — the Beagle Channel and the Cape Horn archipelago — has among the most forbidding terrestrial signatures in the inhabited world: extreme temperature variability, minimal agricultural potential, very low BasinATLAS viability scores. A purely terrestrial EDOP signature would predict very low settlement potential. The Yaghan occupied this territory for millennia, because the marine affordance is extraordinary: the Malvinas Current brings cold, nutrient-rich water through highly productive fjord systems, sustaining dense shellfish, pinnipeds, and fish concentrations. They were essentially aquatic in their subsistence. The terrestrial signature is not wrong — it correctly characterizes terrestrial conditions, but it is blind to the dimension that actually mattered.
+
+Coastality operates through three distinct modes that should not be conflated:
+
+- **Hydrologic connectivity**: position within the drainage graph relative to a marine outlet — captured by `dist_sink` (flow distance to terminal outlet) and outlet type (exorheic / endorheic / terminal lake). Endorheic basins have no marine connection by definition and must be handled explicitly throughout.
+- **Ecological influence**: marine productivity accessible from the location — driven by continental shelf width, upwelling zones, and major current systems. These extend beyond BasinATLAS and require external datasets [*].
+- **Human accessibility**: practical interaction with the sea — harbor morphology, navigable channel availability, coastal shelter. Highly context-dependent [*].
+
+What is immediately implementable from existing data: flow distance to marine outlet (`dist_sink`), outlet type classification, and topological depth from coast (hop count via `next_down`). These constitute the first phase of coastality integration. Shelf width as a marine productivity proxy and oceanographic current overlays are designated second-phase additions.
+
+Together, the upstream and downstream dimensions frame a complete positional description within the hydrological graph: what a place receives from above, and what it can reach below.
+
+### Temporal Scope and Historical Depth
+
+So far, contemporary environmental datasets are used as baselines for analyses that are often historical. This temporal mismatch is a genuine methodological constraint. The banding structure partially addresses this: physiographic and hydroclimatic variables (Groups A and B) are largely stable over centuries to millennia and are in many cases defensible as historical baselines; land cover and human pressure indices (Group D) require exclusion or explicit qualification for pre-modern use.
+
+A significant expansion of EDOP's temporal capacity is under active consideration, motivated by the program's institutional partnership with environmental historians at ISHI. Several established historical climate datasets could in principle be integrated to give signatures genuine temporal depth:
+
+- **Dendrochronology-based climate reconstructions** (e.g. PAGES 2k and related compilations): tree-ring derived temperature and precipitation proxies extending centuries to millennia, with global coverage at varying resolution
+- **Ship log weather compilations** (e.g. CLIWOC): systematic meteorological observations from maritime logbooks, offering pre-instrumental climate data with good spatial coverage for maritime routes
+- **Volcanic forcing records** (e.g. Sigl et al. ice-core series): stratospheric aerosol loading from volcanic eruptions, producing globally distributed forcing events with known climatic consequences
+
+These datasets are structurally different from the static BasinATLAS baseline — they are time series with their own spatial resolution and uncertainty characteristics. Integration is a research agenda item, not an immediate deliverable; the approach and feasibility remain to be developed. But their availability means that the temporal mismatch problem is tractable in principle, and addressing it seriously distinguishes EDOP from purely contemporary geographic enrichment tools.
+
+## 4. Spatial Neighborhoods and Units of Analysis
+
+### The Neighborhood Problem
+
+For a given location, "the environment" is not self-defining. The spatial extent over which environmental variables are aggregated — the *neighborhood* — is a methodological choice with direct consequences for signature content. EDOP treats neighborhood type as a transparent, explicit parameter rather than a hidden default. The choice of neighborhood model is itself a research decision, and scale sensitivity (how much signatures change across neighborhood definitions) will be a designed output of the service.
+
+### Point Locations
+
+For point inputs (settlements, heritage sites, representative points for indigenous societies), several neighborhood models will be available:
+
+- **Containing basin**: the HydroATLAS sub-basin at a specified Pfafstetter level that contains the point. Fast and globally consistent; sensitive to basin boundary placement (a classic MAUP problem). Level 10 (typically tens of km²) is likely the appropriate default for point inputs; Level 08 is more appropriate for regional aggregation.
+- **Fixed-radius buffer**: area-weighted aggregation over all basins intersecting a defined radius. Isotropic (direction-invariant), stable, and comparable across sites regardless of basin network structure.
+- **Upstream catchment**: recursive traversal of all basins draining through the point's containing basin, weighted by distance from the outlet. Process-aware and hydrologically grounded; size varies greatly with position in the network (a headwater point vs. a lowland river site). Distance-decay weighting (exponential decay over upstream depth) is preferred over flat area-weighting, which treats a headwater basin identically to an immediately upstream neighbor.
+- **Three-tier composite**: local (`s` values), near-upstream (N-hop decay aggregate), and full-upstream (`u` values) — the intended mature output, providing a structured picture of the location's position within its hydrological context.
+
+The HydroATLAS basin network — a directed acyclic graph over ~190,000 sub-basins linked by `next_down` fields — provides the topological foundation for the upstream and three-tier models. This graph also enables downstream traversal to the marine outlet, which underlies the coastality measures described in Section 3. Endorheic basins (n=31,021; closed basins with no marine outlet) must be excluded from any upstream traversal or coastality computation.
+
+Edge cases requiring particular care: confluence cities (sitting at the junction of two drainage systems), coastal settlements (where the local basin is tiny but marine adjacency is the dominant feature), and polities spanning major basin divides. These are documented as instances where neighborhood definition has the most consequence.
+
+### Area-Based Units
+
+For polygon inputs (historical polities, administrative regions, designated study areas), the polygon boundary defines the neighborhood. The design question shifts to aggregation: rather than returning only an area-weighted mean vector, EDOP will return a *distribution* over intersecting basin signatures — including quantiles of each variable and, optionally, a clustering of intersecting basins into environmental sub-zones. A scalar summary will remain available but explicitly flagged as a lossy reduction. This preserves within-unit environmental variation (north/south gradients, highland/lowland contrasts) that is often of direct historical interest.
+
+An analytically interesting variant is the temporal sequence of polygon inputs: the same polity at successive dates, as its territory expanded or contracted. Computing signature distributions at each time slice and differencing them reveals how the aggregate environmental profile of the territory changed — which can serve as physical evidence for, or against, environmentally motivated expansion. The Northern Song dynasty's southward territorial expansion between 962 and 980 CE provides a worked example: aridity index distributions shift markedly toward higher moisture availability as the territory expanded into wetter southern regions, consistent with a plausible environmental motivation.
 
 ## 5. Outputs
 
-For any given place, EDOP produces:
+For any given place, the EDOPS will produce:
 
-- A structured environmental signature vector, including local (`s`) and upstream (`u`) values for applicable variables **[REVISED]**
-- A three-tier spatial stratification: local, near-upstream, full-upstream, for key variables [*] **[NEW]**
+- A structured environmental signature, serialized as JSON, including local (`s`) and upstream (`u`) values for applicable variables
+- Coastality fields: outlet type, flow distance to marine outlet, topological depth from coast
+- A three-tier spatial stratification: local, near-upstream, full-upstream, for key variables [*]
 - Summary statistics of underlying variables [*]
-- Dimension scores [*]
+- Dimension scores from dimensionality reduction [*]
 - Optional categorical banding
-- Machine-readable output suitable for downstream analysis
-- **[NEW]** A brief natural language interpretation of the signature, generated by LLM from the structured values and the signature algorithm's parameters, suitable for non-specialist users of gazetteer and cultural heritage platforms [*]
+- Machine-readable output suitable for downstream analysis and similarity computation
+- A brief natural language interpretation of the signature, generated by an LLM, suitable for non-specialist users of gazetteer and cultural heritage platforms
 
----
+JSON serialization is intentional: the signature is structured (named variable groups, local/upstream pairs, coastality component, neighborhood metadata) and self-describing. A consumer can interpret values without external schema documentation. Similarity and comparison operations derive a vector from the JSON at query time, selecting whichever fields are relevant to the task.
 
-## 6. Broader Research Context
+## 6. Validation
 
-EDOP is conceived as one component of a Computing Place framework, paired with a Cultural Dimensions of Place (CDOP) module. Together they draw on structured cultural datasets (e.g. ethnographic variables, heritage classifications, textual corpora) to enable systematic investigation of questions such as:
+A central methodological question — whether EDOP signatures are capturing something real about place, or are artifacts of variable selection and dimensionality reduction — requires external validation to be a designed feature of the service.
 
-- Do cultural traits cluster in particular environmental regimes?
-- How do environmental gradients correspond to linguistic, social, or economic variation?
-- How stable are environmental signatures across historical change?
+### Settlement Correspondence
 
-Environmental signatures define bounded possibility spaces — what natural settings afford and constrain — while cultural agency determines which possibilities are realized. The Computing Place framework supports comparative analysis without asserting causation.
+One approach will exploit the known correspondence between environmental conditions and human settlement patterns across deep history. The logic is explicitly instrumental rather than deterministic: if EDOP signatures encode meaningful environmental information, then basins with signatures similar to known major settlement hearths should themselves appear in the historical record as likely settled or environmentally significant. 
 
----
+This approach also provides a principled objective function for parameter tuning. With settlement correspondence as an external signal, questions become testable: Does adding a given variable class improve correspondence? Does changing basin level sharpen or blur the signal? Does distance-decay weighting of upstream contributions change which basins surface as high-potential? Each is a sensitivity experiment with a measurable outcome.
+
+**Candidate datasets:**
+
+- **Early urban hearths**: a small set of well-documented river-basin civilizations (Fertile Crescent, Indus, Yellow River, Niger Inland Delta) provides high-confidence positive cases with minimal modern confounding. The Reba et al. historical urban population dataset (6,000 years of georeferenced urban centers) offers a broader global positive-case set.
+- **Temporally scoped polities**: The Seshat Databank roject has produced a *Cliopatria* dataset of ~850 historical polities. Cliopatria records carry no further attributes, but a subset do link via seshat_id to the Seshat Databank, where political and institutional variables might support a derived complexity index as a potentially useful ordinal dimension for validation..
+- *D-PLACE ethnographic studies of indigenous societies*: 1,291 documented societies, linking environmental signatures to specific cultural practices, e.g. subsistence strategies.
+
+### Anomaly Structure as Signal
+
+A complementary validation approach uses EDOP's predictive anomalies — settlements in low-viability environments — as a positive signal rather than a failure mode. The Yaghan case illustrates this: EDOP terrestrial signatures will correctly predict low settlement viability in Tierra del Fuego, but settlement existed there for millennia. The anomaly structure points directly at the missing variable — coastality — and its resolution tests the coastality dimension set directly. More generally, environments with high marine affordance and low terrestrial affordance should be settled by populations with maritime subsistence strategies, and those populations should appear as anomalies in any terrestrial-only model. Mapping anomaly structure against coastality dimensions is a planned validation experiment.
 
 ## 7. Methodological Challenges
 
-Key challenges include:
+- **Scale and neighborhood definition**: Basin level selection and boundary sensitivity are indicative of the Modifiable Areal Unit Problem - MAUP) require systematic evaluation. Scale-sensitivity reporting is a designed feature of the signature output. A systematic study of how signatures vary across basin levels and neighborhood types for a representative set of locations is planned as an initial analytical output and likely first paper contribution.
 
-- **Scale and neighborhood definition:** Basin level selection and boundary sensitivity (MAUP) require systematic evaluation, not assumed defaults. Scale-sensitivity reporting is a designed feature of the signature output. **[REVISED]**
+- **Local vs. upstream environmental character**: The `s`/`u` duality introduces a structured form of spatial context that must be handled explicitly in signature design and communicated clearly in outputs.
 
-- **Local vs. upstream environmental character:** The `s`/`u` duality in HydroATLAS introduces a structured form of spatial context that must be handled explicitly in signature design and communicated clearly in outputs. **[NEW]**
+- **Distance-weighted upstream exposure**: Pre-computed `u` values weight upstream basins by contributing area, not flow distance. A location's actual environmental exposure to upstream conditions attenuates with distance, and different processes have different characteristic decay distances. Implementing process-specific, distance-weighted upstream profiles via network traversal is a designated research extension, suitable for collaboration with a GIScience partner or graduate student.
 
-- **Distance-weighted upstream exposure [*]:** Pre-computed `u` values weight upstream basins by contributing area, not flow distance. A location's actual environmental exposure to upstream conditions attenuates with distance, and different processes (water quality, sediment, temperature) have different characteristic decay distances. Implementing process-specific, distance-weighted upstream profiles via network traversal is a designated research extension, suitable for collaboration with a GIScience partner or graduate student. This constitutes the most direct response to Goodchild's observation about exposome modeling and action-at-a-distance. For a POC, topological depth from the recursive catchment traversal (steps upstream in the `next_sink` graph) provides a tractable proxy for distance decay; exponential decay over depth (`exp(-λ × depth)`) is preferable to inverse-depth and introduces a tunable parameter suitable for sensitivity analysis. Metric flow distance — cumulative segment length along the drainage network — is the rigorous version and is achievable via the HydroRIVERS polyline dataset (currently loaded but not yet integrated into signature computation). HydroRIVERS also carries channel-level attributes (discharge estimates, upstream drainage area, river length) that represent a distinct signature dimension — the river system itself, not merely the surrounding basin envelope — and constitute a natural second-phase enrichment of the signature. **[NEW]**
+- **Process-type typology for spatial influence**: Following Goodchild (pers. comm., 2026), environmental influence on a place operates through distinct process geometries — hydrological (network-constrained, upstream), atmospheric (directional, Euclidean decay), acoustic (Euclidean, rapid decay), social/acquaintance (network-structured). A complete implementation would model each process type with its own spatial influence function. The hydrological case is the most tractable given available data and is the designated first implementation.
 
-- **Process-type typology for spatial influence [*]:** Following Goodchild (pers. comm., 2026), environmental influence on a place operates through distinct process geometries — hydrological (network-constrained, upstream), atmospheric (directional, Euclidean decay), acoustic (Euclidean, rapid decay), social/acquaintance (network-structured). A full exposome model would implement separate influence functions for each process type. The hydrological case is the most tractable given available data and is the designated first implementation. **[NEW]**
+- **Temporal mismatch**: Contemporary environmental datasets are used as baselines for analyses that are often historical. The variable banding structure addresses this partly (Groups A/B are defensible historical baselines; Group D requires explicit qualification). A more serious engagement with historical depth — integrating dendrochronology-based climate reconstructions, ship log weather compilations, and volcanic forcing records — is a named research agenda motivated by the program's partnership with environmental historians, and would constitute a significant expansion of EDOP's temporal capacity.
 
-- **Spatial autocorrelation:** Globally gridded environmental variables are inherently spatially autocorrelated, which affects both variable selection and the validity of downstream comparative analysis. This requires explicit treatment rather than acknowledgment in passing.
+- **Spatial autocorrelation**: Globally gridded environmental variables are inherently spatially autocorrelated, which affects both variable selection and the validity of downstream comparative analysis. This requires explicit treatment.
 
-- **Variable selection bias:** The choice of input variables shapes what environmental gradients are recoverable, independent of dimensionality reduction.
+- **Interpretability of reduced dimensions**: PCA components are not inherently interpretable; validation against independent 
+  signals is needed to confirm that they correspond to environmentally meaningful distinctions.
 
-- **Interpretability of reduced dimensions:** PCA components are not inherently interpretable; validation against independent signals is needed to confirm that reduced dimensions correspond to environmentally meaningful gradients.
+- **Risk of reifying environmental context as causal**: Addressed through the bounded possibility space framing — environmental signatures define what settings afford and constrain; cultural agency determines which possibilities are realized — but requiring vigilance in documentation and communication.
 
-- **Temporal mismatch:** Contemporary environmental datasets are used as baselines for analyses that are often historical. Physiographic features (drainage networks, terrain, climate regimes) are largely stable over centuries to millennia and defensible as historical baselines, while anthropogenically sensitive variables (land cover, human pressure indices) require explicit qualification and period-specific handling.
-
-- **Risk of reifying environmental context as causal:** Addressed through the bounded possibility space framing, but requiring vigilance in documentation and communication.
-
----
-
-## 8. Intended Positioning
+## 8. Positioning and Contribution
 
 EDOP is proposed as:
 
@@ -133,64 +168,21 @@ EDOP is proposed as:
 - A methodological contribution to GIScience and spatial analysis
 - A research tool for investigating environment–culture relationships
 
-**[NEW]** EDOP's novelty relative to existing geographic enrichment tools lies in three features: (1) multi-scale, basin-level environmental characterization with explicit uncertainty and variation reporting; (2) structural use of local/upstream duality as a signature component; and (3) a designed pathway toward process-aware, distance-weighted environmental exposure modeling. The first is immediately implementable; the second is partially implemented; the third is a named research agenda. Together they constitute a coherent and extensible contribution that is not replicated by current commercial or open tools.
+EDOP's novelty relative to existing geographic enrichment tools lies in three features: (1) multi-scale, basin-level environmental characterization with explicit uncertainty and variation reporting; (2) structural use of local/upstream duality as a signature component, with a principled extension toward process-aware, distance-weighted upstream exposure; (3) first-class treatment of coastality as a dimension complementary to, and decoupled from, terrestrial signatures. Together these constitute a coherent and extensible contribution not replicated by current commercial or open tools.
 
-In short, EDOP is not a classificatory scheme but a computational infrastructure for environmental characterization. Credibility in both GIScience and humanities venues requires that methodological assumptions be explicit, documented, and subject to sensitivity testing — a standard the project aims to meet.
+EDOP is not a classificatory scheme, instead a computational infrastructure for environmental characterization. Credibility in both GIScience and humanities venues requires that methodological assumptions be explicit, documented, and subject to sensitivity testing — a standard the project aims to meet.
 
----
+## 9. Broader Research Context
 
-## 9. Signature Validation via Settlement Correspondence **[NEW]**
+EDOP is conceived as one component of the **Computing Place** framework, paired with a Cultural Dimensions of Place (CDOP) module. Together they support systematic investigation of questions such as:
 
-A central methodological question — whether the environmental signatures are capturing something real about place, or are artifacts of variable selection and dimensionality reduction — requires external validation. One principled approach exploits the known correspondence between environmental conditions and human settlement patterns across deep history.
+- Do cultural traits cluster in particular environmental regimes?
+- How do environmental gradients correspond to linguistic, social, or economic variation?
+- How stable are environmental signatures across historical change?
 
-The logic is explicitly instrumental rather than deterministic: if EDOP signatures encode meaningful environmental information, then basins with signatures similar to known major settlement hearths should themselves appear in the historical record as settled or environmentally significant. Failure of this correspondence is diagnostic — it suggests the signature is missing dimensions that mattered to settlement; success increases confidence in signature construction. The model is being used as a *probe for the data*, not as a claim about behavioral causation.
+Environmental signatures define bounded possibility spaces — what natural settings afford and constrain — while cultural agency determines which possibilities are realized. The Computing Place framework supports comparative analysis without asserting causation.
 
-This validation approach also provides a principled objective function for parameter tuning. Currently, attribute selection and basin scale choices are reasoned but not optimized against any criterion. With settlement correspondence as an external signal, questions become testable: Does adding a given variable class improve correspondence? Does changing basin level (HydroATLAS Pfafstetter level 08 vs. 10) sharpen or blur the signal? Does distance-decay weighting of upstream contributions change which basins surface as high-potential? Each is a sensitivity experiment with a measurable outcome.
-
-**Candidate validation datasets:**
-
-- *Early urban hearths* (unambiguous positives): A small set of well-documented river-basin civilizations (Fertile Crescent, Indus, Yellow River, Niger Inland Delta, etc.) provides high-confidence basin-level positive cases with minimal modern confounding, as all predate industrial infrastructure. The Reba et al. historical urban population dataset (6,000 years of georeferenced urban centers) offers a broader and more global positive-case set.
-- *Seshat/Cliopatria polities*: The ~15,690 temporally scoped historical polities offer graduated complexity scores that could be correlated with signature characteristics across a complexity spectrum, not just empire-scale cases. This extends validation from binary (settled/unsettled) to ordinal (complexity level), enabling richer analysis.
-- *D-PLACE ethnographic societies*: The 1,291 documented societies provide the lower end of the complexity spectrum and link environmental signatures to specific cultural practices and subsistence strategies.
-
-Modern population rasters (e.g. Natural Earth urban coverage) are less suitable as primary validation because modern settlement reflects path dependency, industrial infrastructure, and political history as much as environmental suitability. They may be useful as a *negative filter* — basins heavily urbanized today but not historically could be flagged for careful handling, since development may have altered their hydrological signatures.
-
-The unit-of-analysis question must be resolved before any validation experiment: a settlement point falls in one basin, but the settlement system it anchored typically spread across several. The appropriate unit is likely the upstream catchment — the full set of basins draining through or near the settlement's outlet point — aggregated by the distance-weighted scheme described in Section 7. This alignment between validation design and signature construction is methodologically coherent and should be made explicit.
-
----
-
-## 10. Basin Neighborhoods and Drainage Topology **[NEW]**
-
-The `next_sink` field in the HydroATLAS basin table (`basin08`) identifies the downstream receiving basin for each sub-basin, forming a directed acyclic graph over the ~190,000 basin units. This topology enables principled spatial grouping that follows actual hydrological connectivity rather than arbitrary spatial buffers — which is the appropriate kind of neighborhood for a service grounded in process-aware environmental characterization.
-
-Three neighborhood types are directly derivable from the graph:
-
-**Immediate siblings:** All basins whose `next_sink` points to the same outlet — hydrological tributaries sharing a confluence. Retrievable with a single non-recursive query.
-
-**Upstream catchment:** Recursive traversal of all basins that eventually drain through a given pour point. This reconstructs the full watershed above any outlet and corresponds most closely to the environmental territory of a river-basin civilization. In PostgreSQL this is a recursive CTE:
-
-```sql
-WITH RECURSIVE upstream AS (
-  SELECT hybas_id, next_sink, 1 AS depth
-  FROM basin08
-  WHERE hybas_id = :target_id
-  UNION ALL
-  SELECT b.hybas_id, b.next_sink, u.depth + 1
-  FROM basin08 b
-  JOIN upstream u ON b.next_sink = u.hybas_id
-)
-SELECT * FROM upstream;
-```
-
-The `depth` counter (steps upstream from the pour point) serves as the basis for distance-decay weighting of upstream signature contributions. It is a topological rather than metric measure; metric flow distance requires routing along HydroRIVERS polylines, which is the designated rigorous extension.
-
-**Downstream corridor:** Following `next_sink` chains from a basin toward the ocean reconstructs the river system membership — relevant for queries about connectivity and downstream exposure.
-
-The `next_sink` terminal field additionally partitions all basins into macro-watershed groups at no computational cost, useful as a similarity-query filter and traversal sanity check.
-
-For signature aggregation over an upstream catchment, distance-weighted averaging using normalized inverse-depth or exponential decay weights (`exp(-λ × depth)`) is the POC implementation. The decay parameter `λ` is tunable and its sensitivity to settlement correspondence outcomes constitutes a research experiment. Area weighting alone — the implicit assumption in HydroATLAS pre-computed `u` values — treats a headwater basin identically to an immediately upstream neighbor, which is the assumption this framework explicitly relaxes.
-
-Spot-checking a known river system (e.g., retrieving the full upstream catchment for the Tigris-Euphrates outlet basin) before building aggregation logic is recommended to calibrate expected catchment sizes at level 08.
+The EDOPS element of **Computing Place** is being developed with the institutional partnership of ISHI (University of Pittsburgh), whose expertise in spatial history and whose ongoing work with the World Historical Gazetteer provides a natural integration context: Computing Place can publish environmental signatures as linked annotations keyed to WHG place identifiers, contributing to a growing ecosystem of richly described, computationally accessible historical places.
 
 ---
 
