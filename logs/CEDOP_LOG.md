@@ -1,5 +1,20 @@
 ### CEDOP LOG
 ----
+#### 02 Apr 2026
+- **ISHI meeting**: video call with Ruth Mostern (Pitt, director ISHI) and her group to discuss institutional support and potential hosting of EDOPS. Outcome: highly positive. Ruth offered a **$15k year-long contract** to advance EDOPS development, framing it as a second flagship initiative for ISHI alongside World Historical Gazetteer. Contract details to be worked out; prior WHG contract arrangements at Pitt provide the administrative template.
+- **Research program status**: EDOPS is now a funded, institutionally-backed research program. First concrete deliverable: demonstrable tools and examples for a **symposium/advisory meeting planned for Fall 2026** (September/October). Ruth is identifying participants from Pitt environmental sciences and ecology, and from Princeton and Merced; aim is to constitute an informal advisory committee for EDOPS.
+- **Ruth's research interests and suggested data sources**: as an environmental historian (most recent book: 1000-year history of the Yellow River) and Song Dynasty specialist, Ruth is specifically interested in EDOPS utility for historical periods. She named several global historical environmental datasets not yet considered for integration:
+  - **Tree-ring climate reconstructions** (likely PAGES 2k or similar dendrochronology compilations)
+  - **Ship log weather data** (likely CLIWOC or similar)
+  - **Volcanic forcing records** (likely Sigl et al. ice-core derived series)
+  - Integration approach and feasibility remain to be developed; these are time-series datasets with their own spatial resolution and uncertainty characteristics, structurally different from the static BasinATLAS baseline. They speak directly to the temporal mismatch problem (outline Section 7).
+- **Design session (pre-meeting)**: developed `docs/edops_use_cases.md` — a structured use cases document establishing 10 UCs that drive service design requirements. Key conceptual outcomes:
+  - Use cases precede and drive signature algorithm and API design, not the reverse
+  - Neighborhood type is a first-class parameter of UC-1 (single-place profile), not a separate use case; upstream exposure is intrinsic to the basic signature
+  - Coastality (`dist_sink`, outlet type) added as a first-class signature component — a distinct process geometry (what a place can reach downstream) complementing upstream exposure (what flows to a place)
+  - Signature serialization: JSON document, not flat vector; similarity metrics derived from JSON field subsets at query time
+  - UC-10 added: territorial expansion as environmental trajectory — temporal sequence of polygon signatures revealing environmental motivation or consequence of polity expansion (anchored by Northern Song 962–980 CE aridity example, which Ruth has previously found compelling)
+
 #### 27 Feb 2026
 - **Basin topology exploration** (`notebooks/edop/01_basin_topology.ipynb`, branch: `topology-explore`): sanity-checked `basin08` DAG structure; key findings:
   - DAG integrity confirmed: zero broken `next_down` links, all `next_sink` values valid
