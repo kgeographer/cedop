@@ -1,0 +1,129 @@
+{
+  "_note": "Draft EDOP signature schema — April 2026. Dummy instance for Ur (30.9626N, 46.1033E). Values are illustrative; some approximate from prior analysis. Fields marked [*] not yet implemented.",
+
+  "meta": {
+    "version": "0.2-draft",
+    "generated": "2026-04-03",
+    "service": "https://cedop.kgeographer.org/api",
+    "period": {
+      "input": null,
+      "resolved_interval": null,
+      "periodo_uri": null,
+      "band_scope": "all",
+      "_note": "period parameter controls band scoping now; will inform temporal dataset selection in later phases. Accepts ISO 8601 interval (e.g. '0900/1000', '-3000/-2500') or PeriodO URI."
+    }
+  },
+
+  "location": {
+    "name": "Ur",
+    "lat": 30.9626,
+    "lon": 46.1033,
+    "whg_id": null,
+    "basin_id": 4070795270,
+    "basin_level": 8
+  },
+
+  "neighborhood": {
+    "type": "three_tier",
+    "level": 8,
+    "decay_lambda": 0.3,
+    "n_upstream_basins": 142,
+    "upstream_area_km2": 897420,
+    "note": "three_tier: local (s), near-upstream (decay-weighted N-hop), full-upstream (u)"
+  },
+
+  "signature": {
+
+    "A_physiographic": {
+      "_note": "Bedrock physical character; stable over geological timescales",
+      "ele_mt_sav": 18,
+      "slp_dg_sav": 0.4,
+      "sgr_dk_sav": 0.2
+    },
+
+    "B_hydroclimatic": {
+      "_note": "s = local sub-basin; near_u = decay-weighted near-upstream aggregate [*]; u = full upstream catchment",
+      "pre_mm_yr": { "s": 94, "near_u": 287, "u": 412 },
+      "tmp_dc_yr": { "s": 235, "near_u": 178, "u": 148 },
+      "ari_ix":    { "s": 5,  "near_u": 14,  "u": 21  },
+      "run_mm_yr": { "s": 12, "near_u": null, "u": 89 },
+      "dis_m3_yr": 991200000,
+      "gwt_cm_sav": 4
+    },
+
+    "C_bioclimatic": {
+      "_note": "Proxies for ecological and land-surface conditions",
+      "pet_mm_yr": { "s": 1820, "u": 980 },
+      "aet_mm_yr": { "s": 88,   "u": 310 },
+      "snw_pc_yr": { "s": 0,    "u": 4   },
+      "ecoregion": {
+        "id": "PA1303",
+        "name": "Mesopotamian shrub desert",
+        "realm": "Palearctic",
+        "biome": "Deserts & Xeric Shrublands"
+      }
+    },
+
+    "D_anthropocene": {
+      "_note": "Modern-era markers; suppress or qualify for pre-industrial analysis",
+      "hft_ix_s09": 42,
+      "urb_pc_sse": 3,
+      "cly_pc_sav": 18
+    }
+
+  },
+
+  "coastality": {
+    "outlet_type": "exorheic",
+    "dist_sink_km": 890,
+    "depth_from_coast_hops": 34,
+    "shelf_productivity": null,
+    "coastal_morphology": null
+  },
+
+  "divergence": {
+    "_note": "s/u ratio per variable; values > 1 indicate drier/warmer/etc. locally than upstream",
+    "pre_mm_yr": 0.23,
+    "ari_ix": 0.24,
+    "tmp_dc_yr": 1.59
+  },
+
+  "scale_sensitivity": {
+    "_note": "How much the local (s) signature changes between basin levels [*]",
+    "levels_compared": [8, 10],
+    "pre_mm_s_delta_pct": null,
+    "ari_ix_s_delta_pct": null
+  },
+
+  "coverage": {
+    "_note": "Documents data sources and temporal basis for each signature component. Never omitted; fields are null when not yet implemented.",
+    "hydroclimatic_baseline": {
+      "source": "HydroATLAS v1.0",
+      "temporal_basis": "contemporary_baseline",
+      "period_requested": null,
+      "period_matched": null
+    },
+    "upstream_topology": {
+      "source": "HydroATLAS basin08 DAG",
+      "temporal_basis": "contemporary_baseline"
+    },
+    "coastality": {
+      "hydrologic": { "source": "HydroATLAS dist_sink", "temporal_basis": "contemporary_baseline" },
+      "ecological": { "source": null, "temporal_basis": null, "note": "shelf/oceanographic data not yet integrated" },
+      "human_access": { "source": null, "temporal_basis": null }
+    },
+    "ecoregion": {
+      "source": "One Earth v2",
+      "temporal_basis": "contemporary_baseline"
+    },
+    "temporal_datasets": {
+      "dendrochronology": { "available": false, "nearest_record_km": null, "source": null },
+      "ship_logs": { "available": false, "source": null },
+      "volcanic_forcing": { "available": false, "source": null }
+    },
+    "fallbacks_applied": []
+  },
+
+  "narrative": "[*] Ur occupies a hyper-arid local environment (aridity index 5, 94mm/yr precipitation) fed by an upstream catchment receiving over four times the local rainfall — a sharp local/upstream divergence characteristic of alluvial civilizations dependent on distant water sources. The site lies approximately 890km upstream from the Persian Gulf, close enough for maritime access while insulated from direct tidal influence. Terrestrial conditions alone would predict marginal viability; the combination of upstream water delivery and downstream sea access explains the site's historical centrality."
+
+}
