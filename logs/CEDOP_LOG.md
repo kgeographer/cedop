@@ -6,6 +6,7 @@
   - `api_spec_draft.md` — gestural parameter spec for 5 endpoints; `period` parameter (ISO 8601 interval or PeriodO URI) added as speculative later-phase feature
   - `api_requirements_draft.md` — behavioral requirements REQ-01 through REQ-18; coverage transparency, temporal fallback, and edge case handling
   - `prospectus_20260402.md` — editorial revision pass: reorganized to 9 sections, coastality subsection developed from `docs/coastality_v2.md` (decoupling thesis, Yaghan case), temporal depth subsection added naming Ruth's suggested historical climate datasets
+- **eVolv2k v4** (Sigl & Toohey 2024, PANGAEA): volcanic eruption catalog, 256 events, 500 BCE–1900 CE; tab-delimited, parsed to `data/volcano/evolv2k_v4.csv`; columns: year (AD + ISO), lat, Greenland/Antarctic SO₄ deposition, VSSI (Tg ± 1σ), asymmetry, location name, tephra flag; 41 eruptions identified, rest assigned default latitudes (45°N/45°S/0°); intended as annotation/event layer in EDOP temporal block, not a continuous spatial variable; parser at `scripts/edop/evolv2k_parse.py`
 - **PAGES 2k / LMR exploration**: investigated historical climate datasets suggested by Ruth Mostern
   - PAGES 2k v2.0.0 (2017): 692 georeferenced proxy records, Common Era, LiPD format — point records not gridded; exploration script at `scripts/edop/pages2k_explore.py`
   - Neukom 2019 NetCDF (`pages2k_ngeo19_recons.nc`): confirmed global mean only (dims: year × ensemble), not spatially resolved — not suitable for EDOP point queries
