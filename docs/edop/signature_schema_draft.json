@@ -6,11 +6,11 @@
     "generated": "2026-04-03",
     "service": "https://cedop.kgeographer.org/api",
     "period": {
-      "input": null,
-      "resolved_interval": null,
+      "input": "0900/1000",
+      "resolved_interval": "0900/1000",
       "periodo_uri": null,
-      "band_scope": "all",
-      "_note": "period parameter controls band scoping now; will inform temporal dataset selection in later phases. Accepts ISO 8601 interval (e.g. '0900/1000', '-3000/-2500') or PeriodO URI."
+      "band_scope": "ABС",
+      "_note": "D band suppressed for pre-industrial period. Temporal datasets queried where available."
     }
   },
 
@@ -95,6 +95,60 @@
     "ari_ix_s_delta_pct": null
   },
 
+  "temporal": {
+    "_note": "[*] Period-specific climate context from LMR v2.1 (Tardif et al. 2019). Gridded reanalysis, 2°×2°, 20-member MC ensemble. Values are actual extractions for Ur (30.0N, 46.0E), 900–1000 CE.",
+    "source": "Last Millennium Reanalysis v2.1",
+    "source_url": "https://www.ncei.noaa.gov/pub/data/paleo/reconstructions/tardif2019lmr/v2_1/",
+    "period": "0900/1000",
+    "grid_cell": { "lat": 30.0, "lon": 46.0 },
+    "n_years": 101,
+
+    "pdsi": {
+      "_note": "Palmer Drought Severity Index; 0 = climatological mean, negative = drier, positive = wetter",
+      "mean": -0.008,
+      "std": 0.380,
+      "min": -1.024,
+      "max": 0.865,
+      "ensemble_spread": 0.313,
+      "decadal_means": {
+        "900-909": -0.481,
+        "910-919": -0.148,
+        "920-929": null,
+        "930-939": null,
+        "940-949": null,
+        "950-959": null,
+        "960-969": null,
+        "970-979": null,
+        "980-989": null,
+        "990-999": null
+      },
+      "_decadal_note": "900s and 910s from confirmed extraction; remaining decades [*] pending full run"
+    },
+
+    "air_temperature": {
+      "_note": "[*] Surface air temperature anomaly relative to 1961–1990 baseline; °C",
+      "mean": null,
+      "std": null,
+      "min": null,
+      "max": null,
+      "ensemble_spread": null
+    },
+
+    "precipitation": {
+      "_note": "[*] Precipitation rate (prate); kg/m²/s",
+      "mean": null,
+      "std": null,
+      "min": null,
+      "max": null,
+      "ensemble_spread": null
+    },
+
+    "sst": {
+      "_note": "Sea surface temperature — not applicable for inland location",
+      "applicable": false
+    }
+  },
+
   "coverage": {
     "_note": "Documents data sources and temporal basis for each signature component. Never omitted; fields are null when not yet implemented.",
     "hydroclimatic_baseline": {
@@ -117,7 +171,8 @@
       "temporal_basis": "contemporary_baseline"
     },
     "temporal_datasets": {
-      "dendrochronology": { "available": false, "nearest_record_km": null, "source": null },
+      "lmr_v2.1": { "available": true, "source": "Tardif et al. 2019, NOAA", "variables": ["pdsi", "air", "prate", "pr_wtr", "prmsl"], "coverage": "global, 2°×2°, 1–2000 CE" },
+      "dendrochronology": { "available": false, "nearest_record_km": null, "source": "PAGES 2k v2.0.0 — point records only, not yet integrated" },
       "ship_logs": { "available": false, "source": null },
       "volcanic_forcing": { "available": false, "source": null }
     },

@@ -1,5 +1,20 @@
 ### CEDOP LOG
 ----
+#### 03 Apr 2026
+- **Design session**: developed EDOPS API and signature design artifacts in `docs/edop/`:
+  - `signature_schema_draft.json` — dummy instance for Ur; full JSON structure including s/u/near_u tiers, coastality block, coverage block, period in meta
+  - `api_spec_draft.md` — gestural parameter spec for 5 endpoints; `period` parameter (ISO 8601 interval or PeriodO URI) added as speculative later-phase feature
+  - `api_requirements_draft.md` — behavioral requirements REQ-01 through REQ-18; coverage transparency, temporal fallback, and edge case handling
+  - `prospectus_20260402.md` — editorial revision pass: reorganized to 9 sections, coastality subsection developed from `docs/coastality_v2.md` (decoupling thesis, Yaghan case), temporal depth subsection added naming Ruth's suggested historical climate datasets
+- **PAGES 2k / LMR exploration**: investigated historical climate datasets suggested by Ruth Mostern
+  - PAGES 2k v2.0.0 (2017): 692 georeferenced proxy records, Common Era, LiPD format — point records not gridded; exploration script at `scripts/edop/pages2k_explore.py`
+  - Neukom 2019 NetCDF (`pages2k_ngeo19_recons.nc`): confirmed global mean only (dims: year × ensemble), not spatially resolved — not suitable for EDOP point queries
+  - **Last Millennium Reanalysis v2.1** (Tardif et al. 2019): spatially gridded NetCDF, 91 lat × 180 lon (2°×2°), 2001 years × 20 MC ensemble runs; variables include `pdsi`, `air`, `prate`, `pr_wtr`, `sst`, `prmsl`
+  - **POC extraction successful**: `pdsi` at Ur (30.0N, 46.0E), 900–1000 CE — mean PDSI ≈ 0 (slightly dry), range -1.02 to +0.87, ensemble spread ≈ 0.31; interpretable interannual variability
+  - Key implementation note: LMRv2.1 time coordinates are `cftime.DatetimeNoLeap` objects — year extraction requires `t.year`, not direct integer comparison; lon convention is 0–358 (not ±180)
+  - Scripts: `scripts/edop/lmr_extract.py` (download + point extraction, cftime-aware)
+  - Installed: `xarray`, `netCDF4`; `requirements.txt` updated
+
 #### 02 Apr 2026
 - **ISHI meeting**: video call with Ruth Mostern (Pitt, director ISHI) and her group to discuss institutional support and potential hosting of EDOPS. Outcome: highly positive. Ruth offered a **$15k year-long contract** to advance EDOPS development, framing it as a second flagship initiative for ISHI alongside World Historical Gazetteer. Contract details to be worked out; prior WHG contract arrangements at Pitt provide the administrative template.
 - **Research program status**: EDOPS is now a funded, institutionally-backed research program. First concrete deliverable: demonstrable tools and examples for a **symposium/advisory meeting planned for Fall 2026** (September/October). Ruth is identifying participants from Pitt environmental sciences and ecology, and from Princeton and Merced; aim is to constitute an informal advisory committee for EDOPS.

@@ -24,6 +24,7 @@ output/
 app/data/world_heritage*.*
 app/data/clio/
 app/data/ich/
+data/
 
 # Large binary/design files
 logos/*.afphoto
