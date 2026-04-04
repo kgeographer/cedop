@@ -1,7 +1,7 @@
 # EDOP: Environmental Dimensions of Place
 *Prospectus — 02 April 2026*
 
-*EDOP is a research program conceived and developed by Karl Grossner, now proposed to be supported and maintained by the Institute for Spatial History Innovation (ISHI), University of Pittsburgh (Ruth Mostern, Director) beginning April 2026.*
+*EDOP is a research program conceived and developed by Karl Grossner, now proposed to be supported and maintained by the Institute for Spatial History Innovation (ISHI), University of Pittsburgh (Ruth Mostern, Director) beginning May 2026.*
 
 ---
 
