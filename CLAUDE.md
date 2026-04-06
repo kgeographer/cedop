@@ -91,11 +91,13 @@ metadata/*.tsv           # Lookup tables for categorical fields
 ## Deployment
 
 - **URL**: `cedop.kgeographer.org` (SSL via certbot)
-- **Server**: DigitalOcean Ubuntu droplet, Apache2 reverse proxy → Gunicorn on port 8001
-- **Service**: `cedop.service` (systemd), virtualenv at `/home/karlg/envs/edop/`
+- **Server**: Hetzner CPX32, Nuremberg — `kgeographer-1` (46.225.125.25), Ubuntu 24.04, Nginx reverse proxy → Gunicorn on port 8001
+- **Service**: `cedop.service` (systemd), virtualenv at `/home/karlg/envs/cedop/`
 - **Working dir**: `/var/www/cedop`
-- **Database**: `cedop` (PostgreSQL/PostGIS)
-- **Deploy**: `git pull` on droplet + `sudo systemctl restart cedop`
+- **Database**: `cedop` (PostgreSQL 17/PostGIS)
+- **Deploy**: `ssh kgeographer-1`, then `git pull` + `sudo systemctl restart cedop`
+- **Also hosted**: `glos.kgeographer.org` (Flask, port 8002), `linkedpaths.kgeographer.org` (static)
+- **Migration log**: `sysop/hetzner_migration_log.md`
 
 ## Database Notes
 

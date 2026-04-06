@@ -1,0 +1,188 @@
+
+<VirtualHost *:80>
+  ServerName default
+  ServerAlias _default_
+
+  DocumentRoot /var/www/html
+
+  <Directory /var/www/html>
+    Options -Indexes
+    Require all granted
+  </Directory>
+
+  ErrorLog ${APACHE_LOG_DIR}/default_error.log
+  CustomLog ${APACHE_LOG_DIR}/default_access.log combined
+</VirtualHost>
+
+# EDOP (FastAPI) — Apache reverse proxy vhost
+# Assumes your FastAPI server listens on: http://127.0.0.1:8001
+
+<VirtualHost *:80>
+  ServerName cedop.kgeographer.org
+
+  # Logs
+  ErrorLog ${APACHE_LOG_DIR}/cedop_error.log
+  CustomLog ${APACHE_LOG_DIR}/cedop_access.log combined
+
+  # Proxy settings
+  ProxyPreserveHost On
+
+  # Forwarded headers so FastAPI can generate correct URLs and logs
+  RequestHeader set X-Forwarded-Proto "http"
+  RequestHeader set X-Forwarded-Port "80"
+
+  # If you use websockets (not sure you do), Apache 2.4.47+ can proxy ws with mod_proxy_wstunnel.
+  # For now, plain HTTP proxy is enough.
+
+  # Main reverse proxy
+  ProxyPass        / http://127.0.0.1:8001/ retry=0 timeout=60
+  ProxyPassReverse / http://127.0.0.1:8001/
+
+  # Optional hardening: stop Apache from acting as an open proxy
+  <Proxy *>
+    Require all granted
+  </Proxy>
+
+  # If you serve static files directly via Apache instead of FastAPI, you can add:
+  # Alias /static/ /srv/cedop/app/static/
+  # <Directory /srv/cedop/app/static/>
+  #   Require all granted
+  # </Directory>
+RewriteEngine on
+RewriteCond %{SERVER_NAME} =cedop.kgeographer.org
+RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
+</VirtualHost>
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+  ServerName cedop.kgeographer.org
+
+  # Logs
+  ErrorLog ${APACHE_LOG_DIR}/cedop_error.log
+  CustomLog ${APACHE_LOG_DIR}/cedop_access.log combined
+
+  # Proxy settings
+  ProxyPreserveHost On
+
+  # Forwarded headers so FastAPI can generate correct URLs and logs
+  RequestHeader set X-Forwarded-Proto "http"
+  RequestHeader set X-Forwarded-Port "80"
+
+  # If you use websockets (not sure you do), Apache 2.4.47+ can proxy ws with mod_proxy_wstunnel.
+  # For now, plain HTTP proxy is enough.
+
+  # Main reverse proxy
+  ProxyPass        / http://127.0.0.1:8001/ retry=0 timeout=60
+  ProxyPassReverse / http://127.0.0.1:8001/
+
+  # Optional hardening: stop Apache from acting as an open proxy
+  <Proxy *>
+    Require all granted
+  </Proxy>
+
+  # If you serve static files directly via Apache instead of FastAPI, you can add:
+  # Alias /static/ /srv/cedop/app/static/
+  # <Directory /srv/cedop/app/static/>
+  #   Require all granted
+  # </Directory>
+
+SSLCertificateFile /etc/letsencrypt/live/cedop.kgeographer.org/fullchain.pem
+SSLCertificateKeyFile /etc/letsencrypt/live/cedop.kgeographer.org/privkey.pem
+Include /etc/letsencrypt/options-ssl-apache.conf
+</VirtualHost>
+</IfModule>
+# Load the WSGI module using the Python environment's mod_wsgi
+LoadModule wsgi_module "/home/karlg/.pyenv/versions/3.11.5/envs/glos/lib/python3.11/site-packages/mod_wsgi/server/mod_wsgi-py311.cpython-311-x86_64-linux-gnu.so"
+WSGIPythonHome "/home/karlg/.pyenv/versions/3.11.5/envs/glos"
+
+<VirtualHost *:80>
+    ServerName glos.kgeographer.org
+    DocumentRoot /home/karlg/webs/glos/web
+
+    # Set up WSGI to use the specified Python virtual environment
+    WSGIDaemonProcess glos \
+        python-home=/home/karlg/.pyenv/versions/3.11.5/envs/glos \
+        python-path=/home/karlg/webs/glos/web:/home/karlg/.pyenv/versions/3.11.5/envs/glos/lib/python3.11/site-packages
+
+
+    WSGIProcessGroup glos
+    WSGIScriptAlias / /home/karlg/webs/glos/web/app.wsgi
+
+    <Directory /home/karlg/webs/glos/web>
+        Require all granted
+    </Directory>
+
+    SetEnv PYTHONHOME /home/karlg/.pyenv/versions/3.11.5/envs/glos
+    SetEnv PYTHONPATH /home/karlg/.pyenv/versions/3.11.5/envs/glos/lib/python3.11/site-packages
+
+    ErrorLog ${APACHE_LOG_DIR}/glos_app_error.log
+    CustomLog ${APACHE_LOG_DIR}/glos_app_access.log combined
+</VirtualHost>
+<VirtualHost *:80>
+    ServerAdmin karlg@kgeographer.org
+    ServerName kgeographer.org
+    ServerAlias kgeographer.com
+    ServerAlias www.kgeographer.org
+    ServerAlias www.kgeographer.com
+
+    DocumentRoot /var/www/kgeographer
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+    <Directory "/var/www/kgeographer">
+    	Options FollowSymLinks
+	AllowOverride All
+    </Directory>
+</VirtualHost>
+
+# run a2ensite kgeographer.conf
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet
+# according to digital ocean:
+
+<VirtualHost *:80>
+
+    ServerAdmin karl@kgeographer.org
+    ServerName linkedpaths.kgeographer.org
+    ServerAlias linkedpaths.kgeographer.org
+    ServerAlias linkedpaths.kgeographer.com
+    DocumentRoot /var/www/linkedpaths/public_html
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+</VirtualHost>
+# according to digital ocean:
+
+<VirtualHost *:80>
+
+    ServerAdmin karlg@kgeographer.org
+    ServerName topotime.org
+    ServerAlias topotime.com
+    ServerAlias www.topotime.org
+    ServerAlias www.topotime.com
+    DocumentRoot /var/www/topotime/public_html
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+</VirtualHost>
+
+# run a2ensite topotime.conf
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet
+# according to digital ocean:
+
+<VirtualHost *:80>
+
+    ServerAdmin karlg@worldheritageweb.org
+    ServerName worldheritageweb.org
+    ServerAlias worldheritageweb.com
+    ServerAlias www.worldheritageweb.org
+    ServerAlias www.worldheritageweb.com
+    DocumentRoot /var/www/whweb/public_html
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+</VirtualHost>
+
+# run a2ensite whweb.conf
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet
