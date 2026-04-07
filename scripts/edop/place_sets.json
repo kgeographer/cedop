@@ -1,0 +1,14 @@
+{
+  "set_personal_v1": {
+    "label": "Personal — places visited + Chang'an",
+    "places": [
+      {"name": "Timbuktu",      "lat": 16.76618535, "lon": -3.00777252},
+      {"name": "Buenos Aires",  "lat": -34.6037,    "lon": -58.3816},
+      {"name": "Vienna",        "lat": 48.2082,     "lon": 16.3738},
+      {"name": "Taos",          "lat": 36.4072,     "lon": -105.5731},
+      {"name": "Istanbul",      "lat": 41.0082,     "lon": 28.9784},
+      {"name": "Tashkent",      "lat": 41.2995,     "lon": 69.2401},
+      {"name": "Chang'an",      "lat": 34.3416,     "lon": 108.9398}
+    ]
+  }
+}
