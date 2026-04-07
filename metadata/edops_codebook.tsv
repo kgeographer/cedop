@@ -1,0 +1,90 @@
+schema_key	band	basin08_col_s	basin08_col_u	friendly_name	type	units	s_u	status	atlas_id	notes
+elevation_min	A	ele_mt_smn		Elevation minimum	float	m	s	implemented	P01	Basin minimum elevation
+elevation_max	A	ele_mt_smx		Elevation maximum	float	m	s	implemented	P01	Basin maximum elevation
+elevation_mean	A	ele_mt_sav	ele_mt_uav	Elevation mean	float	m	s+u	planned	P01	Mean basin elevation; u available in basin08
+elevation_point	A			Point elevation	float	m	point	implemented		Derived from OpenTopoData/Open-Meteo; not a basin08 field
+relief_range_m	A			Relief range	float	m	derived	implemented		Derived: elev_max - elev_min
+relief_position	A			Relief position	float	0–1	derived	implemented		Derived: (elev_point - elev_min) / relief_range
+slope_deg	A	slp_dg_sav	slp_dg_uav	Slope	float	degrees	s+u	implemented	P02	u already in view as slope_upstream
+stream_gradient	A	sgr_dk_sav		Stream gradient	float	m/km	s	implemented	P03
+lithology_id	A	lit_cl_smj		Lithology class ID	integer		s	implemented		Lookup: lu_lit
+lithology_name	A	lit_cl_smj		Lithology class name	string		s	implemented		Resolved via lu_lit
+karst_pct	A	kar_pc_sse	kar_pc_use	Karst area	float	%	s+u	implemented	S07	u already in view as karst_upstream
+erosion_rate	A	ero_kh_sav	ero_kh_uav	Erosion rate	float	t/ha/yr	s+u	planned	S08	Not currently in signature
+glacier_pct	A	gla_pc_sse	gla_pc_use	Glacier/permanent snow	float	%	s+u	planned	L10	Not currently in signature
+permafrost_pct	A	prm_pc_sse	prm_pc_use	Permafrost extent	float	%	s+u	implemented	L09	u available in basin08
+discharge_annual	B	dis_m3_pyr		Discharge annual mean	float	m³/s	s	implemented	H01	Cumulative; no upstream avg meaningful
+discharge_min	B	dis_m3_pmn		Discharge monthly minimum	float	m³/s	s	implemented	H01
+discharge_max	B	dis_m3_pmx		Discharge monthly maximum	float	m³/s	s	implemented	H01
+runoff	B	run_mm_syr		Annual runoff	float	mm/yr	s	implemented	H02
+groundwater_depth	B	gwt_cm_sav		Groundwater table depth	float	cm	s	implemented	H10
+river_area	B	ria_ha_ssu	ria_ha_usu	River area	float	ha	s+u	implemented	H08	u already in view as river_area_upstream
+river_volume	B	riv_tc_ssu	riv_tc_usu	River channel volume	float		s+u	planned	H09	Not currently in signature
+lake_area_pct	B	lka_pc_sse	lka_pc_use	Lake area	float	%	s+u	planned	H04	Not currently in signature
+lake_volume_upstream	B		lkv_mc_usu	Lake volume upstream	float		u	planned	H05	u-only field
+inundation_min	B	inu_pc_smn	inu_pc_umn	Inundation extent minimum	float	%	s+u	planned	H03	Flood signal; not currently in signature
+inundation_max	B	inu_pc_smx	inu_pc_umx	Inundation extent maximum	float	%	s+u	planned	H03	Flood signal; not currently in signature
+inundation_longterm	B	inu_pc_slt	inu_pc_ult	Inundation extent long-term	float	%	s+u	planned	H03	Flood signal; not currently in signature
+wetland_pct_g1	B	wet_pc_sg1	wet_pc_ug1	Wetland extent group 1	float	%	s+u	implemented	L06	u available in basin08
+wetland_pct_g2	B	wet_pc_sg2	wet_pc_ug2	Wetland extent group 2	float	%	s+u	planned	L06	u available in basin08; s in signature already
+soil_water_content	B	swc_pc_syr	swc_pc_uyr	Soil water content annual	float	%	s+u	planned	S06	Not currently in signature
+reservoir_vol	B		rev_mc_usu	Reservoir volume upstream	float		u	implemented	H06	u-only field; already in signature
+degree_of_regulation	B	dor_pc_pva		Degree of regulation by dams	float	%	s	planned	H07	Not currently in signature
+pct_clay	B	cly_pc_sav	cly_pc_uav	Clay content	float	%	s+u	implemented	S01	u available in basin08; currently s only in signature
+pct_silt	B	slt_pc_sav	slt_pc_uav	Silt content	float	%	s+u	implemented	S02	u available in basin08; currently s only in signature
+pct_sand	B	snd_pc_sav	snd_pc_uav	Sand content	float	%	s+u	implemented	S03	u available in basin08; currently s only in signature
+soil_organic_carbon	B	soc_th_sav	soc_th_uav	Soil organic carbon	float	t/ha	s+u	planned	S04	Not currently in signature; good agricultural fertility proxy
+climate_zone_id	C	clz_cl_smj		Climate zone ID	integer		s	implemented		Lookup: lu_clz
+climate_zone_name	C	clz_cl_smj		Climate zone name	string		s	implemented		Resolved via lu_clz
+climate_stratum_id	C	cls_cl_smj		Climate stratum ID	integer		s	implemented		Lookup: lu_cls
+climate_stratum_code	C	cls_cl_smj		Climate stratum code	string		s	implemented		Resolved via lu_cls
+temperature_annual	C	tmp_dc_syr	tmp_dc_uyr	Temperature annual mean	float	°C	s+u	implemented	C03	Stored ×10 in basin08; divide by 10. u available in basin08 as tmp_dc_uyr
+temperature_min	C	tmp_dc_smn		Temperature monthly minimum	float	°C	s	implemented	C03
+temperature_max	C	tmp_dc_smx		Temperature monthly maximum	float	°C	s	implemented	C03
+temperature_monthly	C	tmp_dc_s01..s12		Temperature monthly	float[12]	°C	s	planned	C03	Jan–Dec array; divide by 10
+precipitation_annual	C	pre_mm_syr	pre_mm_uyr	Precipitation annual	float	mm/yr	s+u	implemented	C04	u available in basin08 as pre_mm_uyr
+precipitation_monthly	C	pre_mm_s01..s12		Precipitation monthly	float[12]	mm	s	planned	C04	Jan–Dec array
+pet_annual	C	pet_mm_syr	pet_mm_uyr	Potential evapotranspiration annual	float	mm/yr	s+u	planned	C05	u available in basin08
+aet_annual	C	aet_mm_syr	aet_mm_uyr	Actual evapotranspiration annual	float	mm/yr	s+u	planned	C06	u available in basin08
+aridity_index	C	ari_ix_sav	ari_ix_uav	Aridity index (P/PET)	float		s+u	implemented	C07	Higher = wetter. Key s/u divergence variable. u available in basin08
+climate_moisture_index	C	cmi_ix_syr	cmi_ix_uyr	Climate moisture index	float		s+u	planned	C08	u available in basin08
+snow_cover_annual	C	snw_pc_syr	snw_pc_uyr	Snow cover annual	float	%	s+u	planned	C09	u available in basin08
+snow_cover_max	C	snw_pc_smx		Snow cover maximum	float	%	s	planned	C09
+biome_id	C	tbi_cl_smj		Biome ID	integer		s	implemented		Lookup: lu_tbi
+biome_name	C	tbi_cl_smj		Biome name	string		s	implemented		Resolved via lu_tbi
+ecoregion_terrestrial_id	C	tec_cl_smj		Terrestrial ecoregion ID	integer		s	implemented		Lookup: lu_tec
+ecoregion_terrestrial_name	C	tec_cl_smj		Terrestrial ecoregion name	string		s	implemented		Resolved via lu_tec
+freshwater_habitat_id	C	fmh_cl_smj		Freshwater habitat type ID	integer		s	implemented		Lookup: lu_fmh
+freshwater_habitat_name	C	fmh_cl_smj		Freshwater habitat type name	string		s	implemented		Resolved via lu_fmh
+freshwater_ecoregion_id	C	fec_cl_smj		Freshwater ecoregion ID	integer		s	implemented		Lookup: lu_fec
+freshwater_ecoregion_name	C	fec_cl_smj		Freshwater ecoregion name	string		s	implemented		Resolved via lu_fec
+pnv_majority_id	C	pnv_cl_smj		Potential natural vegetation majority ID	integer		s	implemented		Lookup: lu_pnv
+pnv_majority_name	C	pnv_cl_smj		Potential natural vegetation majority name	string		s	implemented		Resolved via lu_pnv
+pnv_shares	C	pnv_pc_s01..s15		Potential natural vegetation shares	object		s	implemented		JSON object of {name: pct}
+wetland_class_id	C	wet_cl_smj		Wetland class ID	integer		s	implemented		Lookup: lu_wet
+forest_cover_pct	C	for_pc_sse	for_pc_use	Forest cover	float	%	s+u	planned	L07	Not currently in signature
+pop_density	D	ppd_pk_sav	ppd_pk_uav	Population density	float	pk/km²	s+u	implemented	A05	u available in basin08
+pop_count	D	pop_ct_ssu	pop_ct_usu	Population count	float		s+u	planned	A05	Not currently in signature
+cropland_pct	D	crp_pc_sse	crp_pc_use	Cropland extent	float	%	s+u	implemented	L08	u available in basin08; currently s only
+pasture_pct	D	pst_pc_sse	pst_pc_use	Pasture extent	float	%	s+u	planned	L11	Not currently in signature
+irrigated_area_pct	D	ire_pc_sse	ire_pc_use	Irrigated area	float	%	s+u	planned	L12	Not currently in signature
+urban_area_pct	D	urb_pc_sse	urb_pc_use	Urban area	float	%	s+u	planned	A06	Not currently in signature
+nighttime_lights	D	nli_ix_sav	nli_ix_uav	Nighttime lights index	integer		s+u	planned	A03	Not currently in signature
+road_density	D	rdd_mk_sav	rdd_mk_uav	Road density	float	m/km²	s+u	planned	A04	Not currently in signature
+human_footprint_1993	D	hft_ix_s93	hft_ix_u93	Human footprint 1993	integer		s+u	planned	A02	Not currently in signature
+human_footprint_2009	D	hft_ix_s09	hft_ix_u09	Human footprint 2009	integer		s+u	implemented	A02	u available in basin08; currently s only
+protected_area_pct	D	pac_pc_sse	pac_pc_use	Protected area	float	%	s+u	planned		Not currently in signature
+gdp_mean	D	gdp_ud_sav		GDP mean	integer	USD/km²	s	implemented	A07
+hdi	D	hdi_ix_sav		Human Development Index	integer		s	implemented	A08
+dist_sink_km	coastality	dist_sink		Flow distance to marine outlet	float	km	s	planned		Coastality; convert from basin08 units
+outlet_type	coastality	endo		Outlet type	string		s	planned		Derived from endo flag: exorheic/endorheic/coastal
+coast_flag	coastality	coast		Basin touches coast	boolean		s	planned
+topo_depth_from_coast	coastality			Topological depth from coast	integer	hops	derived	planned		Computed via next_down DAG traversal
+lmr_pdsi	temporal			PDSI (LMR v2.1)	float		point	planned		Last Millennium Reanalysis; period query required
+lmr_temp_anomaly	temporal			Temperature anomaly (LMR v2.1)	float	°C	point	planned		Relative to 1951–1980 baseline
+lmr_precip_anomaly	temporal			Precipitation anomaly (LMR v2.1)	float		point	planned
+lmr_slp	temporal			Sea-level pressure (LMR v2.1)	float	hPa	point	planned
+evolv2k_eruptions	temporal			Eruptions in period (eVolv2k v4)	integer		event	planned		Count of eruptions in query period
+evolv2k_max_vssi	temporal			Max VSSI in period (eVolv2k v4)	float	Tg	event	planned		Stratospheric sulfur injection
+evolv2k_hemispheric	temporal			Hemispheric loading (eVolv2k v4)	string		event	planned		NH/SH/global
+narrative	output			LLM narrative summary	string		output	planned		Claude API; non-specialist natural language summary
