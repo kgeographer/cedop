@@ -81,8 +81,35 @@ Both metrics agreed closely. Key findings:
 All work on `sig_rev1`. Commits: codebook dimension column, rev1 view + generator +
 place sets, reorganization into sig/ dirs, signature_distances.py.
 
+## s/u Divergence Profile (completed)
+
+- `scripts/edop/sig/su_divergence.py`: per-place ranked divergence with bar chart;
+  cross-place mean absolute divergence by dimension.
+- Key finding: karst and wetland show highest mean divergence (~100–130%) but partly
+  a scale/sampling artifact. Documented in `docs/llm/karst_wetlands_su_divergence.md`.
+- Taos: perfect zeros across all dimensions — isolated headwater, no upstream contrast.
+- Tashkent: temp −115%, aridity +67% — classic mountain-fed oasis signature.
+- Vienna: river_area +192%, precip +41% — Alps upstream doing significant work.
+
+## Narratives (completed)
+
+- `prompts/edop_narrative_rev1.md`: new prompt aligned with rev1 schema. Prior prompts
+  (general/scientific) predate rev1 and reference non-existent fields — do not use for rev1.
+- `scripts/edop/sig/generate_narratives.py`: Claude API call with --style flag
+  (rev1/scientific/general), --place, --model, --tokens, --dry-run.
+- Generated 7 narratives for set_personal_v1 at --style rev1. Quality good; scientific
+  register, s/u story surfaced correctly. Chang'an/Vienna needed 650 tokens.
+- Narratives written into signature JSON under narrative.text (gitignored output).
+
+## WHG Portal Button (design only)
+
+- Feasible: endpoint checks cache → calls API on miss (~2–4s + spinner) → fallback on error.
+- Pre-generate for known place sets; on-demand + cache for arbitrary coordinates.
+- `prompts/edop_narrative_whg_portal.md` exists but predates rev1 — needs revision before use.
+
 ## Next
 
-1. s/u divergence profile per place (which dimensions diverge most, where)
-2. Narrative draft — feed a signature to Claude API, plain-language summary
-3. GUI: "Setting" tab showing s/u pairs, coastality, key dimensions (post-pipeline)
+1. GUI: signature inspection tab showing s/u pairs, coastality, key dimensions
+2. WHG portal narrative button (endpoint + caching + rev1 prompt)
+3. Add more place sets (WH Cities selection, D-PLACE correspondence experiment)
+4. Temporal enrichment: LMR v2.1 integration
