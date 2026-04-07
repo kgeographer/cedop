@@ -12,9 +12,23 @@
     },
     "neighborhood": {
       "type": "containing_basin",
-      "_type_options": ["containing_basin", "buffer", "upstream_catchment", "three_tier"],
+      "_type_options": ["containing_basin", "buffer", "upstream_catchment", "three_tier", "polity_mean"],
+      "_type_notes": {
+        "containing_basin": "single basin containing the query point; scalar values",
+        "buffer": "area-weighted mean over basins within a fixed radius; scalar values",
+        "upstream_catchment": "pre-computed _u values from BasinATLAS; scalar values",
+        "three_tier": "local + near-upstream + full-upstream stratification; planned",
+        "polity_mean": "area-weighted mean over basins intersecting a polygon; scalar values — lossy summary, full distribution treatment planned Phase 2"
+      },
       "basin_level": 8,
-      "_basin_level_note": "HydroATLAS Pfafstetter level: 6, 8, 9, or 10"
+      "_basin_level_note": "HydroATLAS Pfafstetter level: 6, 8, 9, or 10",
+      "buffer_radius_km": null,
+      "_buffer_radius_note": "required when type=buffer",
+      "polity_id": null,
+      "_polity_id_note": "Cliopatria/Seshat polity id when type=polity_mean",
+      "polity_name": null,
+      "n_basins": null,
+      "_n_basins_note": "count of basins contributing to aggregation; 1 for containing_basin"
     },
     "data_sources": {
       "basin": "HydroATLAS v1.0 / BasinATLAS",
