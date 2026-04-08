@@ -6,7 +6,15 @@
 
 ## Archaeological Predictive Modeling
 
-- [Settlement strategies and their driving mechanisms of Neolithic settlements using machine learning approaches: a case study in Zhejiang Province](https://www.nature.com/articles/s40494-025-01753-4) — *npj Heritage Science* (2025). Machine learning on Neolithic sites; water buffer zones, elevation, slope as top predictors.
+- Fan, X., Mao, L., Zou, C. et al. Settlement strategies and their driving mechanisms of Neolithic settlements using machine learning approaches: a case study in Zhejiang Province. npj Herit. Sci. 13, 186 (2025). https://doi.org/10.1038/s40494-025-01753-4
+- most predictive: elevation, surface relief, slope, and water buffer zones 
+- temporal across several cultural shifts, distinct models for each: **Early Neolithic settlements (11.0–7.0 ka BP) favored high-altitude, vegetated river valleys** supporting hunting-gathering economies, while **mid-Neolithic communities (7.0–4.3 ka BP) shifted to lowland alluvial plains promoting rice agriculture**. **Late Neolithic settlements (4.3 ka BP-) expanded to higher elevations to mitigate flooding risks, coinciding with revived hunting-gathering practices**.
+- 
+- 432 archaeological site points; 400 random points; never mind that they may overlap
+- Topography: elevation, aspect, slope, surface relief, curvature; 
+- Vegetation: vegetation types, NVDI; 
+- Water system: distance to river; 
+- Soil: soil types
 
 - [A Prediction Study on Archaeological Sites Based on Geographical Variables and Logistic Regression — Neolithic and Bronze Age of Xiangyang](https://www.mdpi.com/2071-1050/14/23/15675) — *MDPI Sustainability* (2022). Most sites at 0–150m elevation, slope 0–10°, within 1000m of rivers.
 
