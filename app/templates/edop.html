@@ -502,8 +502,11 @@
   }
 
   function showClusterLabel(label) {
+    // Suppressed pending PCA recomputation from rev1 signature.
     const container = document.getElementById('cluster-label');
-    const text = document.getElementById('cluster-label-text');
+    if (container) container.style.display = 'none';
+    return; /* re-enable once basin08_pca is rebuilt */
+    const text = document.getElementById('cluster-label-text'); // eslint-disable-line
     if (!container || !text) return;
 
     if (label) {

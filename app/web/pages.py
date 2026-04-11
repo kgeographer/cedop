@@ -33,3 +33,7 @@ def about(request: Request):
 @router.get("/edop")
 def edop(request: Request):
     return templates.TemplateResponse("edop.html", {"request": request})
+
+@router.get("/sandbox")
+def sandbox(request: Request):
+    return templates.TemplateResponse("sandbox.html", {"request": request})

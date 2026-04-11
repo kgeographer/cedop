@@ -8,6 +8,7 @@ import certifi
 
 from app.db.signature import get_signature
 from app.db.temporal import get_temporal_context
+from app.db.narrative import get_narrative
 from app.db.connection import db_connect
 from app.settings import settings
 
@@ -138,11 +139,11 @@ def _whg_reconcile_query(query: str, countries: List[str] = None, bounds: Dict =
 
     # Build query payload
     # NOTE: "fuzzy" mode returns results ranked by prominence (alt names, etc.)
-    # "exact" mode returns exact matches but without prominence ranking
+    # No fclasses filter: WHG historical places often carry class "S" (spot/settlement)
+    # rather than "P" (populated place) — filtering to "P" excluded e.g. Tombouctou/Timbuktu [ML]
     q_params = {
         "query": query,
         "mode": "fuzzy",
-        "fclasses": ["P"],  # Places (settlements)
         "type": "https://whgazetteer.org/static/whg_schema.jsonld#Place",
         "size": size
     }
@@ -358,11 +359,61 @@ def health():
 
 
 @router.get("/signature")
-def signature(lat: float, lon: float):
+def signature(lat: float, lon: float, bands: str = "ABCDE", level: int = 8):
+    """Return environmental signature for a coordinate.
+
+    Parameters
+    ----------
+    lat, lon : coordinates
+    bands    : which profile groups to include, e.g. "AC" or "ABCDE" (default all)
+    level    : basin hierarchy level — only 8 currently supported (6 pending data load)
+    """
+    if level != 8:
+        raise HTTPException(status_code=400, detail=f"Basin level {level} not yet available; only level 8 is loaded")
     sig = get_signature(lat=lat, lon=lon)
     if sig is None:
         raise HTTPException(status_code=404, detail="No basin covers this point")
+    # Filter profile_groups to requested bands
+    requested = set(bands.upper().replace(",", "").replace(" ", ""))
+    if requested != {"A", "B", "C", "D", "E"} and sig.get("profile_groups"):
+        sig["profile_groups"] = {k: v for k, v in sig["profile_groups"].items() if k in requested}
     return sig
+
+
+@router.get("/narrative")
+def narrative(
+    lat: float,
+    lon: float,
+    name: Optional[str] = None,
+    year_start: Optional[int] = None,
+    year_end: Optional[int] = None,
+):
+    """Generate a plain-language narrative for a location using Claude.
+
+    Fetches the signature (and optionally temporal context) then calls the
+    Claude API with the rev1 narrative prompt. Returns {narrative: str}.
+
+    Parameters
+    ----------
+    lat, lon   : coordinates
+    name       : display name for the place (shown in the narrative)
+    year_start : if provided with year_end, includes LMR PDSI temporal context
+    year_end   : end year for temporal context
+    """
+    sig = get_signature(lat=lat, lon=lon)
+    if sig is None:
+        raise HTTPException(status_code=404, detail="No basin covers this point")
+
+    temporal = None
+    if year_start is not None and year_end is not None:
+        temporal = get_temporal_context(lat=lat, lon=lon, year_start=year_start, year_end=year_end)
+        if "error" in temporal:
+            temporal = None
+
+    text = get_narrative(sig=sig, place_name=name, temporal=temporal)
+    if text.startswith("ERROR:"):
+        raise HTTPException(status_code=500, detail=text)
+    return {"narrative": text}
 
 
 @router.get("/temporal")
