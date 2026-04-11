@@ -51,15 +51,24 @@ SELECT
   pct_clay,
   pct_silt,
   pct_sand,
+  pct_clay_upstream,
+  pct_silt_upstream,
+  pct_sand_upstream,
+  wet_pct_grp1,
+  wet_pct_grp2,
+  wet_pct_grp1_upstream,
+  wet_pct_grp2_upstream,
+  wetland_class,
 
   -- C: Bioclimatic proxies
   temp_yr,
   temp_min,
   temp_max,
+  temp_yr_upstream,
   precip_yr,
+  precip_yr_upstream,
   aridity,
-  wet_pct_grp1,
-  wet_pct_grp2,
+  aridity_upstream,
   permafrost_extent,
   biome_id,
   biome,
@@ -72,14 +81,21 @@ SELECT
   -- D: Anthropocene markers
   reservoir_vol,
   cropland_extent,
+  cropland_extent_upstream,
   pop_density,
   human_footprint_09,
+  human_footprint_09_upstream,
   gdp_avg,
   human_dev_idx,
 
+  -- E: Coastality
+  dist_sink,
+  endorheic,
+  coast_flag,
+
   -- geometry handling: return a GeoJSON string (good for Leaflet)
   ST_AsGeoJSON(geom, 6) AS geom_geojson
-FROM public.v_basin08_persist
+FROM public.v_basin08_persist_rev1
 WHERE ST_Covers(
   geom,
   ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)
@@ -121,6 +137,14 @@ PROFILE_GROUPS: Dict[str, Dict[str, Any]] = {
             "pct_clay",
             "pct_silt",
             "pct_sand",
+            "pct_clay_upstream",
+            "pct_silt_upstream",
+            "pct_sand_upstream",
+            "wet_pct_grp1",
+            "wet_pct_grp2",
+            "wet_pct_grp1_upstream",
+            "wet_pct_grp2_upstream",
+            "wetland_class",
         ],
     },
     "C": {
@@ -129,10 +153,11 @@ PROFILE_GROUPS: Dict[str, Dict[str, Any]] = {
             "temp_yr",
             "temp_min",
             "temp_max",
+            "temp_yr_upstream",
             "precip_yr",
+            "precip_yr_upstream",
             "aridity",
-            "wet_pct_grp1",
-            "wet_pct_grp2",
+            "aridity_upstream",
             "permafrost_extent",
             "biome",
             "ecoregion",
@@ -145,10 +170,20 @@ PROFILE_GROUPS: Dict[str, Dict[str, Any]] = {
         "fields": [
             "pop_density",
             "human_footprint_09",
+            "human_footprint_09_upstream",
             "cropland_extent",
+            "cropland_extent_upstream",
             "reservoir_vol",
             "gdp_avg",
             "human_dev_idx",
+        ],
+    },
+    "E": {
+        "label": "Coastality",
+        "fields": [
+            "dist_sink",
+            "endorheic",
+            "coast_flag",
         ],
     },
 }

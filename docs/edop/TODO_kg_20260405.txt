@@ -1,0 +1,65 @@
+to do
+=====
+
+update sig to prospectus spec
+-----------------------------
+complete BasinATLAS portion of signature as designed
+- upstream variables
+- (compute of) downstream
+
+rationalize dimension choices & document
+update get_signature()
+
+wire optional LLM call for summary
+
+design API parameters, implement partially
+- bands
+- up/down
+- summary
+- default neighborhood is single basin
+- harness for future (coastality, bathymetry)
+
+add tester page to app @ cedop.kgeographer.org/edop) OR new edops.kgeographer.org (??)
+- cedop. is prototype Computing Place platform
+- basic /signature call w/o whg (dropdown): display results for eval
+
+
+point neighborhoods (see prospectus)
+-------------------
+- upstream
+- bounding basins
+- buffer
+
+scale sensitivity
+-----------------
+add Levels beyond 08
+design eval test(s)
+test, document
+
+validation
+----------
+- do sigs predict Reba et al settlements?
+- coastal anomalies 
+- report
+
+polygons
+--------
+- edge calculation
+- scale variations
+- result distribution, regions/seams?
+- interpretation (LLM? built-in rubric?)
+
+
+GUI dashboard
+-------------
+- set parameters
+- tweak internal model assumptions
+
+WHG place portal
+----------------
+- co-design payload
+- implement in API
+
+
+
+
