@@ -7,6 +7,7 @@ import ssl
 import certifi
 
 from app.db.signature import get_signature
+from app.db.temporal import get_temporal_context
 from app.db.connection import db_connect
 from app.settings import settings
 
@@ -362,6 +363,33 @@ def signature(lat: float, lon: float):
     if sig is None:
         raise HTTPException(status_code=404, detail="No basin covers this point")
     return sig
+
+
+@router.get("/temporal")
+def temporal(
+    lat: float,
+    lon: float,
+    year_start: int = 0,
+    year_end: int = 1998,
+    vssi_min: float = 5.0,
+):
+    """Return LMR v2.1 PDSI time series and significant volcanic events for a location.
+
+    Parameters
+    ----------
+    lat, lon    : coordinates of the place of interest
+    year_start  : first year CE (0–1998); default 0
+    year_end    : last year CE (0–1998); default 1998
+    vssi_min    : minimum volcanic sulfur injection in Tg to include; default 5.0
+    """
+    result = get_temporal_context(
+        lat=lat, lon=lon,
+        year_start=year_start, year_end=year_end,
+        vssi_min=vssi_min,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
 
 
 @router.get("/resolve")
