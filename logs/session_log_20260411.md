@@ -68,10 +68,60 @@ Data files present under `data/`:
 - **`temporal.evolv2k_v4`**: 256 eruption events, 491 BCE – 1890 CE; key fields `vssi_tg`
   (forcing magnitude, Tg), `asymmetry` (hemispheric), `location`
 
+## Session 2 — Sandbox page, narrative layer, UI/UX iteration
+
+### WHG reconcile fix
+- **`fclasses: ["P"]` removed** from `_whg_reconcile_query` in `app/api/routes.py`.
+  This filter was excluding historical places with WHG feature class "S" (spot/settlement),
+  notably Tombouctou/Timbuktu [ML] — the US "Timbuktu" was an exact match to class P,
+  returning first and masking the correct record. Now returns all feature classes.
+
+### Sandbox page (`/sandbox`) — completed
+- `app/web/pages.py`: added `/sandbox` route
+- `app/templates/sandbox.html`: new 2-column researcher tool
+  - **Left col (sticky)**: Place lookup with WHG reconcile candidate list (country codes,
+    exact badges, alt names; mimics edop.html `searchWhgReconcile` flow exactly);
+    resolved place chip; band multi-select dropdown (A–F); Get signature button;
+    LLM interpretation card; signature summary card
+  - **Right col**: placeholder → signature accordions A–E (+ F if temporal selected)
+- WHG candidate list: uses `/api/whg-reconcile`, renders numbered items with name,
+  `[country codes]`, exact badge, type label, alt names; no-geometry items are dimmed
+
+### Band multi-select dropdown
+- Replaced single `<select>` with Bootstrap dropdown containing checkboxes A–F
+- `data-bs-auto-close="outside"` keeps dropdown open while selecting
+- Button label updates live to show selected bands (e.g. `A B C D E`)
+- All / None links at top of dropdown
+- Each option shows full name: `A — Physiographic`, `B — Hydroclimatic`, etc.
+- F separated by divider, labelled `(needs range)`
+- Basin level select moved inline with Bands dropdown (compact)
+
+### Band F — Temporal as first-class accordion
+- Checking F reveals `from` / `to` year inputs (vssi-min defaulted to 5, hidden)
+- `fetchSignature()` fetches both `/api/signature` (bands A–E) and `/api/temporal` (band F)
+  in one button click; either can be omitted (F-only or A–E only)
+- Temporal output renders as Band F accordion panel alongside A–E — decadal PDSI bar
+  chart, volcanic events table, grid cell stats
+- LLM narrative reads year range from Band F inputs (not separate inputs)
+- Standalone temporal card removed from right column
+
+### Bug fixes
+- **Bootstrap SRI hash**: sandbox.html had wrong JS bundle hash (`Xc4s9` vs `Xc5s9`),
+  causing silent SRI failure → `bootstrap` global undefined → accordions never worked
+- **`d-flex` vs `display:none`**: Bootstrap `d-flex` uses `!important`, overriding inline
+  `style="display:none"`. Fixed throughout using `d-none` class + `classList.toggle/replace`
+- **Dropdown z-index clipping**: `overflow-y:auto` on `#left-col` created a scroll
+  container that clipped the dropdown. Removed — page scroll handles overflow.
+- **PDSI bar chart**: negative bars used `░` (U+2591), which rendered poorly. Replaced
+  with `█` for both directions, sign carried by `+`/`-` prefix.
+
+### Commit
+- `a532509` on branch `sig_rev1`
+
 ## Next Steps
 
-1. **Skipped for now**: additional LMR variables (temperature `tas`, precipitation).
-   Retrieve in a future session when needed.
-2. Wire temporal lookup into signature API — given a basin centroid, return PDSI time
-   series slice and nearby eruption events as optional enrichment
-3. Recompute `basin08_pca` from rev1 signature (deferred until signature is stable)
+1. Recompute `basin08_pca` from rev1 signature (deferred; stale cluster labels suppressed in UI)
+2. Additional LMR variables (temperature `tas`, precipitation) — deferred
+3. Load Level 06 basin data; enable `level=6` in `/api/signature`
+4. Design review: sandbox left-column hierarchy, summary vs accordion redundancy,
+   Bootstrap visual language (reads as prototype)
