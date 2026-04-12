@@ -359,24 +359,58 @@ def health():
 
 
 @router.get("/signature")
-def signature(lat: float, lon: float, bands: str = "ABCDE", level: int = 8):
+def signature(
+    lat: float,
+    lon: float,
+    bands: str = "ABCDE",
+    level: int = 8,
+    from_year: Optional[int] = None,
+    to_year: Optional[int] = None,
+):
     """Return environmental signature for a coordinate.
 
     Parameters
     ----------
-    lat, lon : coordinates
-    bands    : which profile groups to include, e.g. "AC" or "ABCDE" (default all)
-    level    : basin hierarchy level — only 8 currently supported (6 pending data load)
+    lat, lon   : coordinates
+    bands      : which profile groups to include, e.g. "ABCDE" or "ABCDEF" (default ABCDE)
+    level      : basin hierarchy level — only 8 currently supported (6 pending data load)
+    from_year  : start year CE for Band F temporal enrichment (0–1998)
+    to_year    : end year CE for Band F temporal enrichment (0–1998)
     """
     if level != 8:
         raise HTTPException(status_code=400, detail=f"Basin level {level} not yet available; only level 8 is loaded")
     sig = get_signature(lat=lat, lon=lon)
     if sig is None:
         raise HTTPException(status_code=404, detail="No basin covers this point")
+
     # Filter profile_groups to requested bands
     requested = set(bands.upper().replace(",", "").replace(" ", ""))
-    if requested != {"A", "B", "C", "D", "E"} and sig.get("profile_groups"):
+    if sig.get("profile_groups"):
         sig["profile_groups"] = {k: v for k, v in sig["profile_groups"].items() if k in requested}
+
+    # Band F: temporal enrichment
+    if "F" in requested:
+        LMR_MIN, LMR_MAX = 0, 1998
+        if from_year is None or to_year is None:
+            sig["temporal"] = {
+                "_status": "not_requested",
+                "_note": "Include from_year and to_year (CE integers) to retrieve Band F temporal data.",
+            }
+        elif from_year < LMR_MIN or to_year > LMR_MAX:
+            sig["temporal"] = {
+                "_status": "out_of_range",
+                "_note": f"LMR v2.1 coverage is {LMR_MIN}–{LMR_MAX} CE. Requested {from_year}–{to_year} is outside this range. Bands A–E are unaffected.",
+                "coverage_ce": [LMR_MIN, LMR_MAX],
+                "requested_ce": [from_year, to_year],
+            }
+        else:
+            temporal = get_temporal_context(lat=lat, lon=lon, year_start=from_year, year_end=to_year)
+            if "error" in temporal:
+                sig["temporal"] = {"_status": "error", "_note": temporal["error"]}
+            else:
+                temporal["_status"] = "ok"
+                sig["temporal"] = temporal
+
     return sig
 
 

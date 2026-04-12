@@ -1,6 +1,8 @@
 import os
+import csv
 import json
 import ssl
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 import psycopg
 from psycopg.rows import dict_row
@@ -15,6 +17,39 @@ except Exception:  # pragma: no cover
     certifi = None
 
 load_dotenv()  # reads .env from project root
+
+# -----------------------
+# Field lookup: built once at import from edops_codebook.tsv.
+# Keyed by api_key_s and api_key_u; value is {schema_key, friendly_name, source, units}.
+# Used in profile_groups to generate human-readable labels.
+# -----------------------
+
+def _load_field_lookup() -> Dict[str, Dict[str, str]]:
+    lookup: Dict[str, Dict[str, str]] = {}
+    codebook = Path(__file__).parent.parent.parent / "metadata" / "edops_codebook.tsv"
+    if not codebook.exists():
+        return lookup
+    with codebook.open(newline="") as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            source_s = row.get("basin08_col_s", "")
+            source_u = row.get("basin08_col_u", "")
+            meta = {
+                "schema_key":    row.get("schema_key", ""),
+                "friendly_name": row.get("friendly_name", ""),
+                "units":         row.get("units", ""),
+                "notes":         row.get("notes", ""),
+            }
+            api_s = row.get("api_key_s", "").strip()
+            api_u = row.get("api_key_u", "").strip()
+            if api_s:
+                lookup[api_s] = {**meta, "source": source_s or source_u or "derived"}
+            if api_u:
+                lookup[api_u] = {**meta, "source": source_u or "derived",
+                                 "schema_key": meta["schema_key"] + "_u",
+                                 "friendly_name": meta["friendly_name"] + " (upstream)"}
+    return lookup
+
+FIELD_LOOKUP: Dict[str, Dict[str, str]] = _load_field_lookup()
 
 SIGNATURE_SQL = """
 SELECT
@@ -191,6 +226,7 @@ PROFILE_GROUPS: Dict[str, Dict[str, Any]] = {
 # Proposed “top summary” (pilot): quick-read fields that usually explain the setting best.
 # UI can render this as a compact list above accordions.
 PROFILE_SUMMARY: list[Dict[str, str]] = [
+    {"key": "ecoregion", "label": "Ecoregion"},
     {"key": "zone_name", "label": "Bioclimate zone"},
     {"key": "strata_code", "label": "Bioclimate stratum"},
     {"key": "land_cover_name", "label": "Land cover"},
@@ -200,7 +236,6 @@ PROFILE_SUMMARY: list[Dict[str, str]] = [
     {"key": "relief_position", "label": "Relief position (0–1)"},
     {"key": "runoff", "label": "Runoff (mm/yr)"},
     {"key": "discharge_yr", "label": "Discharge (m³/s, yr)"},
-    {"key": "ecoregion", "label": "Ecoregion"},
     {"key": "pop_density", "label": "Population density"},
 ]
 
@@ -441,9 +476,13 @@ def get_signature(
                 items: list[Dict[str, Any]] = []
                 for k in gspec["fields"]:
                     if k in sig:
+                        meta = FIELD_LOOKUP.get(k, {})
+                        sk = meta.get("schema_key") or k
+                        src = meta.get("source", "")
+                        label = f"{sk} ({src})" if src else sk
                         items.append({
                             "key": k,
-                            "label": k,  # UI can prettify later; keep stable now
+                            "label": label,
                             "value": sig.get(k),
                         })
                 grouped[gcode] = {

@@ -189,6 +189,27 @@
   </div><!-- /row -->
 </div><!-- /container -->
 
+<!-- Ecoregion Wikipedia modal -->
+<div class="modal fade" id="ecoModal" tabindex="-1" aria-labelledby="ecoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ecoModalLabel">Ecoregion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="ecoModalBody">
+        <p class="text-muted">Loading…</p>
+      </div>
+      <div class="modal-footer">
+        <a id="ecoModalWikiLink" href="#" target="_blank" class="btn btn-outline-secondary btn-sm" style="display:none;">
+          View Wikipedia page
+        </a>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -487,12 +508,17 @@
     if (sig) {
       const summaryEl = document.getElementById('sb-summary');
       const items = Array.isArray(sig.profile_summary) ? sig.profile_summary : [];
-      summaryEl.innerHTML = items.map(it =>
-        `<div class="d-flex justify-content-between gap-2 py-1 border-bottom">
-           <div class="text-muted">${escapeHtml(it.label || humanizeKey(it.key || ''))}</div>
-           <div class="text-end">${escapeHtml(formatValue(it.value))}</div>
-         </div>`
-      ).join('') || '<div class="text-muted">No summary fields.</div>';
+      summaryEl.innerHTML = items.map(it => {
+        const label = escapeHtml(it.label || humanizeKey(it.key || ''));
+        const isEco = it.key === 'ecoregion';
+        const valueHtml = isEco
+          ? `<a href="#" class="sb-eco-link" data-eco-id="${escapeHtml(String(sig.eco_id ?? ''))}">${escapeHtml(formatValue(it.value))}</a>`
+          : escapeHtml(formatValue(it.value));
+        return `<div class="d-flex justify-content-between gap-2 py-1 border-bottom">
+           <div class="text-muted">${label}</div>
+           <div class="text-end">${valueHtml}</div>
+         </div>`;
+      }).join('') || '<div class="text-muted">No summary fields.</div>';
     }
 
     const accEl = document.getElementById('sb-accordions');
@@ -671,6 +697,38 @@
     }
   }
 
+
+  // ── Ecoregion Wikipedia modal ─────────────────────────────────────────
+  const ecoModal     = new bootstrap.Modal(document.getElementById('ecoModal'));
+  const ecoModalBody = document.getElementById('ecoModalBody');
+  const ecoModalLink = document.getElementById('ecoModalWikiLink');
+
+  document.addEventListener('click', async e => {
+    const link = e.target.closest('.sb-eco-link');
+    if (!link) return;
+    e.preventDefault();
+    const ecoId = link.dataset.ecoId;
+    const ecoName = link.textContent.trim();
+    document.getElementById('ecoModalLabel').textContent = ecoName;
+    ecoModalBody.innerHTML = '<p class="text-muted">Loading…</p>';
+    ecoModalLink.style.display = 'none';
+    ecoModal.show();
+    try {
+      const resp = await fetch(`/api/eco/wikitext?eco_id=${encodeURIComponent(ecoId)}`);
+      const data = await resp.json();
+      if (data.summary) {
+        ecoModalBody.innerHTML = `<p>${escapeHtml(data.summary)}</p>`;
+      } else {
+        ecoModalBody.innerHTML = '<p class="text-muted">No Wikipedia summary available for this ecoregion.</p>';
+      }
+      if (data.wiki_url) {
+        ecoModalLink.href = data.wiki_url;
+        ecoModalLink.style.display = '';
+      }
+    } catch (err) {
+      ecoModalBody.innerHTML = '<p class="text-danger">Failed to load ecoregion summary.</p>';
+    }
+  });
 
 })();
 </script>

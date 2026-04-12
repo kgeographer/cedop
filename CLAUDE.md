@@ -80,7 +80,13 @@ metadata/*.tsv           # Lookup tables for categorical fields
 ### Key Endpoints
 
 ```
-/api/signature?lat=X&lon=Y    Environmental signature for coordinates
+/api/signature?lat=X&lon=Y[&bands=ABCDEF&from_year=N&to_year=N]
+                              Environmental signature; Band F requires from_year+to_year (0–1998 CE)
+/api/temporal?lat=X&lon=Y&year_start=N&year_end=N
+                              LMR v2.1 PDSI + eVolv2k volcanic events for a period
+/api/basin-preview?lat=X&lon=Y
+                              Containing basin + adjacent basins + river lines for neighborhood map
+/api/eco/wikitext?eco_id=N    Pre-summarized Wikipedia text + URL for an ecoregion
 /api/resolve?name=X           Place name resolution (WHG API)
 /api/societies                D-PLACE societies with filters
 /api/eco/*                    Ecoregion hierarchy and geometries
@@ -112,6 +118,20 @@ metadata/*.tsv           # Lookup tables for categorical fields
 curl http://localhost:8000/api/health
 curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Timbuktu
 ```
+
+## Sandbox / Researcher Tool
+
+`/sandbox` is the primary design and demonstration interface (`app/templates/sandbox.html`). Current capabilities:
+- WHG place lookup → basin assignment → neighborhood preview map
+- Band A–F signature with schema_key labels (`schema_key (db_col)` format)
+- Ecoregion clickable in summary panel → Wikipedia modal (pre-summarized, 97% coverage)
+- LLM narrative interpretation button
+
+Key design docs:
+- **`docs/gui/scenarios.md`** — User profiles (user00=Karl, user01=humanities researcher, user02=Federico) and scenarios driving design. **Read before any sandbox UI work.**
+- **`docs/gui/prelim_notes.md`** — Earlier screen requirement notes (superseded by scenarios.md)
+- **`docs/edop/edops_schema.json`** — Signature schema: current API output (status=implemented) + planned fields. Real Timbuktu values as examples.
+- **`metadata/edops_codebook.tsv`** — Field reference: schema_key, friendly_name, units, basin08_col_s/u, **api_key_s/u** (added 2026-04-12), notes. Loaded at startup by `signature.py` to generate accordion labels.
 
 ## Session Context Files
 
