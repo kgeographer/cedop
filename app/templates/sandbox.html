@@ -7,6 +7,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <style>
     body { font-size: 0.9rem; }
     #left-col  { position: sticky; top: 1rem; }
@@ -119,6 +121,9 @@
             </div>
           </div>
 
+          <button class="btn btn-outline-secondary btn-sm w-100 mb-1" id="sb-preview-btn" disabled>
+            <i class="bi bi-map"></i> Preview neighborhood
+          </button>
           <button class="btn btn-primary btn-sm w-100" id="sb-sig-btn" disabled>
             Get signature
           </button>
@@ -161,6 +166,16 @@
         Resolve a place and get its signature to begin.
       </div>
 
+      <!-- Neighborhood preview map -->
+      <div id="sb-preview-panel" style="display:none;">
+        <div class="d-flex justify-content-between align-items-baseline mb-1">
+          <h6 class="mb-0 text-muted">Neighborhood preview</h6>
+          <span class="small text-muted" id="sb-preview-meta"></span>
+        </div>
+        <div id="sb-preview-map" style="height:440px; border-radius:6px;"></div>
+        <div class="mt-1 small text-muted">Basins colored by upstream area (darker = larger catchment). <span style="color:#e8660a;font-weight:600;">Orange</span> = current assignment. Blue lines = main rivers.</div>
+      </div>
+
       <!-- Signature accordions -->
       <div id="sb-sig-panel" style="display:none;">
         <div class="d-flex justify-content-between align-items-baseline mb-2">
@@ -176,6 +191,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 (() => {
   // ── State ──────────────────────────────────────────────────────────────
@@ -183,6 +200,8 @@
   let resolvedLon = null;
   let resolvedName = null;
   let currentSig = null;
+  let previewMap = null;
+  let previewLayers = {};
 
   // ── Helpers ────────────────────────────────────────────────────────────
   function escapeHtml(s) {
@@ -298,6 +317,7 @@
     document.getElementById('sb-coords-display').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     placeChip.classList.replace('d-none', 'd-flex');
     sigBtn.disabled = false;
+    document.getElementById('sb-preview-btn').disabled = false;
     hideCandidates();
     setStatus('sb-resolve-status', '', false);
   }
@@ -307,9 +327,11 @@
     placeInput.value = '';
     placeChip.classList.replace('d-flex', 'd-none');
     sigBtn.disabled = true;
+    document.getElementById('sb-preview-btn').disabled = true;
     hideCandidates();
     document.getElementById('sb-right-placeholder').style.display = '';
     document.getElementById('sb-sig-panel').style.display = 'none';
+    document.getElementById('sb-preview-panel').style.display = 'none';
     document.getElementById('sb-summary-card').style.display = 'none';
     document.getElementById('sb-narrative-card').style.display = 'none';
   }
@@ -452,6 +474,7 @@
 
   function renderSignature(sig, temporalData = null) {
     document.getElementById('sb-right-placeholder').style.display = 'none';
+    document.getElementById('sb-preview-panel').style.display = 'none';
     document.getElementById('sb-sig-panel').style.display = '';
     document.getElementById('sb-narrative-card').style.display = sig ? '' : 'none';
     document.getElementById('sb-summary-card').style.display = sig ? '' : 'none';
@@ -497,6 +520,122 @@
     }
 
     accEl.innerHTML = `<div class="accordion" id="${accId}">${panels}</div>`;
+  }
+
+  // ── Neighborhood preview ───────────────────────────────────────────────
+  document.getElementById('sb-preview-btn').addEventListener('click', fetchPreview);
+
+  async function fetchPreview() {
+    if (resolvedLat === null) return;
+    const btn = document.getElementById('sb-preview-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading…';
+    try {
+      const res = await fetch(`/api/basin-preview?lat=${resolvedLat}&lon=${resolvedLon}`);
+      if (!res.ok) throw new Error('Preview failed');
+      renderPreview(await res.json());
+    } catch (err) {
+      alert(`Preview error: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-map"></i> Preview neighborhood';
+    }
+  }
+
+  function basinColor(up_area) {
+    // Log scale: log10(100)≈2 (tiny) → log10(400000)≈5.6 (Niger main)
+    const t = Math.min(Math.max((Math.log10(Math.max(up_area, 1)) - 2) / 3.6, 0), 1);
+    return `rgb(${Math.round(220 - t*170)},${Math.round(220 - t*130)},${Math.round(220 + t*35)})`;
+  }
+
+  function renderPreview(data) {
+    document.getElementById('sb-right-placeholder').style.display = 'none';
+    document.getElementById('sb-sig-panel').style.display = 'none';
+    const panel = document.getElementById('sb-preview-panel');
+    panel.style.display = '';
+
+    // Lazy-init Leaflet map (same basemap as edop.html)
+    // setView before adding vector layers so map has valid pixel bounds
+    if (!previewMap) {
+      previewMap = L.map('sb-preview-map').setView([data.point.lat, data.point.lon], 8);
+      L.tileLayer('https://tiles.openstreetmap.us/raster/hillshade/{z}/{x}/{y}.jpg', {
+        maxZoom: 12, opacity: 1.0,
+        attribution: 'Hillshade: &copy; OpenStreetMap US'
+      }).addTo(previewMap);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, opacity: 0.50,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(previewMap);
+      previewMap.invalidateSize();
+    } else {
+      Object.values(previewLayers).forEach(l => previewMap.removeLayer(l));
+      previewLayers = {};
+      previewMap.invalidateSize();
+    }
+
+    // Adjacent basins — choropleth by upstream area
+    if (data.adjacent_basins) {
+      previewLayers.adjacent = L.geoJSON(data.adjacent_basins, {
+        style: f => ({
+          fillColor: basinColor(f.properties.up_area),
+          fillOpacity: 0.65,
+          color: '#888', weight: 0.5
+        }),
+        onEachFeature: (f, layer) => {
+          layer.bindTooltip(`upstream area: ${f.properties.up_area.toLocaleString()} km²`);
+        }
+      }).addTo(previewMap);
+    }
+
+    // Containing basin — orange
+    if (data.containing_basin) {
+      previewLayers.containing = L.geoJSON(data.containing_basin, {
+        style: { fillColor: '#e8660a', fillOpacity: 0.55, color: '#b84a00', weight: 2 }
+      }).bindTooltip(
+        `Current assignment<br>upstream area: ${data.containing_basin.properties.up_area.toLocaleString()} km²`
+      ).addTo(previewMap);
+    }
+
+    // Rivers — blue, weight by order class (1=largest)
+    if (data.rivers) {
+      previewLayers.rivers = L.geoJSON(data.rivers, {
+        style: f => ({
+          color: '#1a6fbd',
+          weight: f.properties.ord_clas === 1 ? 2.5 : 1.2,
+          opacity: 0.85
+        })
+      }).addTo(previewMap);
+    }
+
+    // Point marker
+    previewLayers.point = L.circleMarker([data.point.lat, data.point.lon], {
+      radius: 7, fillColor: '#e03030', color: '#fff', weight: 2, fillOpacity: 1
+    }).bindTooltip(
+      `${resolvedName || ''}<br>${data.point.lat.toFixed(4)}, ${data.point.lon.toFixed(4)}`
+    ).addTo(previewMap);
+
+    // Fit to adjacent basins extent — defer until after container is fully visible
+    setTimeout(() => {
+      previewMap.invalidateSize();
+      if (previewLayers.adjacent) {
+        const bounds = previewLayers.adjacent.getBounds();
+        if (bounds && bounds.isValid()) {
+          previewMap.fitBounds(bounds, { padding: [20, 20] });
+        } else {
+          previewMap.setView([data.point.lat, data.point.lon], 9);
+        }
+      } else {
+        previewMap.setView([data.point.lat, data.point.lon], 9);
+      }
+    }, 100);
+
+    // Meta line
+    const containUp = data.containing_basin
+      ? data.containing_basin.properties.up_area.toLocaleString() : '—';
+    const maxAdj = data.adjacent_basins && data.adjacent_basins.features.length
+      ? data.adjacent_basins.features[0].properties.up_area.toLocaleString() : '—';
+    document.getElementById('sb-preview-meta').textContent =
+      `Assigned: ${containUp} km²  ·  Largest nearby: ${maxAdj} km²`;
   }
 
   // ── Narrative ──────────────────────────────────────────────────────────

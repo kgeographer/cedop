@@ -30,6 +30,15 @@ the initial user is a humanities researcher (e.g. history, archaeology, classics
   - Basic instruction, e.g. "Resolve a place and get its signature to begin"
 
 
+- After place is resolved, two action buttons appear:
+  - **Preview neighborhood** — loads a hydro-context map in the right panel (`#sb-sig-panel`) showing:
+    - Point location marker
+    - Immediately containing basin polygon (highlighted)
+    - Adjacent basins within ~50km, colored by `up_area` (graduated: larger upstream area = darker/more saturated — visually identifies river-channel basins)
+    - River polylines from `gaz.rivers` filtered to main channels (`ord_clas >= 4` or `dis_av_cms` threshold), graduated by discharge weight
+    - Purpose: lets user assess the hydro situation and make an informed choice of scale/neighborhood before requesting a signature. Addresses the fundamental problem that point containment assigns floodplain/river-adjacent sites to small local basins rather than the main channel basin.
+  - **Get signature** — proceeds with current basin assignment (containment); in future, neighborhood choice from preview informs which basin is used
+
 - Fail states:
   - WHG lookup returns no match → display message "Not found in WHG. Options: enter lat/lon directly | search Geonames | try an LLM-assisted lookup"
   - Requested date range is outside LMR coverage (pre-0 CE or post-~2000 CE) → display message noting the gap; offer to proceed with bands A–E only; note that pre-Common Era paleoclimate data at this resolution is not currently available

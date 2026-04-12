@@ -1666,6 +1666,81 @@ def eco_wikitext(eco_id: int):
 
 
 # -----------------------
+# Basin neighborhood preview
+# -----------------------
+
+@router.get("/basin-preview")
+def basin_preview(lat: float, lon: float):
+    """Return hydro-context layers for a point: containing basin, adjacent basins, main river lines."""
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            pt_geog = f"ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326)::geography"
+
+            # 1. Containing basin (smallest ST_Covers — what the signature currently picks)
+            cur.execute("""
+                SELECT hybas_id, up_area, ST_AsGeoJSON(geom, 5) AS geom
+                FROM public.basin08
+                WHERE ST_Covers(geom, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
+                ORDER BY ST_Area(geom::geography) ASC
+                LIMIT 1
+            """, (lon, lat))
+            cb = cur.fetchone()
+            containing = {
+                "type": "Feature",
+                "properties": {"hybas_id": cb[0], "up_area": round(cb[1], 0)},
+                "geometry": json.loads(cb[2])
+            } if cb else None
+
+            # 2. Adjacent basins within 50km (true metric via geog column)
+            cur.execute(f"""
+                SELECT hybas_id, up_area, ST_AsGeoJSON(geom, 5) AS geom
+                FROM public.basin08
+                WHERE ST_DWithin(geog, {pt_geog}, 50000)
+                ORDER BY up_area DESC
+            """)
+            adjacent = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"hybas_id": r[0], "up_area": round(r[1], 0)},
+                        "geometry": json.loads(r[2])
+                    }
+                    for r in cur.fetchall()
+                ]
+            }
+
+            # 3. Main river lines within 60km (ord_clas=1 largest, <=2 adds secondary channels)
+            cur.execute(f"""
+                SELECT ord_clas, dis_av_cms, ST_AsGeoJSON(geom, 5) AS geom
+                FROM gaz.hydrorivers
+                WHERE ST_DWithin(geog, {pt_geog}, 60000)
+                AND ord_clas <= 2
+            """)
+            rivers = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"ord_clas": r[0], "dis_av_cms": round(r[1], 1)},
+                        "geometry": json.loads(r[2])
+                    }
+                    for r in cur.fetchall()
+                ]
+            }
+
+        return {
+            "point": {"lat": lat, "lon": lon},
+            "containing_basin": containing,
+            "adjacent_basins": adjacent,
+            "rivers": rivers
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -----------------------
 # D-PLACE Societies
 # -----------------------
 
