@@ -12,11 +12,12 @@
   <style>
     body { font-size: 0.9rem; }
     #left-col  { position: sticky; top: 1rem; }
-    #narrative-box { font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; }
     .param-row label { font-size: 0.8rem; color: #666; }
     .accordion-button { font-size: 0.85rem; padding: 0.4rem 0.75rem; }
     .accordion-body  { font-size: 0.8rem; padding: 0.5rem 0.75rem; }
     .spinner-border-sm { width: 1rem; height: 1rem; }
+    #sb-band-checks .form-check { margin-bottom: 0; }
+    #sb-band-checks .form-check-label { font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -29,7 +30,6 @@
       <span class="text-muted mx-2">/</span>
       <span class="text-secondary">Sandbox</span>
     </span>
-    <span class="badge rounded-pill bg-secondary fw-normal fs-6 me-3">researcher tool</span>
   </h4>
 </header>
 
@@ -57,8 +57,7 @@
             <button class="btn btn-link btn-sm p-0 text-danger" id="sb-clear-btn" title="Clear">&#x2715;</button>
           </div>
 
-          <!-- Parameters -->
-          <!-- Level + Bands inline -->
+          <!-- Level + Bands -->
           <div class="d-flex gap-2 align-items-start mb-2">
             <div style="flex:0 0 auto;">
               <label class="form-label mb-0" style="font-size:0.78rem;color:#666;">Level</label>
@@ -69,48 +68,35 @@
             </div>
             <div style="flex:1 1 auto;">
               <label class="form-label mb-0" style="font-size:0.78rem;color:#666;">Bands</label>
-              <div class="dropdown">
-                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start"
-                        type="button" id="bands-dropdown-btn"
-                        data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                        aria-expanded="false">
-                  <span id="bands-display" class="font-monospace">A B C D E</span>
-                </button>
-                <ul class="dropdown-menu p-2" style="min-width:210px;" aria-labelledby="bands-dropdown-btn">
-                  <li class="d-flex gap-3 px-1 mb-1">
-                    <a href="#" id="bands-select-all" class="small text-decoration-none">All</a>
-                    <a href="#" id="bands-clear-all" class="small text-decoration-none">None</a>
-                  </li>
-                  <li><hr class="dropdown-divider my-1"></li>
-                  <li><div class="form-check">
-                    <input class="form-check-input sb-band-chk" type="checkbox" id="band-A" value="A" checked>
-                    <label class="form-check-label" for="band-A">A — Physiographic</label>
-                  </div></li>
-                  <li><div class="form-check">
-                    <input class="form-check-input sb-band-chk" type="checkbox" id="band-B" value="B" checked>
-                    <label class="form-check-label" for="band-B">B — Hydroclimatic</label>
-                  </div></li>
-                  <li><div class="form-check">
-                    <input class="form-check-input sb-band-chk" type="checkbox" id="band-C" value="C" checked>
-                    <label class="form-check-label" for="band-C">C — Bioclimatic</label>
-                  </div></li>
-                  <li><div class="form-check">
-                    <input class="form-check-input sb-band-chk" type="checkbox" id="band-D" value="D" checked>
-                    <label class="form-check-label" for="band-D">D — Anthropocene</label>
-                  </div></li>
-                  <li><div class="form-check">
-                    <input class="form-check-input sb-band-chk" type="checkbox" id="band-E" value="E" checked>
-                    <label class="form-check-label" for="band-E">E — Coastality</label>
-                  </div></li>
-                  <li><hr class="dropdown-divider my-1"></li>
-                  <li><div class="form-check">
-                    <input class="form-check-input sb-band-chk" type="checkbox" id="band-F" value="F">
-                    <label class="form-check-label" for="band-F">F — Temporal <span class="text-muted">(needs range)</span></label>
-                  </div></li>
-                </ul>
+              <div id="sb-band-checks" class="d-flex flex-wrap gap-2 mt-1">
+                <div class="form-check form-check-inline me-0">
+                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-A" value="A" checked>
+                  <label class="form-check-label" for="band-A" title="Physiographic">A</label>
+                </div>
+                <div class="form-check form-check-inline me-0">
+                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-B" value="B" checked>
+                  <label class="form-check-label" for="band-B" title="Hydroclimatic">B</label>
+                </div>
+                <div class="form-check form-check-inline me-0">
+                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-C" value="C" checked>
+                  <label class="form-check-label" for="band-C" title="Bioclimatic">C</label>
+                </div>
+                <div class="form-check form-check-inline me-0">
+                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-D" value="D" checked>
+                  <label class="form-check-label" for="band-D" title="Anthropocene">D</label>
+                </div>
+                <div class="form-check form-check-inline me-0">
+                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-E" value="E" checked>
+                  <label class="form-check-label" for="band-E" title="Coastality">E</label>
+                </div>
+                <div class="form-check form-check-inline me-0">
+                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-F" value="F">
+                  <label class="form-check-label" for="band-F" title="Temporal (needs year range)">F</label>
+                </div>
               </div>
             </div>
           </div>
+
           <!-- F-band year inputs — shown when F is checked -->
           <div id="f-year-row" class="d-none mb-2">
             <div class="d-flex gap-1 align-items-center">
@@ -121,35 +107,25 @@
             </div>
           </div>
 
-          <button class="btn btn-outline-secondary btn-sm w-100 mb-1" id="sb-preview-btn" disabled>
-            <i class="bi bi-map"></i> Preview neighborhood
-          </button>
           <button class="btn btn-primary btn-sm w-100" id="sb-sig-btn" disabled>
             Get signature
           </button>
-        </div>
-      </div>
 
-      <!-- LLM thoughts button + narrative -->
-      <div class="card mb-2" id="sb-narrative-card" style="display:none;">
-        <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
-          <span>LLM interpretation</span>
-          <button class="btn btn-outline-secondary btn-sm" id="sb-narrative-btn">
-            <i class="bi bi-stars"></i> Generate
-          </button>
-        </div>
-        <div class="card-body p-2">
-          <div class="text-muted small mb-1 d-none" id="sb-narrative-hint">
-            Using Band F time range for temporal context.
+          <!-- Intro / instructions — hidden after first resolution -->
+          <div id="sb-intro-text" class="text-muted small mt-2" style="line-height:1.4;">
+            Enter a place name or coordinates and click <strong>Resolve</strong>. Select a candidate to preview its hydrological neighborhood. Choose bands and click <strong>Get signature</strong> for the full environmental profile.
           </div>
-          <div id="sb-narrative-status" class="text-muted small mb-1" style="display:none;"></div>
-          <div id="narrative-box" class="text-secondary"></div>
         </div>
       </div>
 
       <!-- Signature summary -->
       <div id="sb-summary-card" class="card" style="display:none;">
-        <div class="card-header fw-semibold">Summary</div>
+        <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+          <span>Summary</span>
+          <a href="#" id="sb-interp-link" class="d-none small text-decoration-none text-secondary" title="LLM interpretation">
+            <i class="bi bi-stars"></i> interpret
+          </a>
+        </div>
         <div class="card-body p-2">
           <div id="sb-summary"></div>
         </div>
@@ -160,36 +136,47 @@
     <!-- ===================== RIGHT COLUMN ===================== -->
     <div class="col-md-8">
 
-      <!-- Sig status / placeholder -->
-      <div id="sb-right-placeholder" class="text-muted text-center py-5">
-        <i class="bi bi-geo-alt fs-1 d-block mb-2"></i>
-        Resolve a place and get its signature to begin.
-      </div>
+      <!-- Map | Signature tabs -->
+      <div id="sb-right-tabs">
+        <ul class="nav nav-tabs mb-2" id="sbTabList" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-map-btn" data-bs-toggle="tab"
+                    data-bs-target="#pane-map" type="button" role="tab">Map</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-sig-btn" data-bs-toggle="tab"
+                    data-bs-target="#pane-sig" type="button" role="tab">Signature</button>
+          </li>
+        </ul>
+        <div class="tab-content">
 
-      <!-- Neighborhood preview map -->
-      <div id="sb-preview-panel" style="display:none;">
-        <div class="d-flex justify-content-between align-items-baseline mb-1">
-          <h6 class="mb-0 text-muted">Neighborhood preview</h6>
-          <span class="small text-muted" id="sb-preview-meta"></span>
-        </div>
-        <div id="sb-preview-map" style="height:440px; border-radius:6px;"></div>
-        <div class="mt-1 small text-muted">Basins colored by upstream area (darker = larger catchment). <span style="color:#e8660a;font-weight:600;">Orange</span> = current assignment. Blue lines = main rivers.</div>
-      </div>
+          <!-- Map pane -->
+          <div class="tab-pane fade show active" id="pane-map" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-baseline mb-1">
+              <h6 class="mb-0 text-muted">Neighborhood preview</h6>
+              <span class="small text-muted" id="sb-preview-meta"></span>
+            </div>
+            <div id="sb-preview-map" style="height:440px; border-radius:6px;"></div>
+            <div class="mt-1 small text-muted">Basins colored by upstream area (darker = larger catchment). <span style="color:#e8660a;font-weight:600;">Orange</span> = current assignment. Blue lines = main rivers.</div>
+          </div>
 
-      <!-- Signature accordions -->
-      <div id="sb-sig-panel" style="display:none;">
-        <div class="d-flex justify-content-between align-items-baseline mb-2">
-          <h5 id="sb-sig-heading" class="mb-0"></h5>
-          <span class="text-muted small" id="sb-basin-meta"></span>
+          <!-- Signature pane -->
+          <div class="tab-pane fade" id="pane-sig" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+              <h5 id="sb-sig-heading" class="mb-0"></h5>
+              <span class="text-muted small" id="sb-basin-meta"></span>
+            </div>
+            <div id="sb-accordions"></div>
+          </div>
+
         </div>
-        <div id="sb-accordions"></div>
       </div>
 
     </div><!-- /right col -->
   </div><!-- /row -->
 </div><!-- /container -->
 
-<!-- Ecoregion Wikipedia modal -->
+<!-- Shared modal: ecoregion Wikipedia + LLM interpretation -->
 <div class="modal fade" id="ecoModal" tabindex="-1" aria-labelledby="ecoModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -223,6 +210,9 @@
   let currentSig = null;
   let previewMap = null;
   let previewLayers = {};
+  let candidateMarkers = [];
+
+  const CANDIDATE_COLORS = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#a65628','#f781bf','#66c2a5','#999999','#ffff33'];
 
   // ── Helpers ────────────────────────────────────────────────────────────
   function escapeHtml(s) {
@@ -324,12 +314,47 @@
         setResolved(place.lat, place.lon, place.name);
       });
     });
+    showCandidateMarkers(results);
   }
 
   function hideCandidates() {
     candidatesEl.style.display = 'none';
     candidatesEl.innerHTML = '';
     whgResults = [];
+    clearCandidateMarkers();
+  }
+
+  function clearCandidateMarkers() {
+    candidateMarkers.forEach(m => { if (previewMap) previewMap.removeLayer(m); });
+    candidateMarkers = [];
+  }
+
+  function showCandidateMarkers(results) {
+    clearCandidateMarkers();
+    if (!previewMap) return;
+    const bounds = [];
+    results.forEach((r, idx) => {
+      if (!r.lat || !r.lon) return;
+      const color = CANDIDATE_COLORS[idx % CANDIDATE_COLORS.length];
+      bounds.push([r.lat, r.lon]);
+      const circle = L.circleMarker([r.lat, r.lon], {
+        radius: 10, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.85
+      }).addTo(previewMap);
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:22px;height:22px;background:${color};border:2px solid #fff;border-radius:50%;color:#fff;font-weight:bold;font-size:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.3);">${idx+1}</div>`,
+        iconSize: [22, 22], iconAnchor: [11, 11]
+      });
+      const label = L.marker([r.lat, r.lon], { icon }).addTo(previewMap);
+      const ccodes = (r.countries || []).map(c => c.code).join(', ');
+      circle.bindPopup(`<strong>${idx+1}. ${escapeHtml(r.name)}</strong>${ccodes ? ` [${ccodes}]` : ''}`);
+      candidateMarkers.push(circle, label);
+    });
+    if (bounds.length === 1) {
+      previewMap.setView(bounds[0], 8);
+    } else if (bounds.length > 1) {
+      previewMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+    }
   }
 
   function setResolved(lat, lon, name) {
@@ -338,9 +363,14 @@
     document.getElementById('sb-coords-display').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     placeChip.classList.replace('d-none', 'd-flex');
     sigBtn.disabled = false;
-    document.getElementById('sb-preview-btn').disabled = false;
-    hideCandidates();
+    hideCandidates();   // clears candidate markers too
     setStatus('sb-resolve-status', '', false);
+    // Switch to Map tab and auto-preview
+    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-map-btn')).show();
+    fetchPreview();
+    // Hide intro text after first use
+    const intro = document.getElementById('sb-intro-text');
+    if (intro) intro.style.display = 'none';
   }
 
   function clearPlace() {
@@ -348,40 +378,20 @@
     placeInput.value = '';
     placeChip.classList.replace('d-flex', 'd-none');
     sigBtn.disabled = true;
-    document.getElementById('sb-preview-btn').disabled = true;
     hideCandidates();
-    document.getElementById('sb-right-placeholder').style.display = '';
-    document.getElementById('sb-sig-panel').style.display = 'none';
-    document.getElementById('sb-preview-panel').style.display = 'none';
     document.getElementById('sb-summary-card').style.display = 'none';
-    document.getElementById('sb-narrative-card').style.display = 'none';
+    const intro = document.getElementById('sb-intro-text');
+    if (intro) intro.style.display = '';
   }
 
-  // ── Bands dropdown ─────────────────────────────────────────────────────
+  // ── Bands checkboxes ───────────────────────────────────────────────────
   function updateBandsDisplay() {
     const selected = Array.from(document.querySelectorAll('.sb-band-chk:checked')).map(c => c.value);
-    document.getElementById('bands-display').textContent =
-      selected.length ? selected.join(' ') : '—';
-    // Show F year row if F is selected
     document.getElementById('f-year-row').classList.toggle('d-none', !selected.includes('F'));
-    const hint = document.getElementById('sb-narrative-hint');
-    if (hint) hint.classList.toggle('d-none', !selected.includes('F'));
   }
 
   document.querySelectorAll('.sb-band-chk').forEach(cb => {
     cb.addEventListener('change', updateBandsDisplay);
-  });
-
-  document.getElementById('bands-select-all').addEventListener('click', e => {
-    e.preventDefault();
-    document.querySelectorAll('.sb-band-chk').forEach(cb => { cb.checked = true; });
-    updateBandsDisplay();
-  });
-
-  document.getElementById('bands-clear-all').addEventListener('click', e => {
-    e.preventDefault();
-    document.querySelectorAll('.sb-band-chk').forEach(cb => { cb.checked = false; });
-    updateBandsDisplay();
   });
 
   // ── Signature ──────────────────────────────────────────────────────────
@@ -494,11 +504,12 @@
   }
 
   function renderSignature(sig, temporalData = null) {
-    document.getElementById('sb-right-placeholder').style.display = 'none';
-    document.getElementById('sb-preview-panel').style.display = 'none';
-    document.getElementById('sb-sig-panel').style.display = '';
-    document.getElementById('sb-narrative-card').style.display = sig ? '' : 'none';
+    // Switch to Signature tab
+    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-sig-btn')).show();
+
     document.getElementById('sb-summary-card').style.display = sig ? '' : 'none';
+    const interpLink = document.getElementById('sb-interp-link');
+    if (interpLink) interpLink.classList.toggle('d-none', !sig);
 
     document.getElementById('sb-sig-heading').textContent =
       resolvedName ? `${resolvedName} — environmental signature` : 'Environmental signature';
@@ -548,23 +559,30 @@
     accEl.innerHTML = `<div class="accordion" id="${accId}">${panels}</div>`;
   }
 
-  // ── Neighborhood preview ───────────────────────────────────────────────
-  document.getElementById('sb-preview-btn').addEventListener('click', fetchPreview);
+  // ── Map initialization (eager, so candidate markers can appear before any preview) ──
+  function initMap() {
+    previewMap = L.map('sb-preview-map').setView([20, 10], 2);
+    L.tileLayer('https://tiles.openstreetmap.us/raster/hillshade/{z}/{x}/{y}.jpg', {
+      maxZoom: 12, opacity: 1.0,
+      attribution: 'Hillshade: &copy; OpenStreetMap US'
+    }).addTo(previewMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, opacity: 0.50,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(previewMap);
+  }
+  initMap();
 
+  // ── Neighborhood preview ───────────────────────────────────────────────
   async function fetchPreview() {
     if (resolvedLat === null) return;
-    const btn = document.getElementById('sb-preview-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading…';
     try {
       const res = await fetch(`/api/basin-preview?lat=${resolvedLat}&lon=${resolvedLon}`);
       if (!res.ok) throw new Error('Preview failed');
       renderPreview(await res.json());
     } catch (err) {
-      alert(`Preview error: ${err.message}`);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-map"></i> Preview neighborhood';
+      document.getElementById('sb-preview-meta').textContent = 'Preview unavailable';
+      console.warn(`Preview error: ${err.message}`);
     }
   }
 
@@ -575,29 +593,10 @@
   }
 
   function renderPreview(data) {
-    document.getElementById('sb-right-placeholder').style.display = 'none';
-    document.getElementById('sb-sig-panel').style.display = 'none';
-    const panel = document.getElementById('sb-preview-panel');
-    panel.style.display = '';
-
-    // Lazy-init Leaflet map (same basemap as edop.html)
-    // setView before adding vector layers so map has valid pixel bounds
-    if (!previewMap) {
-      previewMap = L.map('sb-preview-map').setView([data.point.lat, data.point.lon], 8);
-      L.tileLayer('https://tiles.openstreetmap.us/raster/hillshade/{z}/{x}/{y}.jpg', {
-        maxZoom: 12, opacity: 1.0,
-        attribution: 'Hillshade: &copy; OpenStreetMap US'
-      }).addTo(previewMap);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, opacity: 0.50,
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(previewMap);
-      previewMap.invalidateSize();
-    } else {
-      Object.values(previewLayers).forEach(l => previewMap.removeLayer(l));
-      previewLayers = {};
-      previewMap.invalidateSize();
-    }
+    // Clear previous basin/river layers (candidate markers already cleared by setResolved)
+    Object.values(previewLayers).forEach(l => previewMap.removeLayer(l));
+    previewLayers = {};
+    previewMap.invalidateSize();
 
     // Adjacent basins — choropleth by upstream area
     if (data.adjacent_basins) {
@@ -664,45 +663,12 @@
       `Assigned: ${containUp} km²  ·  Largest nearby: ${maxAdj} km²`;
   }
 
-  // ── Narrative ──────────────────────────────────────────────────────────
-  document.getElementById('sb-narrative-btn').addEventListener('click', fetchNarrative);
-
-  async function fetchNarrative() {
-    if (!currentSig || resolvedLat === null) return;
-    const btn = document.getElementById('sb-narrative-btn');
-    const box = document.getElementById('narrative-box');
-    const ys  = document.getElementById('f-year-start').value.trim();
-    const ye  = document.getElementById('f-year-end').value.trim();
-
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
-    setStatus('sb-narrative-status', 'Calling Claude API…');
-    box.textContent = '';
-
-    let url = `/api/narrative?lat=${resolvedLat}&lon=${resolvedLon}`;
-    if (resolvedName) url += `&name=${encodeURIComponent(resolvedName)}`;
-    if (ys && ye)     url += `&year_start=${ys}&year_end=${ye}`;
-
-    try {
-      const res = await fetch(url);
-      if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
-      const data = await res.json();
-      box.textContent = data.narrative;
-      setStatus('sb-narrative-status', '', false);
-    } catch (err) {
-      setStatus('sb-narrative-status', `Error: ${err.message}`);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-stars"></i> Regenerate';
-    }
-  }
-
-
-  // ── Ecoregion Wikipedia modal ─────────────────────────────────────────
+  // ── Shared modal: ecoregion Wikipedia + LLM interpretation ─────────────
   const ecoModal     = new bootstrap.Modal(document.getElementById('ecoModal'));
   const ecoModalBody = document.getElementById('ecoModalBody');
   const ecoModalLink = document.getElementById('ecoModalWikiLink');
 
+  // Ecoregion link click → Wikipedia summary
   document.addEventListener('click', async e => {
     const link = e.target.closest('.sb-eco-link');
     if (!link) return;
@@ -727,6 +693,33 @@
       }
     } catch (err) {
       ecoModalBody.innerHTML = '<p class="text-danger">Failed to load ecoregion summary.</p>';
+    }
+  });
+
+  // Interpretation link click → LLM narrative in same modal
+  document.getElementById('sb-interp-link').addEventListener('click', async e => {
+    e.preventDefault();
+    if (!currentSig || resolvedLat === null) return;
+    document.getElementById('ecoModalLabel').textContent =
+      `Interpretation: ${resolvedName || 'Place'}`;
+    ecoModalBody.innerHTML = '<p class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Calling Claude API…</p>';
+    ecoModalLink.style.display = 'none';
+    ecoModal.show();
+
+    const ys = document.getElementById('f-year-start').value.trim();
+    const ye = document.getElementById('f-year-end').value.trim();
+    let url = `/api/narrative?lat=${resolvedLat}&lon=${resolvedLon}`;
+    if (resolvedName) url += `&name=${encodeURIComponent(resolvedName)}`;
+    if (ys && ye) url += `&year_start=${ys}&year_end=${ye}`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+      const data = await res.json();
+      ecoModalBody.innerHTML =
+        `<pre style="white-space:pre-wrap;font-size:0.85rem;line-height:1.6;">${escapeHtml(data.narrative)}</pre>`;
+    } catch (err) {
+      ecoModalBody.innerHTML = `<p class="text-danger">Error: ${escapeHtml(err.message)}</p>`;
     }
   });
 
