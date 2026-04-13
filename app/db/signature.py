@@ -128,6 +128,9 @@ SELECT
   endorheic,
   coast_flag,
 
+  -- Scale context
+  up_area,
+
   -- geometry handling: return a GeoJSON string (good for Leaflet)
   ST_AsGeoJSON(geom, 6) AS geom_geojson
 FROM public.v_basin08_persist_rev1

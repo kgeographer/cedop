@@ -82,6 +82,9 @@ SELECT
   b.endo       AS endorheic,               -- NEW (0=exorheic, non-zero=endorheic)
   b.coast      AS coast_flag,              -- NEW (1 if basin touches coast)
 
+-- Scale
+  b.up_area    AS up_area,                 -- upstream catchment area (km²)
+
   b.geom
 
 FROM public.basin08 b

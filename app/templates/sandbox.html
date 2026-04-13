@@ -166,6 +166,10 @@
             <button class="nav-link" id="tab-sig-btn" data-bs-toggle="tab"
                     data-bs-target="#pane-sig" type="button" role="tab">Signature</button>
           </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-analysis-btn" data-bs-toggle="tab"
+                    data-bs-target="#pane-analysis" type="button" role="tab">Analysis <span class="badge bg-secondary ms-1" style="font-size:0.65rem;">α</span></button>
+          </li>
         </ul>
         <div class="tab-content">
 
@@ -186,6 +190,13 @@
               <span class="text-muted small" id="sb-basin-meta"></span>
             </div>
             <div id="sb-accordions"></div>
+          </div>
+
+          <!-- Analysis pane -->
+          <div class="tab-pane fade" id="pane-analysis" role="tabpanel">
+            <div id="sb-analysis-body" class="text-muted small" style="line-height:1.6;">
+              <p class="mt-3">Run <strong>Get signature</strong> to populate analysis.</p>
+            </div>
           </div>
 
         </div>
@@ -230,6 +241,7 @@
   let previewMap = null;
   let previewLayers = {};
   let candidateMarkers = [];
+  let previewData = null;
 
   const CANDIDATE_COLORS = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#a65628','#f781bf','#66c2a5','#999999','#ffff33'];
 
@@ -481,6 +493,7 @@
       }
 
       renderSignature(sig, temporalData);
+      if (sig) renderAnalysis(sig, previewData);
     } catch (err) {
       alert(`Error: ${err.message}`);
     } finally {
@@ -701,6 +714,150 @@
   }
   initMap();
 
+  // ── Analysis (alpha) ───────────────────────────────────────────────────
+
+  function renderAnalysis(sig, preview) {
+    const el = document.getElementById('sb-analysis-body');
+    if (!el) return;
+
+    // ── helpers ──
+    const fmt  = v => (v == null) ? '—' : (Number.isInteger(v) ? v.toLocaleString() : Number(v).toLocaleString(undefined, {maximumFractionDigits: 1}));
+    const fmtR = v => (v == null || !isFinite(v)) ? '—' : v.toFixed(2) + '×';
+    const ratio = (a, b) => (a && b && b !== 0) ? a / b : null;
+
+    // ── extract fields ──
+    const upArea   = sig.up_area;           // km²
+    const distSink = sig.dist_sink;         // km (BasinATLAS stores in km)
+    const coast    = sig.coast_flag;
+    const endo     = sig.endorheic;
+    const precip_s = sig.precip_yr,          precip_u = sig.precip_yr_upstream;
+    const arid_s   = sig.aridity,            arid_u   = sig.aridity_upstream;
+    const temp_s   = sig.temp_yr,            temp_u   = sig.temp_yr_upstream;
+    const disch    = sig.discharge_yr;       // m³/s
+    const runoff   = sig.runoff;             // mm/yr
+
+    const precipR  = ratio(precip_u, precip_s);
+    const aridR    = ratio(arid_u, arid_s);
+    const tempR    = ratio(temp_u, temp_s);
+
+    // ── scale mismatch from preview ──
+    let scaleHtml = '';
+    if (preview && preview.containing_basin && preview.adjacent_basins) {
+      const cUp = preview.containing_basin.properties.up_area;
+      const adjAreas = preview.adjacent_basins.features.map(f => f.properties.up_area);
+      const maxAdj = adjAreas.length ? Math.max(...adjAreas) : null;
+      const mismatch = (cUp && maxAdj) ? maxAdj / cUp : null;
+      if (mismatch && mismatch > 50) {
+        scaleHtml = `<div class="alert alert-warning py-2 px-3 mb-3" style="font-size:0.82rem;">
+          <strong>Scale mismatch</strong> — assigned basin (${fmt(cUp)} km²) is
+          ${Math.round(mismatch).toLocaleString()}× smaller than the largest adjacent basin
+          (${fmt(maxAdj)} km²). The signature may not capture the dominant hydrological setting.
+          See Map tab.
+        </div>`;
+      }
+    }
+
+    // ── drainage fate badge ──
+    let fateBadge = '';
+    if (endo && endo !== 0) {
+      fateBadge = '<span class="badge bg-secondary me-1">Endorheic</span>';
+    } else if (coast && distSink != null && distSink < 10) {
+      fateBadge = '<span class="badge bg-info text-dark me-1">Coastal terminal</span>';
+    } else {
+      fateBadge = '<span class="badge bg-light text-dark border me-1">Exorheic interior</span>';
+    }
+
+    // ── divergence row coloring ──
+    const ratioClass = r => {
+      if (r == null) return '';
+      const d = Math.abs(r - 1);
+      if (d < 0.1) return 'text-muted';
+      if (d < 0.3) return 'text-warning-emphasis';
+      return 'fw-semibold text-danger';
+    };
+
+    // ── small-basin caveat ──
+    const smallBasin = upArea != null && upArea < 5000;
+    const suNote = smallBasin
+      ? `<p class="text-muted fst-italic mb-2" style="font-size:0.8rem;">Small upstream catchment (${fmt(upArea)} km²) — local and upstream conditions are nearly identical at this scale. The ratios below reflect basin-internal averaging, not a meaningful local/upstream contrast.</p>`
+      : '';
+
+    // ── water provenance classification ──
+    let provLabel = '', provNote = '';
+    if (endo && endo !== 0) {
+      provLabel = '<span class="badge bg-secondary">Endorheic</span>';
+      provNote  = 'Basin has no ocean outlet. Water accumulates locally (evaporation, infiltration).';
+    } else if (coast && distSink != null && distSink < 10) {
+      provLabel = '<span class="badge bg-info text-dark">Coastal terminal</span>';
+      provNote  = 'Direct coastal drainer. Local precipitation dominates water supply.';
+    } else if (!smallBasin && precipR != null && precipR > 1.5) {
+      provLabel = '<span class="badge bg-primary">Exogenous water supply</span>';
+      provNote  = `Upstream catchment delivers ${fmtR(precipR)} the precipitation of the local basin — water originating outside the local drainage area is the dominant supply.`;
+    } else if (!smallBasin && aridR != null && aridR > 1.5) {
+      provLabel = '<span class="badge bg-primary">Exogenous water supply</span>';
+      provNote  = `Upstream moisture index is ${fmtR(aridR)} that of the local basin — the catchment is substantially wetter than the local setting.`;
+    } else if (smallBasin) {
+      provLabel = '<span class="badge bg-secondary">Undetermined — small basin</span>';
+      provNote  = 'Basin too small to resolve local/upstream contrast. Consult neighborhood context.';
+    } else {
+      provLabel = '<span class="badge bg-success">Local-dominant</span>';
+      provNote  = 'Local and upstream conditions are similar — water supply is generated within the regional catchment.';
+    }
+
+    el.innerHTML = `
+      ${scaleHtml}
+
+      <h6 class="fw-semibold mb-2">Basin context</h6>
+      <table class="table table-sm table-borderless mb-3" style="font-size:0.83rem;">
+        <tbody>
+          <tr><td class="text-muted pe-3" style="width:55%;">Upstream catchment</td>
+              <td><strong>${fmt(upArea)}</strong> km²</td></tr>
+          <tr><td class="text-muted pe-3">Distance to ocean outlet</td>
+              <td><strong>${fmt(distSink)}</strong> km</td></tr>
+          <tr><td class="text-muted pe-3">Drainage type</td>
+              <td>${fateBadge}</td></tr>
+        </tbody>
+      </table>
+
+      <h6 class="fw-semibold mb-1">Local–upstream divergence</h6>
+      ${suNote}
+      <table class="table table-sm mb-3" style="font-size:0.83rem;">
+        <thead class="table-light">
+          <tr>
+            <th style="width:38%;">Variable</th>
+            <th>Local (s)</th>
+            <th>Upstream (u)</th>
+            <th>Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-muted">Precipitation (mm/yr)</td>
+            <td>${fmt(precip_s)}</td>
+            <td>${fmt(precip_u)}</td>
+            <td class="${ratioClass(precipR)}">${fmtR(precipR)}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Moisture index (P/PET)</td>
+            <td>${fmt(arid_s)}</td>
+            <td>${fmt(arid_u)}</td>
+            <td class="${ratioClass(aridR)}">${fmtR(aridR)}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Temperature (°C)</td>
+            <td>${fmt(temp_s)}</td>
+            <td>${fmt(temp_u)}</td>
+            <td class="${ratioClass(tempR)}">${fmtR(tempR)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h6 class="fw-semibold mb-1">Water provenance</h6>
+      <div class="mb-1">${provLabel}</div>
+      <p class="text-muted mb-0" style="font-size:0.82rem;">${provNote}</p>
+    `;
+  }
+
   // ── Neighborhood preview ───────────────────────────────────────────────
   async function fetchPreview() {
     if (resolvedLat === null) return;
@@ -721,6 +878,7 @@
   }
 
   function renderPreview(data) {
+    previewData = data;
     // Clear previous basin/river layers (candidate markers already cleared by setResolved)
     Object.values(previewLayers).forEach(l => previewMap.removeLayer(l));
     previewLayers = {};
