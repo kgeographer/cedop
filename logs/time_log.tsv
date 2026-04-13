@@ -3,3 +3,4 @@ date	start	end	hours	branch	notes
 2026-04-11	18:30	19:44	1.25	sig_rev1	sandbox.md scenarios and fail state requirements (Timbuktu, Ur)
 2026-04-12	08:16	11:28	3.2	sig_rev1	Neighborhood preview map: API endpoint, basin choropleth, HydroRIVERS global load, geography indexes
 2026-04-13	08:30	13:01	4.5	sandbox	Wireframe redesign: Map|Signature tabs, candidate markers, bands checkboxes, auto-preview, interpretation modal
+2026-04-13	16:52	18:58	2.1	sandbox	Analysis (alpha) tab: up_area in payload, s/u divergence table, scale mismatch alert, water provenance classification
