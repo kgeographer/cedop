@@ -48,6 +48,25 @@
             <button class="btn btn-outline-primary" id="sb-resolve-btn">Resolve</button>
           </div>
           <div id="sb-resolve-status" class="text-muted small mb-2" style="display:none;"></div>
+
+          <!-- fclass filter — shown when candidates are present -->
+          <div id="sb-fclass-filter" class="d-none d-flex align-items-center gap-2 mb-1" style="font-size:0.78rem;">
+            <span class="text-muted">Filter:</span>
+            <div class="form-check form-check-inline me-0">
+              <input class="form-check-input fclass-chk" type="checkbox" id="fc-P" value="P" checked>
+              <label class="form-check-label" for="fc-P" title="Populated places (cities, towns)">P</label>
+            </div>
+            <div class="form-check form-check-inline me-0">
+              <input class="form-check-input fclass-chk" type="checkbox" id="fc-S" value="S">
+              <label class="form-check-label" for="fc-S" title="Spots (buildings, airports, monuments)">S</label>
+            </div>
+            <div class="form-check form-check-inline me-0">
+              <input class="form-check-input fclass-chk" type="checkbox" id="fc-H" value="H">
+              <label class="form-check-label" for="fc-H" title="Hydrographic (rivers, lakes)">H</label>
+            </div>
+            <span class="text-muted ms-auto" id="sb-fclass-count"></span>
+          </div>
+
           <!-- Candidate list when multiple results -->
           <div id="sb-candidates" class="list-group list-group-flush small mb-2" style="display:none;"></div>
           <!-- Resolved place chip -->
@@ -278,31 +297,51 @@
     }
   }
 
-  function showCandidates(results) {
-    const html = results.map((r, idx) => {
+  function getCheckedFclasses() {
+    return Array.from(document.querySelectorAll('.fclass-chk:checked')).map(c => c.value);
+  }
+
+  function applyFclassFilter(results) {
+    const active = getCheckedFclasses();
+    if (!active.length) return results;
+    return results.filter(r => {
+      const fc = r.fclasses || [];
+      // Show if any fclass matches, OR if fclasses is empty (unclassified — always show)
+      return fc.length === 0 || fc.some(f => active.includes(f));
+    });
+  }
+
+  function renderCandidates(results) {
+    const visible = applyFclassFilter(results);
+    const countEl = document.getElementById('sb-fclass-count');
+    if (countEl) countEl.textContent = `${visible.length} / ${results.length}`;
+
+    const html = visible.map((r, idx) => {
       const name    = escapeHtml(r.name);
       const ccodes  = (r.countries || []).map(c => c.code).join(', ');
       const badge   = r.match ? ' <span class="badge bg-success" style="font-size:0.7rem;">exact</span>' : '';
-      const type    = (r.types && r.types[0]) ? `<span class="text-muted ms-1" style="font-size:0.75rem;">${escapeHtml(r.types[0].label)}</span>` : '';
-      const alts    = (!r.match && r.alt_names && r.alt_names.length)
+      const fcLabel = r.fclasses && r.fclasses.length ? `<span class="text-muted ms-1" style="font-size:0.75rem;">${r.fclasses.join('/')}</span>` : '';
+      const typeLabel = (!r.fclasses || !r.fclasses.length) && r.types && r.types[0]
+        ? `<span class="text-muted ms-1" style="font-size:0.75rem;">${escapeHtml(r.types[0].label)}</span>` : '';
+      const alts    = (r.alt_names && r.alt_names.length)
         ? `<div class="text-muted" style="font-size:0.75rem;">aka: ${r.alt_names.slice(0,3).map(escapeHtml).join(', ')}</div>`
         : '';
       const hasCoords = r.lat && r.lon;
       const dimStyle = !hasCoords ? ' style="opacity:0.5;cursor:default;pointer-events:none;"' : '';
+      // Use original index into whgResults for selection
+      const origIdx = whgResults.indexOf(r);
       return `
-        <a href="#" class="list-group-item list-group-item-action py-1 px-2 whg-candidate"${dimStyle} data-idx="${idx}">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <span class="fw-semibold">${idx+1}. ${name}</span>${badge}
-              ${ccodes ? ` <span class="text-muted">[${ccodes}]</span>` : ''}
-              ${type}
-              ${alts}
-              ${!hasCoords ? '<div class="text-muted" style="font-size:0.72rem;">(no geometry)</div>' : ''}
-            </div>
+        <a href="#" class="list-group-item list-group-item-action py-1 px-2 whg-candidate"${dimStyle} data-idx="${origIdx}">
+          <div>
+            <span class="fw-semibold">${idx+1}. ${name}</span>${badge}
+            ${ccodes ? ` <span class="text-muted">[${ccodes}]</span>` : ''}
+            ${fcLabel}${typeLabel}
+            ${alts}
+            ${!hasCoords ? '<div class="text-muted" style="font-size:0.72rem;">(no geometry)</div>' : ''}
           </div>
         </a>`;
     }).join('');
-    candidatesEl.innerHTML = html;
+    candidatesEl.innerHTML = html || '<div class="list-group-item text-muted small">No results match current filter.</div>';
     candidatesEl.style.display = '';
 
     candidatesEl.querySelectorAll('.whg-candidate[data-idx]').forEach(el => {
@@ -310,11 +349,16 @@
         e.preventDefault();
         const idx = parseInt(el.getAttribute('data-idx'), 10);
         const place = whgResults[idx];
-        if (!place.lat || !place.lon) return;
+        if (!place || !place.lat || !place.lon) return;
         setResolved(place.lat, place.lon, place.name);
       });
     });
-    showCandidateMarkers(results);
+    showCandidateMarkers(visible.filter(r => r.lat && r.lon));
+  }
+
+  function showCandidates(results) {
+    document.getElementById('sb-fclass-filter').classList.remove('d-none');
+    renderCandidates(results);
   }
 
   function hideCandidates() {
@@ -322,7 +366,13 @@
     candidatesEl.innerHTML = '';
     whgResults = [];
     clearCandidateMarkers();
+    document.getElementById('sb-fclass-filter').classList.add('d-none');
   }
+
+  // Re-render on fclass filter change
+  document.querySelectorAll('.fclass-chk').forEach(cb => {
+    cb.addEventListener('change', () => { if (whgResults.length) renderCandidates(whgResults); });
+  });
 
   function clearCandidateMarkers() {
     candidateMarkers.forEach(m => { if (previewMap) previewMap.removeLayer(m); });
@@ -457,6 +507,43 @@
       </div>`;
   }
 
+  function buildPdsiSvg(series) {
+    const W = 560, H = 110, PL = 30, PB = 16, PT = 6, PR = 6;
+    const w = W - PL - PR, h = H - PB - PT;
+    const vals = series.map(d => d.pdsi);
+    const years = series.map(d => d.year);
+    const vMin = Math.min(Math.min(...vals), 0);
+    const vMax = Math.max(Math.max(...vals), 0);
+    const vRange = vMax - vMin || 1;
+    const toY  = v => PT + h * (1 - (v - vMin) / vRange);
+    const zeroY = toY(0);
+    const bw = w / series.length;
+
+    const bars = series.map((d, i) => {
+      const x  = PL + i * bw;
+      const y  = d.pdsi >= 0 ? toY(d.pdsi) : zeroY;
+      const bh = Math.max(0.8, Math.abs(toY(d.pdsi) - zeroY));
+      const fill = d.pdsi >= 0 ? '#4e8fbf' : '#b05a2f';
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(1, bw).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" opacity="0.75"/>`;
+    }).join('');
+
+    // Y labels: max, 0, min
+    const yLabels = [[vMax, vMax.toFixed(1)], [0, '0'], [vMin, vMin.toFixed(1)]].map(([v, lbl]) =>
+      `<text x="${PL - 3}" y="${(toY(v) + 3).toFixed(1)}" font-size="8" text-anchor="end" fill="#888">${lbl}</text>`
+    ).join('');
+
+    // X labels: evenly spaced year ticks (≈5)
+    const step = Math.max(1, Math.floor(series.length / 5));
+    const xLabels = series.filter((_, i) => i % step === 0 || i === series.length - 1).map(d => {
+      const x = PL + years.indexOf(d.year) * bw + bw / 2;
+      return `<text x="${x.toFixed(1)}" y="${(H - 2).toFixed(1)}" font-size="8" text-anchor="middle" fill="#888">${d.year}</text>`;
+    }).join('');
+
+    const zeroLine = `<line x1="${PL}" y1="${zeroY.toFixed(1)}" x2="${W - PR}" y2="${zeroY.toFixed(1)}" stroke="#555" stroke-width="0.6"/>`;
+
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;margin-bottom:0.75rem;">${bars}${zeroLine}${yLabels}${xLabels}</svg>`;
+  }
+
   function buildTemporalBody(data) {
     const gc = data.grid_cell;
     let html = `<div class="small mb-2">
@@ -467,38 +554,36 @@
       &nbsp; max <strong>${data.pdsi_max}</strong>
     </div>`;
 
+    const tipIcon = (tip) =>
+      `<i class="bi bi-question-circle text-muted ms-1" style="font-size:0.8rem;cursor:help;"
+          data-bs-toggle="tooltip" data-bs-title="${escapeHtml(tip)}"></i>`;
+
+    // PDSI series — shown first
+    const series = data.pdsi_series || [];
+    if (series.length) {
+      html += `<div class="fs-6 fw-semibold mb-1">PDSI series (annual, ensemble mean)
+        ${tipIcon('Palmer Drought Severity Index from the Last Millennium Reanalysis v2.1. Positive = wetter than average; negative = drier. Values are ensemble means.')}
+      </div>
+      ${buildPdsiSvg(series)}`;
+    }
+
+    // Volcanic events — shown second
     if (data.volcanic_events && data.volcanic_events.length) {
       const rows = data.volcanic_events.map(e =>
         `<tr><td>${e.year_ad}</td><td>${e.vssi_tg}</td><td>${e.vssi_1sig ?? '—'}</td>
          <td>${e.asymmetry !== null ? e.asymmetry.toFixed(2) : '—'}</td>
          <td>${e.location || 'unknown'}</td><td>${e.tephra ? 'Y' : 'N'}</td></tr>`
       ).join('');
-      html += `<div class="text-muted small mb-1">Volcanic events (vssi ≥ threshold)</div>
-        <table class="table table-sm table-bordered mb-2" style="font-size:0.78rem;">
-          <thead class="table-light">
-            <tr><th>Year</th><th>vssi (Tg)</th><th>±1σ</th><th>Asym.</th><th>Location</th><th>Tephra</th></tr>
-          </thead><tbody>${rows}</tbody>
-        </table>`;
+      html += `<div class="fs-6 fw-semibold mb-1">Volcanic events (vssi ≥ threshold)
+        ${tipIcon('Stratospheric aerosol injection (VSSI, Tg) from the eVolv2k v4 dataset. Larger values indicate eruptions with stronger global cooling potential.')}
+      </div>
+      <table class="table table-sm table-bordered mb-2" style="font-size:0.78rem;">
+        <thead class="table-light">
+          <tr><th>Year</th><th>vssi (Tg)</th><th>±1σ</th><th>Asym.</th><th>Location</th><th>Tephra</th></tr>
+        </thead><tbody>${rows}</tbody>
+      </table>`;
     } else {
       html += `<div class="text-muted small mb-2">No volcanic events above threshold in this period.</div>`;
-    }
-
-    const series = data.pdsi_series || [];
-    if (series.length) {
-      const decades = {};
-      series.forEach(({year, pdsi}) => {
-        const d = Math.floor(year / 10) * 10;
-        if (!decades[d]) decades[d] = [];
-        decades[d].push(pdsi);
-      });
-      const lines = Object.entries(decades).map(([d, vals]) => {
-        const mean = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(3);
-        const bar  = (parseFloat(mean) >= 0 ? '+' : '-')
-          + '█'.repeat(Math.min(Math.round(Math.abs(parseFloat(mean))*20), 12));
-        return `${d}s  ${mean.padStart(7)}  ${bar}`;
-      });
-      html += `<div class="text-muted small mb-1">PDSI series (annual, ensemble mean)</div>
-        <div class="small font-monospace" style="max-height:200px;overflow-y:auto;">${escapeHtml(lines.join('\n'))}</div>`;
     }
     return html;
   }
@@ -512,9 +597,48 @@
     if (interpLink) interpLink.classList.toggle('d-none', !sig);
 
     document.getElementById('sb-sig-heading').textContent =
-      resolvedName ? `${resolvedName} — environmental signature` : 'Environmental signature';
-    document.getElementById('sb-basin-meta').textContent =
-      sig ? `Basin ${sig.id ?? ''}  ·  ${sig.ecoregion ?? ''}` : '';
+      resolvedName || 'Environmental signature';
+
+    // Basin meta: ID + API/JSON link
+    const metaEl = document.getElementById('sb-basin-meta');
+    if (sig) {
+      const sigBands = Array.from(document.querySelectorAll('.sb-band-chk:checked'))
+        .map(cb => cb.value).filter(v => v !== 'F').join('');
+      const apiUrl = `/api/signature?lat=${resolvedLat}&lon=${resolvedLon}&bands=${sigBands}&level=${document.getElementById('sb-level').value}`;
+      metaEl.innerHTML = `Basin ${escapeHtml(String(sig.id ?? ''))}
+        &ensp;<a href="#" id="sb-json-link" class="small text-decoration-none text-secondary" title="API URL &amp; JSON">
+          <i class="bi bi-braces"></i> JSON / API
+        </a>`;
+      // Attach handler (replace any prior listener by cloning the node)
+      const jsonLink = metaEl.querySelector('#sb-json-link');
+      jsonLink.addEventListener('click', e => {
+        e.preventDefault();
+        document.getElementById('ecoModalLabel').textContent = 'API URL & JSON payload';
+        document.getElementById('ecoModalWikiLink').style.display = 'none';
+        document.getElementById('ecoModalBody').innerHTML = `
+          <div class="mb-3">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="fw-semibold small">API URL</span>
+              <button class="btn btn-outline-secondary btn-sm py-0 px-1" id="sb-copy-url-btn" title="Copy URL">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+            <code id="sb-api-url-text" class="d-block small p-2 bg-light rounded" style="word-break:break-all;">${escapeHtml(window.location.origin + apiUrl)}</code>
+          </div>
+          <div>
+            <span class="fw-semibold small">JSON payload</span>
+            <pre class="small p-2 bg-light rounded mt-1" style="max-height:400px;overflow-y:auto;">${escapeHtml(JSON.stringify(sig, null, 2))}</pre>
+          </div>`;
+        ecoModal.show();
+        document.getElementById('sb-copy-url-btn').addEventListener('click', () => {
+          navigator.clipboard.writeText(window.location.origin + apiUrl).then(() => {
+            document.getElementById('sb-copy-url-btn').innerHTML = '<i class="bi bi-clipboard-check"></i>';
+          });
+        });
+      });
+    } else {
+      metaEl.innerHTML = '';
+    }
 
     if (sig) {
       const summaryEl = document.getElementById('sb-summary');
@@ -557,6 +681,10 @@
     }
 
     accEl.innerHTML = `<div class="accordion" id="${accId}">${panels}</div>`;
+    // Init tooltips on dynamically inserted content
+    accEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+      new bootstrap.Tooltip(el);
+    });
   }
 
   // ── Map initialization (eager, so candidate markers can appear before any preview) ──

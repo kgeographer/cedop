@@ -26,7 +26,7 @@ def _http_get_json(url: str, timeout_sec: int = 20) -> Dict[str, Any]:
     ctx = ssl.create_default_context(cafile=certifi.where())
     req = urllib.request.Request(url, headers={
         "Accept": "application/json",
-        "User-Agent": "CEDOP/1.0"
+        "User-Agent": "Mozilla/5.0 (compatible; CEDOP/1.0; +https://cedop.kgeographer.org)"
     })
     with urllib.request.urlopen(req, timeout=timeout_sec, context=ctx) as resp:
         raw = resp.read().decode("utf-8")
@@ -40,7 +40,7 @@ def _http_post_json(url: str, payload: Dict[str, Any], headers: Dict[str, str] =
     req_headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "CEDOP/1.0"
+        "User-Agent": "Mozilla/5.0 (compatible; CEDOP/1.0; +https://cedop.kgeographer.org)"
     }
     if headers:
         req_headers.update(headers)
@@ -214,6 +214,69 @@ def _parse_wkt_point_coords(wkt: str) -> Optional[Tuple[float, float]]:
     if m:
         return float(m.group(1)), float(m.group(2))
     return None
+
+
+def _whg_search_candidates(query: str, limit: int = 10) -> List[Dict]:
+    """Search WHG using suggest + entity for reliable geometry.
+
+    reconcile+extend returns child IDs (gn:, osm:) that have empty geometry
+    in the extend response.  suggest returns canonical parent IDs whose entity
+    record has geometry in GeoJSON Feature format.
+    """
+    suggest_results = _whg_suggest(query, limit=limit)
+    if not suggest_results:
+        return []
+
+    results = []
+    for r in suggest_results:
+        place_id = r.get("id", "")
+        lon, lat = None, None
+        countries = []
+        types = []
+        fclasses = []
+
+        # Fallback country from suggest description field ("Country: ML")
+        desc = r.get("description", "") or ""
+        m = re.match(r"Country:\s*(\w+)", desc)
+        if m:
+            countries = [{"code": m.group(1)}]
+
+        # Fetch entity for geometry and richer metadata
+        if place_id:
+            try:
+                entity = _whg_entity(place_id)
+                geom = entity.get("geometry") or {}
+                if geom.get("type") == "Point":
+                    coords = geom.get("coordinates") or []
+                    if len(coords) >= 2:
+                        lon, lat = float(coords[0]), float(coords[1])
+                props = entity.get("properties") or {}
+                ccodes = props.get("ccodes") or []
+                if ccodes:
+                    countries = [{"code": c} for c in ccodes]
+                types = [{"label": t.get("label", "")} for t in (entity.get("types") or [])]
+                fclasses = props.get("fclasses") or []
+            except Exception:
+                pass  # keep suggest-only data if entity call fails
+
+        # Drop wikidata-only noise: no GeoNames fclass means unclassified wikidata entry
+        if not fclasses:
+            continue
+
+        results.append({
+            "id": place_id,
+            "name": r.get("name", ""),
+            "score": r.get("score", 0),
+            "match": r.get("match", False),
+            "alt_names": r.get("alt_names", []),
+            "lon": lon,
+            "lat": lat,
+            "countries": countries,
+            "types": types,
+            "fclasses": fclasses,
+        })
+
+    return results
 
 
 def _merge_reconcile_results(candidates: List[Dict], extended: Dict[str, Dict]) -> List[Dict]:
@@ -662,25 +725,15 @@ def whg_reconcile(q: str, countries: str = None, size: int = 10):
         country_list = [c.strip().upper() for c in countries.split(",") if c.strip()]
 
     try:
-        # Step 1: Query for candidates
-        candidates = _whg_reconcile_query(q, countries=country_list, size=size)
-
-        if not candidates:
-            return {"results": []}
-
-        # Step 2: Get geometry for all candidates
-        place_ids = [c.get("id") for c in candidates if c.get("id")]
-        extended = _whg_reconcile_extend(place_ids)
-
-        # Step 3: Merge results
-        results = _merge_reconcile_results(candidates, extended)
-
+        # suggest + entity: suggest returns canonical parent IDs with geometry;
+        # country filter is not supported by suggest (ignored here — ping Stephen)
+        results = _whg_search_candidates(q, limit=size)
         return {"results": results}
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"WHG reconcile failed: {e}")
+        raise HTTPException(status_code=502, detail=f"WHG search failed: {e}")
 
 
 @router.get("/wh-sites")
