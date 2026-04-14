@@ -41,7 +41,13 @@
 - Edinburgh → returns US place before Scottish Edinburgh (WHG ranking issue)
 - Latency: 2–4s per search (irreducible given N entity calls to WHG)
 - sandbox.html WHG lookup not yet updated with these fixes (edop.html only)
-- Deploy pending: `git pull` + restart on kgeographer-1
+- Deploy pending: `git pull` + restart on kgeographer-1 — **do after WHG is stable**
+
+## Next session priorities
+
+1. **WHG lookup** — fix Ur and Rome; port edop.html fixes to sandbox.html
+2. **Deploy** to kgeographer-1
+3. **Thursday demo prep** — Timbuktu L06 + Montevideo demo sequence
 
 ## Created
 
