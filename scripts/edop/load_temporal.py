@@ -1,7 +1,7 @@
 """
 load_temporal.py
 ----------------
-Creates the temporal schema and loads two paleoclimate datasets into cedop:
+Creates the temporal schema and loads paleoclimate datasets into cedop:
 
   1. LMR v2.1 PDSI  — data/lmr_v2.1/pdsi_MCruns_ensemble_mean_LMRv2.1.nc
      16,380 rows (one per 2° grid cell); pdsi[] array of 2001 annual means (0–1998 CE).
@@ -9,10 +9,16 @@ Creates the temporal schema and loads two paleoclimate datasets into cedop:
   2. eVolv2k v4     — data/volcano/evolv2k_v4.csv
      256 volcanic eruption events, ~500 BCE – 1890 CE.
 
-Run from repo root:
-    ~/envs/_edop/bin/python3 scripts/edop/load_temporal.py [--lmr] [--evolv2k] [--dry-run]
+  3. LMR v2.1 air   — data/lmr_v2.1/air_MCruns_ensemble_mean_LMRv2.1.nc
+     2m air temperature; stored as air[] column in temporal.lmr_climate.
 
-With no flags, loads both datasets. Use --lmr or --evolv2k to load one at a time.
+  4. LMR v2.1 prate — data/lmr_v2.1/prate_MCruns_ensemble_mean_LMRv2.1.nc
+     Precipitation rate; stored as prate[] column in temporal.lmr_climate.
+
+Run from repo root:
+    ~/envs/_edop/bin/python3 scripts/edop/load_temporal.py [--lmr] [--evolv2k] [--air] [--prate] [--dry-run]
+
+With no flags, loads all datasets. Use individual flags to load one at a time.
 """
 
 import argparse
@@ -27,7 +33,9 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.shared.db_utils import db_connect
 
-LMR_NC   = Path("data/lmr_v2.1/pdsi_MCruns_ensemble_mean_LMRv2.1.nc")
+LMR_NC    = Path("data/lmr_v2.1/pdsi_MCruns_ensemble_mean_LMRv2.1.nc")
+AIR_NC    = Path("data/lmr_v2.1/air_MCruns_ensemble_mean_LMRv2.1.nc")
+PRATE_NC  = Path("data/lmr_v2.1/prate_MCruns_ensemble_mean_LMRv2.1.nc")
 EVOLV_CSV = Path("data/volcano/evolv2k_v4.csv")
 SQL_DDL   = Path("sql/temporal/create_temporal.sql")
 
@@ -42,11 +50,21 @@ def create_schema(conn):
     ddl = SQL_DDL.read_text()
     conn.execute(ddl)
     conn.commit()
-    print("Schema ready (temporal.lmr_pdsi, temporal.evolv2k_v4).")
+    print("Schema ready (temporal.lmr_climate, temporal.evolv2k_v4).")
+
+
+def add_lmr_column(conn, col_name):
+    """Add a real[] column to lmr_climate if it doesn't already exist."""
+    conn.execute(f"""
+        ALTER TABLE temporal.lmr_climate
+        ADD COLUMN IF NOT EXISTS {col_name} real[]
+    """)
+    conn.commit()
+    print(f"Column {col_name} ready in temporal.lmr_climate.")
 
 
 # ---------------------------------------------------------------------------
-# LMR PDSI loader
+# LMR PDSI loader (initial load — inserts all rows)
 # ---------------------------------------------------------------------------
 
 def load_lmr(conn, dry_run=False):
@@ -64,7 +82,7 @@ def load_lmr(conn, dry_run=False):
     print(f"Collapsing 20 MC runs to ensemble mean ...")
 
     if dry_run:
-        print(f"[dry-run] Would insert {total:,} rows into temporal.lmr_pdsi — skipping.")
+        print(f"[dry-run] Would insert {total:,} rows into temporal.lmr_climate — skipping.")
         ds.close()
         return
 
@@ -76,12 +94,12 @@ def load_lmr(conn, dry_run=False):
     print("Array loaded.")
 
     insert_sql = """
-        INSERT INTO temporal.lmr_pdsi (lat, lon, pdsi, geom)
+        INSERT INTO temporal.lmr_climate (lat, lon, pdsi, geom)
         VALUES (%s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
     """
 
     # Truncate first so re-runs are safe
-    conn.execute("TRUNCATE temporal.lmr_pdsi RESTART IDENTITY")
+    conn.execute("TRUNCATE temporal.lmr_climate RESTART IDENTITY")
     conn.commit()
 
     rows = []
@@ -109,7 +127,77 @@ def load_lmr(conn, dry_run=False):
         conn.commit()
         inserted += len(rows)
 
-    print(f"\nLMR PDSI: {inserted:,} rows inserted into temporal.lmr_pdsi.")
+    print(f"\nLMR PDSI: {inserted:,} rows inserted into temporal.lmr_climate.")
+
+
+# ---------------------------------------------------------------------------
+# Generic LMR variable loader (updates existing rows by lat/lon)
+# ---------------------------------------------------------------------------
+
+def load_lmr_var(conn, nc_path: Path, var_name: str, col_name: str, dry_run=False):
+    """
+    Load an additional LMR variable into an existing column of temporal.lmr_climate.
+    Updates rows matched by (lat, lon) — grid must be identical to PDSI grid.
+
+    Parameters
+    ----------
+    nc_path  : path to the _ensemble_mean NC file
+    var_name : name of the variable inside the NC file (e.g. 'air', 'prate')
+    col_name : target column in temporal.lmr_climate (e.g. 'air', 'prate')
+    """
+    print(f"\nOpening {nc_path} ...")
+    ds = nc.Dataset(nc_path)
+
+    lat_vals = ds.variables["lat"][:]
+    lon_vals = ds.variables["lon"][:]
+    var      = ds.variables[var_name]     # shape (2001, 20, 91, 180)
+
+    n_lat = len(lat_vals)
+    n_lon = len(lon_vals)
+    total = n_lat * n_lon
+    print(f"Grid: {n_lat} lat × {n_lon} lon = {total:,} cells")
+    print(f"Collapsing MC runs to ensemble mean for '{var_name}' ...")
+
+    if dry_run:
+        print(f"[dry-run] Would update {total:,} rows — skipping.")
+        ds.close()
+        return
+
+    print(f"Loading full {var_name} array ...")
+    arr_all  = var[:].data               # (2001, n_mc, 91, 180)
+    arr_mean = arr_all.mean(axis=1)      # (2001, 91, 180)
+    ds.close()
+    print("Array loaded.")
+
+    update_sql = f"""
+        UPDATE temporal.lmr_climate
+        SET {col_name} = %s
+        WHERE lat = %s AND lon = %s
+    """
+
+    rows = []
+    updated = 0
+
+    for i_lat in range(n_lat):
+        for i_lon in range(n_lon):
+            lat        = float(lat_vals[i_lat])
+            lon_native = float(lon_vals[i_lon])
+            arr        = arr_mean[:, i_lat, i_lon].tolist()
+            rows.append((arr, lat, lon_native))
+
+            if len(rows) >= BATCH_SIZE:
+                conn.cursor().executemany(update_sql, rows)
+                conn.commit()
+                updated += len(rows)
+                rows = []
+                print(f"  {updated:,} / {total:,} rows updated", end="\r")
+
+    if rows:
+        conn.cursor().executemany(update_sql, rows)
+        conn.commit()
+        updated += len(rows)
+
+    print(f"\nLMR {var_name}: {updated:,} rows updated in temporal.lmr_climate (column: {col_name}).")
 
 
 # ---------------------------------------------------------------------------
@@ -165,14 +253,18 @@ def load_evolv2k(conn, dry_run=False):
 
 def main():
     parser = argparse.ArgumentParser(description="Load temporal datasets into cedop db.")
-    parser.add_argument("--lmr",      action="store_true", help="Load LMR PDSI only")
-    parser.add_argument("--evolv2k",  action="store_true", help="Load eVolv2k only")
-    parser.add_argument("--dry-run",  action="store_true", help="Parse only; no db writes")
+    parser.add_argument("--lmr",     action="store_true", help="Load LMR PDSI only")
+    parser.add_argument("--evolv2k", action="store_true", help="Load eVolv2k only")
+    parser.add_argument("--air",     action="store_true", help="Load LMR air temperature")
+    parser.add_argument("--prate",   action="store_true", help="Load LMR precipitation rate")
+    parser.add_argument("--dry-run", action="store_true", help="Parse only; no db writes")
     args = parser.parse_args()
 
-    # Default: load both
-    do_lmr     = args.lmr     or (not args.lmr and not args.evolv2k)
-    do_evolv2k = args.evolv2k or (not args.lmr and not args.evolv2k)
+    any_flag = args.lmr or args.evolv2k or args.air or args.prate
+    do_lmr     = args.lmr     or not any_flag
+    do_evolv2k = args.evolv2k or not any_flag
+    do_air     = args.air     or not any_flag
+    do_prate   = args.prate   or not any_flag
 
     conn = db_connect()
 
@@ -183,6 +275,14 @@ def main():
 
     if do_evolv2k:
         load_evolv2k(conn, dry_run=args.dry_run)
+
+    if do_air:
+        add_lmr_column(conn, "air")
+        load_lmr_var(conn, AIR_NC, "air", "air", dry_run=args.dry_run)
+
+    if do_prate:
+        add_lmr_column(conn, "prate")
+        load_lmr_var(conn, PRATE_NC, "prate", "prate", dry_run=args.dry_run)
 
     conn.close()
     print("\nDone.")

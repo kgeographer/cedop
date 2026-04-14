@@ -26,7 +26,8 @@ def _http_get_json(url: str, timeout_sec: int = 20) -> Dict[str, Any]:
     ctx = ssl.create_default_context(cafile=certifi.where())
     req = urllib.request.Request(url, headers={
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; CEDOP/1.0; +https://cedop.kgeographer.org)"
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://whgazetteer.org/",
     })
     with urllib.request.urlopen(req, timeout=timeout_sec, context=ctx) as resp:
         raw = resp.read().decode("utf-8")
@@ -60,10 +61,9 @@ def _whg_suggest_first(prefix: str) -> Optional[Dict[str, Any]]:
         "limit": 3,
         "cursor": 0,
         "exact": "false",
+        "type": "place",
+        "token": settings.WHG_API_TOKEN,
     }
-    # WHG may require authentication for suggest; include token when configured.
-    if settings.WHG_API_TOKEN:
-        params["token"] = settings.WHG_API_TOKEN
 
     url = "https://whgazetteer.org/suggest/entity?" + urllib.parse.urlencode(params)
     data = _http_get_json(url)
@@ -80,14 +80,13 @@ def _whg_suggest(prefix: str, limit: int = 5) -> List[Dict[str, Any]]:
         "prefix": prefix,
         "limit": limit,
         "cursor": 0,
+        "type": "place",
         "token": settings.WHG_API_TOKEN,
     }
 
     url = "https://whgazetteer.org/suggest/entity?" + urllib.parse.urlencode(params)
     data = _http_get_json(url)
-    results = data.get("result") or []
-    # Filter to places only (IDs prefixed with "place:")
-    return [r for r in results if r.get("id", "").startswith("place:")]
+    return data.get("result") or []
 
 
 def _whg_entity(place_id: str) -> Dict[str, Any]:

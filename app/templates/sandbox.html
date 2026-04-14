@@ -534,10 +534,10 @@
       </div>`;
   }
 
-  function buildPdsiSvg(series) {
-    const W = 560, H = 110, PL = 30, PB = 16, PT = 6, PR = 6;
+  function buildClimSvg(series, valKey, posColor, negColor) {
+    const W = 560, H = 110, PL = 38, PB = 16, PT = 6, PR = 6;
     const w = W - PL - PR, h = H - PB - PT;
-    const vals = series.map(d => d.pdsi);
+    const vals = series.map(d => d[valKey]);
     const years = series.map(d => d.year);
     const vMin = Math.min(Math.min(...vals), 0);
     const vMax = Math.max(Math.max(...vals), 0);
@@ -547,19 +547,19 @@
     const bw = w / series.length;
 
     const bars = series.map((d, i) => {
+      const v  = d[valKey];
       const x  = PL + i * bw;
-      const y  = d.pdsi >= 0 ? toY(d.pdsi) : zeroY;
-      const bh = Math.max(0.8, Math.abs(toY(d.pdsi) - zeroY));
-      const fill = d.pdsi >= 0 ? '#4e8fbf' : '#b05a2f';
+      const y  = v >= 0 ? toY(v) : zeroY;
+      const bh = Math.max(0.8, Math.abs(toY(v) - zeroY));
+      const fill = v >= 0 ? posColor : negColor;
       return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(1, bw).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" opacity="0.75"/>`;
     }).join('');
 
-    // Y labels: max, 0, min
-    const yLabels = [[vMax, vMax.toFixed(1)], [0, '0'], [vMin, vMin.toFixed(1)]].map(([v, lbl]) =>
-      `<text x="${PL - 3}" y="${(toY(v) + 3).toFixed(1)}" font-size="8" text-anchor="end" fill="#888">${lbl}</text>`
+    const fmt = v => Math.abs(v) < 0.01 ? v.toExponential(1) : v.toFixed(4);
+    const yLabels = [[vMax, fmt(vMax)], [0, '0'], [vMin, fmt(vMin)]].map(([v, lbl]) =>
+      `<text x="${PL - 3}" y="${(toY(v) + 3).toFixed(1)}" font-size="7.5" text-anchor="end" fill="#888">${lbl}</text>`
     ).join('');
 
-    // X labels: evenly spaced year ticks (≈5)
     const step = Math.max(1, Math.floor(series.length / 5));
     const xLabels = series.filter((_, i) => i % step === 0 || i === series.length - 1).map(d => {
       const x = PL + years.indexOf(d.year) * bw + bw / 2;
@@ -573,38 +573,86 @@
 
   function buildTemporalBody(data) {
     const gc = data.grid_cell;
-    let html = `<div class="small mb-2">
-      <strong>Grid cell</strong>: ${gc.lat}N, ${gc.lon}E &nbsp;|&nbsp;
-      <strong>Period</strong>: ${data.year_start}–${data.year_end} CE &nbsp;|&nbsp;
-      PDSI mean <strong>${data.pdsi_mean}</strong>
-      &nbsp; min <strong>${data.pdsi_min}</strong>
-      &nbsp; max <strong>${data.pdsi_max}</strong>
-    </div>`;
+    const uid = `tbf-${Date.now()}`;  // unique prefix for tab IDs
 
     const tipIcon = (tip) =>
       `<i class="bi bi-question-circle text-muted ms-1" style="font-size:0.8rem;cursor:help;"
           data-bs-toggle="tooltip" data-bs-title="${escapeHtml(tip)}"></i>`;
 
-    // PDSI series — shown first
-    const series = data.pdsi_series || [];
-    if (series.length) {
-      html += `<div class="fs-6 fw-semibold mb-1">PDSI series (annual, ensemble mean)
-        ${tipIcon('Palmer Drought Severity Index from the Last Millennium Reanalysis v2.1. Positive = wetter than average; negative = drier. Values are ensemble means.')}
-      </div>
-      ${buildPdsiSvg(series)}`;
-    }
+    // --- Header row ---
+    let html = `<div class="small mb-2 text-muted">
+      <strong>Grid cell</strong>: ${gc.lat}°N, ${gc.lon}°E &nbsp;|&nbsp;
+      <strong>Period</strong>: ${data.year_start}–${data.year_end} CE
+    </div>`;
 
-    // Volcanic events — shown second
+    // --- PDSI tab content ---
+    const pdsiSeries = data.pdsi_series || [];
+    const pdsiTab = pdsiSeries.length
+      ? `<div class="small mb-1 text-muted">
+           Mean <strong>${data.pdsi_mean}</strong> &nbsp;
+           Min <strong>${data.pdsi_min}</strong> &nbsp;
+           Max <strong>${data.pdsi_max}</strong>
+           ${tipIcon('Palmer Drought Severity Index from LMR v2.1. Positive = wetter than average; negative = drier. Anomaly relative to 1951–1980 reference.')}
+         </div>
+         ${buildClimSvg(pdsiSeries, 'pdsi', '#4e8fbf', '#b05a2f')}`
+      : `<div class="text-muted small">No PDSI data.</div>`;
+
+    // --- Temperature tab content ---
+    const airSeries = data.air_series || [];
+    const airTab = airSeries.length
+      ? `<div class="small mb-1 text-muted">
+           Mean anomaly <strong>${data.air_mean_anom_k} K</strong>
+           ${tipIcon('2m air temperature anomaly (K) from LMR v2.1 ensemble mean. Positive = warmer than reference period average.')}
+         </div>
+         ${buildClimSvg(airSeries, 'air_anom_k', '#c0392b', '#2980b9')}`
+      : `<div class="text-muted small">No temperature data.</div>`;
+
+    // --- Precipitation tab content ---
+    const prateSeries = data.prate_series || [];
+    const prateTab = prateSeries.length
+      ? `<div class="small mb-1 text-muted">
+           Mean anomaly <strong>${data.prate_mean_anom_mm_day} mm/day</strong>
+           ${tipIcon('Precipitation rate anomaly (mm/day) from LMR v2.1 ensemble mean. Positive = wetter than reference period average.')}
+         </div>
+         ${buildClimSvg(prateSeries, 'prate_anom_mm_day', '#27ae60', '#8e44ad')}`
+      : `<div class="text-muted small">No precipitation data.</div>`;
+
+    // --- Bootstrap tabs ---
+    html += `
+    <ul class="nav nav-tabs nav-sm mb-0" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active py-1 px-2" id="${uid}-pdsi-tab"
+          data-bs-toggle="tab" data-bs-target="#${uid}-pdsi"
+          type="button" role="tab" style="font-size:0.82rem;">PDSI</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-1 px-2" id="${uid}-air-tab"
+          data-bs-toggle="tab" data-bs-target="#${uid}-air"
+          type="button" role="tab" style="font-size:0.82rem;">Temperature</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-1 px-2" id="${uid}-prate-tab"
+          data-bs-toggle="tab" data-bs-target="#${uid}-prate"
+          type="button" role="tab" style="font-size:0.82rem;">Precipitation</button>
+      </li>
+    </ul>
+    <div class="tab-content border border-top-0 rounded-bottom p-2 mb-3">
+      <div class="tab-pane fade show active" id="${uid}-pdsi" role="tabpanel">${pdsiTab}</div>
+      <div class="tab-pane fade" id="${uid}-air"   role="tabpanel">${airTab}</div>
+      <div class="tab-pane fade" id="${uid}-prate" role="tabpanel">${prateTab}</div>
+    </div>`;
+
+    // --- Volcanic events (outside tabs) ---
+    html += `<div class="fs-6 fw-semibold mb-1">Volcanic events (VSSI ≥ threshold)
+      ${tipIcon('Stratospheric aerosol injection (VSSI, Tg) from eVolv2k v4. Larger values indicate eruptions with stronger global cooling potential.')}
+    </div>`;
     if (data.volcanic_events && data.volcanic_events.length) {
       const rows = data.volcanic_events.map(e =>
         `<tr><td>${e.year_ad}</td><td>${e.vssi_tg}</td><td>${e.vssi_1sig ?? '—'}</td>
          <td>${e.asymmetry !== null ? e.asymmetry.toFixed(2) : '—'}</td>
          <td>${e.location || 'unknown'}</td><td>${e.tephra ? 'Y' : 'N'}</td></tr>`
       ).join('');
-      html += `<div class="fs-6 fw-semibold mb-1">Volcanic events (vssi ≥ threshold)
-        ${tipIcon('Stratospheric aerosol injection (VSSI, Tg) from the eVolv2k v4 dataset. Larger values indicate eruptions with stronger global cooling potential.')}
-      </div>
-      <table class="table table-sm table-bordered mb-2" style="font-size:0.78rem;">
+      html += `<table class="table table-sm table-bordered mb-2" style="font-size:0.78rem;">
         <thead class="table-light">
           <tr><th>Year</th><th>vssi (Tg)</th><th>±1σ</th><th>Asym.</th><th>Location</th><th>Tephra</th></tr>
         </thead><tbody>${rows}</tbody>
@@ -612,6 +660,7 @@
     } else {
       html += `<div class="text-muted small mb-2">No volcanic events above threshold in this period.</div>`;
     }
+
     return html;
   }
 

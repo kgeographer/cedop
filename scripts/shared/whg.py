@@ -11,13 +11,18 @@ TOKEN = next(
      if l.startswith("WHG_API_TOKEN=")),
     None
 )
-UA = "Mozilla/5.0 (compatible; CEDOP/1.0; +https://cedop.kgeographer.org)"
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 BASE = "https://whgazetteer.org"
+HEADERS = {
+    "User-Agent": UA,
+    "Referer": BASE + "/",
+    "Accept": "application/json",
+}
 
 
 def whg_get(path: str, **params) -> dict:
     params["token"] = TOKEN
     url = BASE + path + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    req = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(req, context=_ssl) as r:
         return json.loads(r.read())

@@ -5,12 +5,17 @@ Temporal enrichment lookups for the EDOP signature API.
 
 Functions:
   get_temporal_context(lat, lon, year_start, year_end, vssi_min)
-    Returns PDSI time series (LMR v2.1) and significant volcanic events
-    (eVolv2k v4) for a given location and year range.
+    Returns LMR v2.1 climate time series (PDSI, air temperature, precipitation rate)
+    and significant volcanic events (eVolv2k v4) for a given location and year range.
 
 Array indexing note:
-  PostgreSQL arrays are 1-indexed. Year Y CE is stored at pdsi[Y+1].
-  Slice year_start–year_end → pdsi[year_start+1 : year_end+1].
+  PostgreSQL arrays are 1-indexed. Year Y CE is stored at arr[Y+1].
+  Slice year_start–year_end → arr[year_start+1 : year_end+1].
+
+Units (all LMR variables are anomalies relative to a reference period):
+  pdsi  : Palmer Drought Severity Index anomaly (dimensionless)
+  air   : 2m air temperature anomaly (K)
+  prate : precipitation rate anomaly (kg/m²/s) — multiply by 86400 for mm/day anomaly
 """
 
 from typing import Any, Dict, List, Optional
@@ -38,14 +43,18 @@ def get_temporal_context(
     Returns
     -------
     dict with keys:
-      grid_cell       : {lat, lon} of the nearest LMR 2° grid cell
-      year_start      : actual start year returned
-      year_end        : actual end year returned
-      pdsi_series     : list of {year, pdsi} dicts for the requested range
-      pdsi_mean       : mean PDSI over the range
-      pdsi_min        : minimum PDSI (most arid)
-      pdsi_max        : maximum PDSI (most wet)
-      volcanic_events : list of eruption dicts with vssi_tg >= vssi_min
+      grid_cell           : {lat, lon} of the nearest LMR 2° grid cell
+      year_start          : actual start year returned
+      year_end            : actual end year returned
+      pdsi_series         : list of {year, pdsi} dicts
+      pdsi_mean           : mean PDSI over the range
+      pdsi_min            : minimum PDSI (most arid)
+      pdsi_max            : maximum PDSI (most wet)
+      air_series              : list of {year, air_anom_k} dicts (K anomaly vs. reference)
+      air_mean_anom_k         : mean air temperature anomaly (K)
+      prate_series            : list of {year, prate_anom_mm_day} dicts (mm/day anomaly)
+      prate_mean_anom_mm_day  : mean precipitation rate anomaly (mm/day)
+      volcanic_events     : list of eruption dicts with vssi_tg >= vssi_min
     """
     # Clamp to valid range
     year_start = max(0, min(year_start, 1998))
@@ -61,13 +70,15 @@ def get_temporal_context(
     with db_connect() as conn:
         with conn.cursor() as cur:
 
-            # --- PDSI nearest-cell lookup ---
+            # --- LMR nearest-cell lookup (all climate variables) ---
             cur.execute("""
                 SELECT
                     lat,
                     lon,
-                    pdsi[%(pg_start)s : %(pg_end)s] AS pdsi_slice
-                FROM temporal.lmr_pdsi
+                    pdsi[%(pg_start)s  : %(pg_end)s] AS pdsi_slice,
+                    air[%(pg_start)s   : %(pg_end)s] AS air_slice,
+                    prate[%(pg_start)s : %(pg_end)s] AS prate_slice
+                FROM temporal.lmr_climate
                 ORDER BY geom <-> ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)
                 LIMIT 1
             """, {"lat": lat, "lon": lon_geom, "pg_start": pg_start, "pg_end": pg_end})
@@ -76,10 +87,12 @@ def get_temporal_context(
             if row is None:
                 return {"error": "No LMR grid cell found"}
 
-            grid_lat, grid_lon, pdsi_slice = row
+            grid_lat, grid_lon, pdsi_slice, air_slice, prate_slice = row
 
-            # Build series and stats
+            # Build year index
             years = list(range(year_start, year_end + 1))
+
+            # PDSI series and stats
             series = [
                 {"year": y, "pdsi": round(float(v), 4)}
                 for y, v in zip(years, pdsi_slice)
@@ -89,6 +102,24 @@ def get_temporal_context(
             pdsi_mean = round(sum(values) / len(values), 4) if values else None
             pdsi_min  = round(min(values), 4) if values else None
             pdsi_max  = round(max(values), 4) if values else None
+
+            # Air temperature anomaly series (K anomaly relative to reference period)
+            air_series = [
+                {"year": y, "air_anom_k": round(float(v), 4)}
+                for y, v in zip(years, air_slice)
+                if v is not None
+            ]
+            air_vals = [s["air_anom_k"] for s in air_series]
+            air_mean = round(sum(air_vals) / len(air_vals), 4) if air_vals else None
+
+            # Precipitation rate anomaly series (kg/m²/s anomaly → mm/day anomaly)
+            prate_series = [
+                {"year": y, "prate_anom_mm_day": round(float(v) * 86400, 4)}
+                for y, v in zip(years, prate_slice)
+                if v is not None
+            ]
+            prate_vals = [s["prate_anom_mm_day"] for s in prate_series]
+            prate_mean = round(sum(prate_vals) / len(prate_vals), 4) if prate_vals else None
 
             # Convert native LMR lon (0–358) to −180/180 for display
             grid_lon_display = float(grid_lon) if float(grid_lon) <= 180 else float(grid_lon) - 360
@@ -123,5 +154,9 @@ def get_temporal_context(
         "pdsi_mean":       pdsi_mean,
         "pdsi_min":        pdsi_min,
         "pdsi_max":        pdsi_max,
+        "air_series":           air_series,
+        "air_mean_anom_k":      air_mean,
+        "prate_series":         prate_series,
+        "prate_mean_anom_mm_day": prate_mean,
         "volcanic_events": events,
     }

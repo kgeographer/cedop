@@ -54,3 +54,49 @@
 - `scripts/shared/whg.py` — minimal WHG API test harness (token from .env, certifi SSL)
 - `docs/whg/api_investigation.md`
 - `docs/whg/issues_20260414.md`
+
+---
+
+**Branch**: sandbox
+**Time**: 08:30–13:45 (~5.25h) + 16:15–18:35 (~2.3h)
+
+---
+
+## Hetzner deploy (afternoon session)
+
+- Full deploy: sandbox → main → kgeographer-1
+- One-time installs: `pip install anthropic`; `pg_restore` of `public.basin06` and `gaz.hydrorivers` (8.3M rows, 580MB dump)
+- `ALTER TABLE basin08 ADD COLUMN geog geography(MultiPolygon,4326)` + populate + GIST index (`idx_basin08_geog`) — basin preview 8.5s → 23ms
+- Created `v_basin08_persist_rev1` and `v_basin06_persist_rev1` views via SQL files
+- Deploy checklist created: `sysop/deploy_checklist.md` (tracks one-time and pending steps)
+
+## WHG lookup (continued)
+
+- Root cause confirmed: `type=place` missing from suggest calls — WHG returns `period:` records intermixed, causing zero results for common place names
+- Fixed `_whg_suggest_first` and `_whg_suggest` in `app/api/routes.py` with `type=place` param
+- Added `Referer: https://whgazetteer.org/` and browser User-Agent to all WHG requests (`scripts/shared/whg.py`)
+- Stephen Gadd responded: confirmed new indexes deployed Monday may have caused regressions; fix pending on his end
+
+## LMR temporal expansion
+
+- Renamed `temporal.lmr_pdsi` → `temporal.lmr_climate` (schema, SQL, loader, API)
+- Added `air` (2m temperature anomaly, K) and `prate` (precip rate anomaly, kg/m²/s) columns
+- Updated `load_temporal.py`: added `--air` / `--prate` flags, generic `load_lmr_var()`, `add_lmr_column()`
+- Updated `app/db/temporal.py`: single query returns all three variables; returns `air_series [{year, air_anom_k}]`, `prate_series [{year, prate_anom_mm_day}]` plus means
+- Key clarification: LMR stores **anomalies**, not absolute values — air is ΔK, prate is Δkg/m²/s (×86400 for mm/day); field names updated accordingly
+- Created `data/lmr_v2.1/lmr_inventory.md`: full catalog of 18 LMR v2.1 NC files; SST flagged for Phase 2 coastality band
+- TOAST compression: ~1GB NetCDF → 58MB in Postgres (real[] arrays compress extremely well)
+
+## Band F UI — tabbed accordion
+
+- Replaced single PDSI histogram with three Bootstrap tabs: **PDSI** | **Temperature** | **Precipitation**
+- Shared `buildClimSvg(series, valKey, posColor, negColor)` renders any anomaly series
+- Volcanic events table sits **below** tabs as a shared footer (not inside any tab)
+- Colors: PDSI = blue/brown, Temperature = red/blue, Precipitation = green/purple
+- Y-axis auto-formats to scientific notation for very small values (prate anomalies ~10⁻² mm/day)
+
+## Pending (next deploy)
+
+- Rename `temporal.lmr_pdsi → lmr_climate` on Hetzner
+- Copy `air_MCruns_ensemble_mean_LMRv2.1.nc` and `prate_MCruns...nc` to Hetzner
+- Run `load_temporal.py --air --prate` on Hetzner
