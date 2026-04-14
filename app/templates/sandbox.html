@@ -73,7 +73,7 @@
           <div id="sb-place-chip" class="d-none align-items-center gap-2 mb-2">
             <span class="badge bg-primary" id="sb-place-name-badge"></span>
             <span class="text-muted small" id="sb-coords-display"></span>
-            <button class="btn btn-link btn-sm p-0 text-danger" id="sb-clear-btn" title="Clear">&#x2715;</button>
+            <button class="btn btn-link btn-sm p-0 text-danger" id="sb-clear-btn">&#x2715; clear</button>
           </div>
 
           <!-- Level + Bands -->
@@ -437,11 +437,25 @@
 
   function clearPlace() {
     resolvedLat = resolvedLon = resolvedName = currentSig = null;
+    previewData = null;
     placeInput.value = '';
     placeChip.classList.replace('d-flex', 'd-none');
     sigBtn.disabled = true;
     hideCandidates();
+    // Clear map layers
+    Object.values(previewLayers).forEach(l => previewMap && previewMap.removeLayer(l));
+    previewLayers = {};
+    document.getElementById('sb-preview-meta').textContent = '';
+    // Clear signature tab
     document.getElementById('sb-summary-card').style.display = 'none';
+    document.getElementById('sb-sig-heading').textContent = '';
+    document.getElementById('sb-basin-meta').textContent = '';
+    document.getElementById('sb-accordions').innerHTML = '';
+    // Clear analysis tab
+    document.getElementById('sb-analysis-body').innerHTML =
+      '<p class="mt-3">Run <strong>Get signature</strong> to populate analysis.</p>';
+    // Return to map tab
+    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-map-btn')).show();
     const intro = document.getElementById('sb-intro-text');
     if (intro) intro.style.display = '';
   }
@@ -758,10 +772,11 @@
     }
 
     // ── drainage fate badge ──
+    // dist_sink=0 means this basin IS the outlet — coastal regardless of coast_flag
     let fateBadge = '';
     if (endo && endo !== 0) {
       fateBadge = '<span class="badge bg-secondary me-1">Endorheic</span>';
-    } else if (coast && distSink != null && distSink < 10) {
+    } else if (distSink != null && (distSink < 1 || (coast && distSink < 10))) {
       fateBadge = '<span class="badge bg-info text-dark me-1">Coastal terminal</span>';
     } else {
       fateBadge = '<span class="badge bg-light text-dark border me-1">Exorheic interior</span>';
@@ -777,7 +792,11 @@
     };
 
     // ── small-basin caveat ──
-    const smallBasin = upArea != null && upArea < 5000;
+    // Threshold is level-dependent: L08 micro-basins < 5000 km²; L06 basins are inherently
+    // larger so only flag genuinely tiny ones (< 500 km²). Ratios of 1.0× at L06 usually
+    // reflect genuine homogeneity, not a data artifact.
+    const smallBasinThreshold = level === 6 ? 500 : 5000;
+    const smallBasin = upArea != null && upArea < smallBasinThreshold;
     const suNote = smallBasin
       ? `<p class="text-muted fst-italic mb-2" style="font-size:0.8rem;">Small upstream catchment (${fmt(upArea)} km²) — local and upstream conditions are nearly identical at this scale. The ratios below reflect basin-internal averaging, not a meaningful local/upstream contrast.</p>`
       : '';
