@@ -80,7 +80,6 @@ def _whg_suggest(prefix: str, limit: int = 5) -> List[Dict[str, Any]]:
         "prefix": prefix,
         "limit": limit,
         "cursor": 0,
-        "exact": "true",
         "token": settings.WHG_API_TOKEN,
     }
 
@@ -228,7 +227,10 @@ def _whg_search_candidates(query: str, limit: int = 10) -> List[Dict]:
         return []
 
     results = []
+    entity_calls = 0
     for r in suggest_results:
+        if len(results) >= 3 or entity_calls >= 5:
+            break
         place_id = r.get("id", "")
         lon, lat = None, None
         countries = []
@@ -244,6 +246,7 @@ def _whg_search_candidates(query: str, limit: int = 10) -> List[Dict]:
         # Fetch entity for geometry and richer metadata
         if place_id:
             try:
+                entity_calls += 1
                 entity = _whg_entity(place_id)
                 geom = entity.get("geometry") or {}
                 if geom.get("type") == "Point":

@@ -65,6 +65,9 @@
                       placeholder="search World Historical Gazetteer..."
                       autocomplete="off"
                     />
+                    <div id="whg-searching" class="text-muted small mt-1" style="display:none;">
+                      <span class="spinner-border spinner-border-sm me-1" role="status"></span>Searching WHG...
+                    </div>
                     <div
                       id="whg-dropdown"
                       class="dropdown-menu w-100"
@@ -2320,10 +2323,13 @@
     }
 
     async function searchWhgReconcile(input) {
-      if (!input || input.length < 3) {
+      if (!input || input.length < 2) {
         hideWhgDropdown();
         return;
       }
+
+      const whgSearching = document.getElementById('whg-searching');
+      if (whgSearching) whgSearching.style.display = 'block';
 
       // Get country filter from selected tags
       const countries = selectedCountries.length > 0
@@ -2349,6 +2355,8 @@
       } catch (e) {
         console.error('WHG reconcile error:', e);
         hideWhgDropdown();
+      } finally {
+        if (whgSearching) whgSearching.style.display = 'none';
       }
     }
 
@@ -2417,22 +2425,28 @@
     }
 
     if (whgSearch) {
-      whgSearch.addEventListener('input', () => {
-        clearTimeout(whgDebounceTimer);
-        const q = whgSearch.value.trim();
-        whgDebounceTimer = setTimeout(() => searchWhgReconcile(q), 300);
+      // Lookahead disabled: N+1 WHG calls per keystroke are too slow
+      // whgSearch.addEventListener('input', () => {
+      //   clearTimeout(whgDebounceTimer);
+      //   const q = whgSearch.value.trim();
+      //   whgDebounceTimer = setTimeout(() => searchWhgReconcile(q), 300);
+      // });
+
+      // Search on Enter
+      whgSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const q = whgSearch.value.trim();
+          if (q) searchWhgReconcile(q);
+        }
+        if (e.key === 'Escape') {
+          hideWhgDropdown(true);  // clear markers too
+        }
       });
 
       // Hide dropdown when clicking outside
       document.addEventListener('click', (e) => {
         if (!whgSearch.contains(e.target) && !whgDropdown.contains(e.target)) {
-          hideWhgDropdown(true);  // clear markers too
-        }
-      });
-
-      // Keyboard navigation
-      whgSearch.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
           hideWhgDropdown(true);  // clear markers too
         }
       });
