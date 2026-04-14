@@ -51,7 +51,12 @@ def _load_field_lookup() -> Dict[str, Dict[str, str]]:
 
 FIELD_LOOKUP: Dict[str, Dict[str, str]] = _load_field_lookup()
 
-SIGNATURE_SQL = """
+_VIEW_FOR_LEVEL = {
+    8: "v_basin08_persist_rev1",
+    6: "v_basin06_persist_rev1",
+}
+
+SIGNATURE_SQL_TMPL = """
 SELECT
   id,
   zone_id,
@@ -133,7 +138,7 @@ SELECT
 
   -- geometry handling: return a GeoJSON string (good for Leaflet)
   ST_AsGeoJSON(geom, 6) AS geom_geojson
-FROM public.v_basin08_persist_rev1
+FROM public.{view}
 WHERE ST_Covers(
   geom,
   ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)
@@ -389,6 +394,7 @@ def get_elevation_point(lat: float, lon: float) -> Dict[str, Any]:
 def get_signature(
     lat: float,
     lon: float,
+    level: int = 8,
 ) -> Dict[str, Any] | None:
     """Return a single basin signature dict for (lat, lon), or None if no basin covers point.
 
@@ -412,9 +418,12 @@ def get_signature(
     # Drop None values so psycopg/libpq can fall back to defaults / .pgpass when appropriate
     conn_kwargs = {k: v for k, v in conn_kwargs.items() if v not in (None, "")}
 
+    view = _VIEW_FOR_LEVEL.get(level, "v_basin08_persist_rev1")
+    sql = SIGNATURE_SQL_TMPL.format(view=view)
+
     with psycopg.connect(**conn_kwargs, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
-            cur.execute(SIGNATURE_SQL, {"lat": lat, "lon": lon})
+            cur.execute(sql, {"lat": lat, "lon": lon})
             row = cur.fetchone()
             if not row:
                 return None

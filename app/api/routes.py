@@ -440,9 +440,9 @@ def signature(
     from_year  : start year CE for Band F temporal enrichment (0–1998)
     to_year    : end year CE for Band F temporal enrichment (0–1998)
     """
-    if level != 8:
-        raise HTTPException(status_code=400, detail=f"Basin level {level} not yet available; only level 8 is loaded")
-    sig = get_signature(lat=lat, lon=lon)
+    if level not in (6, 8):
+        raise HTTPException(status_code=400, detail=f"Basin level {level} not available; supported levels: 6, 8")
+    sig = get_signature(lat=lat, lon=lon, level=level)
     if sig is None:
         raise HTTPException(status_code=404, detail="No basin covers this point")
 
@@ -1757,17 +1757,18 @@ def eco_wikitext(eco_id: int):
 # -----------------------
 
 @router.get("/basin-preview")
-def basin_preview(lat: float, lon: float):
+def basin_preview(lat: float, lon: float, level: int = 8):
     """Return hydro-context layers for a point: containing basin, adjacent basins, main river lines."""
+    basin_table = "basin06" if level == 6 else "basin08"
     try:
         conn = db_connect()
         with conn.cursor() as cur:
             pt_geog = f"ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326)::geography"
 
             # 1. Containing basin (smallest ST_Covers — what the signature currently picks)
-            cur.execute("""
+            cur.execute(f"""
                 SELECT hybas_id, up_area, ST_AsGeoJSON(geom, 5) AS geom
-                FROM public.basin08
+                FROM public.{basin_table}
                 WHERE ST_Covers(geom, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
                 ORDER BY ST_Area(geom::geography) ASC
                 LIMIT 1
@@ -1782,7 +1783,7 @@ def basin_preview(lat: float, lon: float):
             # 2. Adjacent basins within 50km (true metric via geog column)
             cur.execute(f"""
                 SELECT hybas_id, up_area, ST_AsGeoJSON(geom, 5) AS geom
-                FROM public.basin08
+                FROM public.{basin_table}
                 WHERE ST_DWithin(geog, {pt_geog}, 50000)
                 ORDER BY up_area DESC
             """)

@@ -82,7 +82,7 @@
               <label class="form-label mb-0" style="font-size:0.78rem;color:#666;">Level</label>
               <select class="form-select form-select-sm" id="sb-level" style="width:auto;">
                 <option value="8" selected>08</option>
-                <option value="6" disabled>06</option>
+                <option value="6">06</option>
               </select>
             </div>
             <div style="flex:1 1 auto;">
@@ -493,7 +493,7 @@
       }
 
       renderSignature(sig, temporalData);
-      if (sig) renderAnalysis(sig, previewData);
+      if (sig) renderAnalysis(sig, previewData, parseInt(level));
     } catch (err) {
       alert(`Error: ${err.message}`);
     } finally {
@@ -716,7 +716,7 @@
 
   // ── Analysis (alpha) ───────────────────────────────────────────────────
 
-  function renderAnalysis(sig, preview) {
+  function renderAnalysis(sig, preview, level = 8) {
     const el = document.getElementById('sb-analysis-body');
     if (!el) return;
 
@@ -740,9 +740,9 @@
     const aridR    = ratio(arid_u, arid_s);
     const tempR    = ratio(temp_u, temp_s);
 
-    // ── scale mismatch from preview ──
+    // ── scale mismatch from preview (only meaningful when preview and sig are same level) ──
     let scaleHtml = '';
-    if (preview && preview.containing_basin && preview.adjacent_basins) {
+    if (level === 8 && preview && preview.containing_basin && preview.adjacent_basins) {
       const cUp = preview.containing_basin.properties.up_area;
       const adjAreas = preview.adjacent_basins.features.map(f => f.properties.up_area);
       const maxAdj = adjAreas.length ? Math.max(...adjAreas) : null;
@@ -807,7 +807,7 @@
     el.innerHTML = `
       ${scaleHtml}
 
-      <h6 class="fw-semibold mb-2">Basin context</h6>
+      <h6 class="fw-semibold mb-2">Basin context <span class="badge bg-light text-dark border ms-1" style="font-size:0.7rem;">Level 0${level}</span></h6>
       <table class="table table-sm table-borderless mb-3" style="font-size:0.83rem;">
         <tbody>
           <tr><td class="text-muted pe-3" style="width:55%;">Upstream catchment</td>
@@ -861,8 +861,9 @@
   // ── Neighborhood preview ───────────────────────────────────────────────
   async function fetchPreview() {
     if (resolvedLat === null) return;
+    const level = document.getElementById('sb-level').value;
     try {
-      const res = await fetch(`/api/basin-preview?lat=${resolvedLat}&lon=${resolvedLon}`);
+      const res = await fetch(`/api/basin-preview?lat=${resolvedLat}&lon=${resolvedLon}&level=${level}`);
       if (!res.ok) throw new Error('Preview failed');
       renderPreview(await res.json());
     } catch (err) {
