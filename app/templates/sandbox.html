@@ -49,23 +49,6 @@
           </div>
           <div id="sb-resolve-status" class="text-muted small mb-2" style="display:none;"></div>
 
-          <!-- fclass filter — shown when candidates are present -->
-          <div id="sb-fclass-filter" class="d-none d-flex align-items-center gap-2 mb-1" style="font-size:0.78rem;">
-            <span class="text-muted">Filter:</span>
-            <div class="form-check form-check-inline me-0">
-              <input class="form-check-input fclass-chk" type="checkbox" id="fc-P" value="P" checked>
-              <label class="form-check-label" for="fc-P" title="Populated places (cities, towns)">P</label>
-            </div>
-            <div class="form-check form-check-inline me-0">
-              <input class="form-check-input fclass-chk" type="checkbox" id="fc-S" value="S">
-              <label class="form-check-label" for="fc-S" title="Spots (buildings, airports, monuments)">S</label>
-            </div>
-            <div class="form-check form-check-inline me-0">
-              <input class="form-check-input fclass-chk" type="checkbox" id="fc-H" value="H">
-              <label class="form-check-label" for="fc-H" title="Hydrographic (rivers, lakes)">H</label>
-            </div>
-            <span class="text-muted ms-auto" id="sb-fclass-count"></span>
-          </div>
 
           <!-- Candidate list when multiple results -->
           <div id="sb-candidates" class="list-group list-group-flush small mb-2" style="display:none;"></div>
@@ -290,14 +273,25 @@
       return;
     }
 
-    // WHG reconcile — returns candidate list with lat/lon/countries
+    // Require map to be zoomed in before searching
+    if (!previewMap || previewMap.getZoom() < 4) {
+      setStatus('sb-resolve-status', 'Zoom in to your study region first, then search.');
+      return;
+    }
+
+    // WHG reconcile — returns candidate list with lat/lon/country
     hideCandidates();
     setStatus('sb-resolve-status', 'Searching WHG…');
     try {
-      const res = await fetch(`/api/whg-reconcile?q=${encodeURIComponent(q)}&size=10`);
+      const b = previewMap.getBounds();
+      const sw = b.getSouthWest(), ne = b.getNorthEast();
+      const poly = {type:'Polygon', coordinates:[[[sw.lng,sw.lat],[ne.lng,sw.lat],[ne.lng,ne.lat],[sw.lng,ne.lat],[sw.lng,sw.lat]]]};
+      const boundsParam = '&bounds=' + encodeURIComponent(JSON.stringify(poly));
+      const res = await fetch(`/api/whg-reconcile?q=${encodeURIComponent(q)}&size=10${boundsParam}`);
       if (!res.ok) throw new Error(`WHG search failed (${res.status})`);
       const data = await res.json();
       whgResults = data.results || [];
+      window.whgResults = whgResults;  // dev: inspect in console
       if (!whgResults.length) {
         setStatus('sb-resolve-status', `No results found for "${q}".`);
         return;
@@ -309,51 +303,27 @@
     }
   }
 
-  function getCheckedFclasses() {
-    return Array.from(document.querySelectorAll('.fclass-chk:checked')).map(c => c.value);
-  }
-
-  function applyFclassFilter(results) {
-    const active = getCheckedFclasses();
-    if (!active.length) return results;
-    return results.filter(r => {
-      const fc = r.fclasses || [];
-      // Show if any fclass matches, OR if fclasses is empty (unclassified — always show)
-      return fc.length === 0 || fc.some(f => active.includes(f));
-    });
-  }
-
   function renderCandidates(results) {
-    const visible = applyFclassFilter(results);
-    const countEl = document.getElementById('sb-fclass-count');
-    if (countEl) countEl.textContent = `${visible.length} / ${results.length}`;
-
-    const html = visible.map((r, idx) => {
+    const html = results.map((r, idx) => {
       const name    = escapeHtml(r.name);
-      const ccodes  = (r.countries || []).map(c => c.code).join(', ');
+      const country = r.country ? ` <span class="text-muted">[${escapeHtml(r.country)}]</span>` : '';
       const badge   = r.match ? ' <span class="badge bg-success" style="font-size:0.7rem;">exact</span>' : '';
-      const fcLabel = r.fclasses && r.fclasses.length ? `<span class="text-muted ms-1" style="font-size:0.75rem;">${r.fclasses.join('/')}</span>` : '';
-      const typeLabel = (!r.fclasses || !r.fclasses.length) && r.types && r.types[0]
-        ? `<span class="text-muted ms-1" style="font-size:0.75rem;">${escapeHtml(r.types[0].label)}</span>` : '';
       const alts    = (r.alt_names && r.alt_names.length)
         ? `<div class="text-muted" style="font-size:0.75rem;">aka: ${r.alt_names.slice(0,3).map(escapeHtml).join(', ')}</div>`
         : '';
       const hasCoords = r.lat && r.lon;
       const dimStyle = !hasCoords ? ' style="opacity:0.5;cursor:default;pointer-events:none;"' : '';
-      // Use original index into whgResults for selection
       const origIdx = whgResults.indexOf(r);
       return `
         <a href="#" class="list-group-item list-group-item-action py-1 px-2 whg-candidate"${dimStyle} data-idx="${origIdx}">
           <div>
-            <span class="fw-semibold">${idx+1}. ${name}</span>${badge}
-            ${ccodes ? ` <span class="text-muted">[${ccodes}]</span>` : ''}
-            ${fcLabel}${typeLabel}
+            <span class="fw-semibold">${idx+1}. ${name}</span>${badge}${country}
             ${alts}
             ${!hasCoords ? '<div class="text-muted" style="font-size:0.72rem;">(no geometry)</div>' : ''}
           </div>
         </a>`;
     }).join('');
-    candidatesEl.innerHTML = html || '<div class="list-group-item text-muted small">No results match current filter.</div>';
+    candidatesEl.innerHTML = html || '<div class="list-group-item text-muted small">No results found.</div>';
     candidatesEl.style.display = '';
 
     candidatesEl.querySelectorAll('.whg-candidate[data-idx]').forEach(el => {
@@ -365,11 +335,10 @@
         setResolved(place.lat, place.lon, place.name);
       });
     });
-    showCandidateMarkers(visible.filter(r => r.lat && r.lon));
+    showCandidateMarkers(results.filter(r => r.lat && r.lon));
   }
 
   function showCandidates(results) {
-    document.getElementById('sb-fclass-filter').classList.remove('d-none');
     renderCandidates(results);
   }
 
@@ -378,13 +347,7 @@
     candidatesEl.innerHTML = '';
     whgResults = [];
     clearCandidateMarkers();
-    document.getElementById('sb-fclass-filter').classList.add('d-none');
   }
-
-  // Re-render on fclass filter change
-  document.querySelectorAll('.fclass-chk').forEach(cb => {
-    cb.addEventListener('change', () => { if (whgResults.length) renderCandidates(whgResults); });
-  });
 
   function clearCandidateMarkers() {
     candidateMarkers.forEach(m => { if (previewMap) previewMap.removeLayer(m); });
@@ -776,6 +739,7 @@
     }).addTo(previewMap);
   }
   initMap();
+  window.previewMap = previewMap;  // dev: expose for console inspection
 
   // ── Analysis (alpha) ───────────────────────────────────────────────────
 
