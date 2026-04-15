@@ -33,7 +33,7 @@
         <div class="tab-pane fade show active" id="panel-main" role="tabpanel" aria-labelledby="tab-main">
           <h5 class="mb-2 d-flex justify-content-between align-items-center">
             Resolve place
-            <a href="#" id="whg-reset-filter" class="small text-muted" style="display:none;">reset filter</a>
+            <span id="whg-zoom-alert" class="small text-warning fw-normal" style="display:none;">&#9651; Zoom in first (zoom &ge; 4)</span>
           </h5>
 
           <!-- Input method pills -->
@@ -343,7 +343,7 @@
 
     <!-- RIGHT: map (always visible) -->
     <div class="col-12 col-lg-6">
-<!--      <h4 class="mb-3">Map</h4>-->
+      <div id="map-title" class="small text-muted mb-1">Zoom to study area</div>
       <div id="map" style="height: 420px; border: 1px solid #ddd;"></div>
       <style>
         /* Hillshade blend: keeps relief legible when reference tiles (streets/labels) are toggled on.
@@ -1656,6 +1656,11 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    function setMapTitle(text) {
+      const el = document.getElementById('map-title');
+      if (el) el.textContent = text;
+    }
+
     // Main tab status helper
     function mainSetStatus(msg) {
       const el = document.getElementById('main-status');
@@ -1773,6 +1778,7 @@
         clearSimilarResults();
         mainSetStatus('');
         clearGazState();
+        setMapTitle('Zoom to study area');
         if (map) map.setView([0, 0], 2);
       });
     });
@@ -2119,10 +2125,12 @@
         return;
       }
 
+      const zoomAlert = document.getElementById('whg-zoom-alert');
       if (!map || map.getZoom() < 4) {
-        mainSetStatus('Zoom in to your study region (zoom ≥ 4) before searching.');
+        if (zoomAlert) zoomAlert.style.display = '';
         return;
       }
+      if (zoomAlert) zoomAlert.style.display = 'none';
 
       const whgSearching = document.getElementById('whg-searching');
       if (whgSearching) whgSearching.style.display = 'block';
@@ -2206,6 +2214,7 @@
         console.log('sig', sig)
         renderSignature(sig);
         setBasinFromSignature(sig);
+        setMapTitle(place.name + ' \u2014 Level 08 basin');
         mainSetStatus('');
       } catch (e) {
         mainSetStatus(String(e));
