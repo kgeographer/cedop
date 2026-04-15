@@ -86,8 +86,13 @@ metadata/*.tsv           # Lookup tables for categorical fields
                               LMR v2.1 PDSI + eVolv2k volcanic events for a period
 /api/basin-preview?lat=X&lon=Y
                               Containing basin + adjacent basins + river lines for neighborhood map
+/api/basin-preview?lat=X&lon=Y[&level=6|8]
+                              Containing basin + adjacent basins + river lines for neighborhood map (default level 8)
+/api/whg-reconcile?q=X[&size=N&bounds=GeoJSON]
+                              WHG reconcile+extend pipeline: fetches 50, filters noisy namespaces (wd:/gn:/osm:),
+                              returns top N. Requires viewport bounds (zoom ≥ 4) for useful ranking.
 /api/eco/wikitext?eco_id=N    Pre-summarized Wikipedia text + URL for an ecoregion
-/api/resolve?name=X           Place name resolution (WHG API)
+/api/resolve?name=X           Place name resolution (WHG API — legacy; prefer /api/whg-reconcile)
 /api/societies                D-PLACE societies with filters
 /api/eco/*                    Ecoregion hierarchy and geometries
 /api/whc-*                    World Heritage Cities data
@@ -122,8 +127,11 @@ curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Ti
 ## Sandbox / Researcher Tool
 
 `/sandbox` is the primary design and demonstration interface (`app/templates/sandbox.html`). Current capabilities:
-- WHG place lookup → basin assignment → neighborhood preview map
-- Band A–F signature with schema_key labels (`schema_key (db_col)` format)
+- WHG place lookup (reconcile+extend pipeline, zoom ≥ 4, viewport bounds) → candidate markers → basin assignment → neighborhood preview map
+- Level 08/06 toggle (`#sb-level`): switching re-fetches neighborhood always, sig only if one exists; no tab jumping
+- Band A–F signature with schema_key labels; sig heading shows place name + active level
+- Analysis α tab: water provenance classification, s/u divergence table, scale mismatch alert
+- Band F temporal: PDSI / Temperature / Precipitation tabs with SVG bar charts + volcanic events
 - Ecoregion clickable in summary panel → Wikipedia modal (pre-summarized, 97% coverage)
 - LLM narrative interpretation button
 

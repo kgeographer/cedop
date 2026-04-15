@@ -435,10 +435,17 @@
     cb.addEventListener('change', updateBandsDisplay);
   });
 
+  // ── Level switch: re-fetch sig + neighborhood if place already resolved ─
+  document.getElementById('sb-level').addEventListener('change', () => {
+    if (resolvedLat === null) return;
+    fetchPreview();
+    if (currentSig !== null) fetchSignature(false);
+  });
+
   // ── Signature ──────────────────────────────────────────────────────────
   sigBtn.addEventListener('click', fetchSignature);
 
-  async function fetchSignature() {
+  async function fetchSignature(switchTab = true) {
     if (resolvedLat === null) return;
 
     const sigBands = Array.from(document.querySelectorAll('.sb-band-chk:checked'))
@@ -472,7 +479,7 @@
         temporalData = await tres.json();
       }
 
-      renderSignature(sig, temporalData);
+      renderSignature(sig, temporalData, switchTab);
       if (sig) renderAnalysis(sig, previewData, parseInt(level));
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -630,16 +637,16 @@
     return html;
   }
 
-  function renderSignature(sig, temporalData = null) {
-    // Switch to Signature tab
-    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-sig-btn')).show();
+  function renderSignature(sig, temporalData = null, switchTab = true) {
+    if (switchTab) bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-sig-btn')).show();
 
     document.getElementById('sb-summary-card').style.display = sig ? '' : 'none';
     const interpLink = document.getElementById('sb-interp-link');
     if (interpLink) interpLink.classList.toggle('d-none', !sig);
 
+    const level = document.getElementById('sb-level').value;
     document.getElementById('sb-sig-heading').textContent =
-      resolvedName || 'Environmental signature';
+      (resolvedName || 'Environmental signature') + ` (Level 0${level})`;
 
     // Basin meta: ID + API/JSON link
     const metaEl = document.getElementById('sb-basin-meta');
