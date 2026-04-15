@@ -694,12 +694,12 @@ def whg_reconcile(q: str, size: int = 10, bounds: str = None):
             pass
 
     try:
-        candidates = _whg_reconcile_query(q, bounds=bounds_geojson, size=size)
+        # Fetch 50 from WHG then filter — noisy namespaces dominate top slots
+        candidates = _whg_reconcile_query(q, bounds=bounds_geojson, size=50)
         if not candidates:
             return {"results": []}
-        # Drop high-volume noisy namespaces; keep WHG-uploaded (place:NNN), tgn:, pl:, etc.
         _noisy = re.compile(r'^place:(wd|osm|gn):')
-        candidates = [c for c in candidates if not _noisy.match(c["id"])]
+        candidates = [c for c in candidates if not _noisy.match(c["id"])][:size]
         if not candidates:
             return {"results": []}
         place_ids = [c["id"] for c in candidates]

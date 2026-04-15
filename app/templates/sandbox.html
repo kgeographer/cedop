@@ -159,7 +159,7 @@
           <!-- Map pane -->
           <div class="tab-pane fade show active" id="pane-map" role="tabpanel">
             <div class="d-flex justify-content-between align-items-baseline mb-1">
-              <h6 class="mb-0 text-muted">Neighborhood preview</h6>
+              <h6 class="mb-0 text-muted" id="sb-map-title">Zoom to study area</h6>
               <span class="small text-muted" id="sb-preview-meta"></span>
             </div>
             <div id="sb-preview-map" style="height:440px; border-radius:6px;"></div>
@@ -221,7 +221,7 @@
   let resolvedLon = null;
   let resolvedName = null;
   let currentSig = null;
-  let previewMap = null;
+  let mapPreview = null;
   let previewLayers = {};
   let candidateMarkers = [];
   let previewData = null;
@@ -274,7 +274,7 @@
     }
 
     // Require map to be zoomed in before searching
-    if (!previewMap || previewMap.getZoom() < 4) {
+    if (!mapPreview || mapPreview.getZoom() < 4) {
       setStatus('sb-resolve-status', 'Zoom in to your study region first, then search.');
       return;
     }
@@ -283,7 +283,7 @@
     hideCandidates();
     setStatus('sb-resolve-status', 'Searching WHG…');
     try {
-      const b = previewMap.getBounds();
+      const b = mapPreview.getBounds();
       const sw = b.getSouthWest(), ne = b.getNorthEast();
       const poly = {type:'Polygon', coordinates:[[[sw.lng,sw.lat],[ne.lng,sw.lat],[ne.lng,ne.lat],[sw.lng,ne.lat],[sw.lng,sw.lat]]]};
       const boundsParam = '&bounds=' + encodeURIComponent(JSON.stringify(poly));
@@ -350,13 +350,13 @@
   }
 
   function clearCandidateMarkers() {
-    candidateMarkers.forEach(m => { if (previewMap) previewMap.removeLayer(m); });
+    candidateMarkers.forEach(m => { if (mapPreview) mapPreview.removeLayer(m); });
     candidateMarkers = [];
   }
 
   function showCandidateMarkers(results) {
     clearCandidateMarkers();
-    if (!previewMap) return;
+    if (!mapPreview) return;
     const bounds = [];
     results.forEach((r, idx) => {
       if (!r.lat || !r.lon) return;
@@ -364,21 +364,21 @@
       bounds.push([r.lat, r.lon]);
       const circle = L.circleMarker([r.lat, r.lon], {
         radius: 10, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.85
-      }).addTo(previewMap);
+      }).addTo(mapPreview);
       const icon = L.divIcon({
         className: '',
         html: `<div style="width:22px;height:22px;background:${color};border:2px solid #fff;border-radius:50%;color:#fff;font-weight:bold;font-size:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.3);">${idx+1}</div>`,
         iconSize: [22, 22], iconAnchor: [11, 11]
       });
-      const label = L.marker([r.lat, r.lon], { icon }).addTo(previewMap);
+      const label = L.marker([r.lat, r.lon], { icon }).addTo(mapPreview);
       const ccodes = (r.countries || []).map(c => c.code).join(', ');
       circle.bindPopup(`<strong>${idx+1}. ${escapeHtml(r.name)}</strong>${ccodes ? ` [${ccodes}]` : ''}`);
       candidateMarkers.push(circle, label);
     });
     if (bounds.length === 1) {
-      previewMap.setView(bounds[0], 8);
+      mapPreview.setView(bounds[0], 8);
     } else if (bounds.length > 1) {
-      previewMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+      mapPreview.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     }
   }
 
@@ -406,9 +406,10 @@
     sigBtn.disabled = true;
     hideCandidates();
     // Clear map layers
-    Object.values(previewLayers).forEach(l => previewMap && previewMap.removeLayer(l));
+    Object.values(previewLayers).forEach(l => mapPreview && mapPreview.removeLayer(l));
     previewLayers = {};
     document.getElementById('sb-preview-meta').textContent = '';
+    document.getElementById('sb-map-title').textContent = 'Zoom to study area';
     // Clear signature tab
     document.getElementById('sb-summary-card').style.display = 'none';
     document.getElementById('sb-sig-heading').textContent = '';
@@ -417,8 +418,9 @@
     // Clear analysis tab
     document.getElementById('sb-analysis-body').innerHTML =
       '<p class="mt-3">Run <strong>Get signature</strong> to populate analysis.</p>';
-    // Return to map tab
+    // Return to map tab and reset map view
     bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-map-btn')).show();
+    if (mapPreview) mapPreview.setView([20, 10], 2);
     const intro = document.getElementById('sb-intro-text');
     if (intro) intro.style.display = '';
   }
@@ -460,6 +462,7 @@
         if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Signature request failed'); }
         sig = await res.json();
         currentSig = sig;
+        window.currentSig = sig;  // dev: inspect in console
       }
 
       if (wantF) {
@@ -728,18 +731,18 @@
 
   // ── Map initialization (eager, so candidate markers can appear before any preview) ──
   function initMap() {
-    previewMap = L.map('sb-preview-map').setView([20, 10], 2);
+    mapPreview = L.map('sb-preview-map').setView([20, 10], 2);
     L.tileLayer('https://tiles.openstreetmap.us/raster/hillshade/{z}/{x}/{y}.jpg', {
       maxZoom: 12, opacity: 1.0,
       attribution: 'Hillshade: &copy; OpenStreetMap US'
-    }).addTo(previewMap);
+    }).addTo(mapPreview);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, opacity: 0.50,
       attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(previewMap);
+    }).addTo(mapPreview);
   }
   initMap();
-  window.previewMap = previewMap;  // dev: expose for console inspection
+  window.mapPreview = mapPreview;  // dev: expose for console inspection
 
   // ── Analysis (alpha) ───────────────────────────────────────────────────
 
@@ -832,8 +835,16 @@
       provLabel = '<span class="badge bg-secondary">Undetermined — small basin</span>';
       provNote  = 'Basin too small to resolve local/upstream contrast. Consult neighborhood context.';
     } else {
-      provLabel = '<span class="badge bg-success">Local-dominant</span>';
-      provNote  = 'Local and upstream conditions are similar — water supply is generated within the regional catchment.';
+      // Check whether all ratios are near 1.0 (uniform catchment) vs. modest divergence (local-dominant)
+      const nearUnity = r => r == null || (r >= 0.9 && r <= 1.1);
+      const uniform = nearUnity(precipR) && nearUnity(aridR) && nearUnity(tempR);
+      if (uniform) {
+        provLabel = '<span class="badge bg-secondary">Catchment-uniform</span>';
+        provNote  = 'Climate conditions are consistent throughout the upstream catchment — no significant local/upstream contrast.';
+      } else {
+        provLabel = '<span class="badge bg-success">Local-dominant</span>';
+        provNote  = 'Upstream conditions differ modestly from local — water supply is primarily generated within the regional catchment.';
+      }
     }
 
     el.innerHTML = `
@@ -913,9 +924,9 @@
   function renderPreview(data) {
     previewData = data;
     // Clear previous basin/river layers (candidate markers already cleared by setResolved)
-    Object.values(previewLayers).forEach(l => previewMap.removeLayer(l));
+    Object.values(previewLayers).forEach(l => mapPreview.removeLayer(l));
     previewLayers = {};
-    previewMap.invalidateSize();
+    mapPreview.invalidateSize();
 
     // Adjacent basins — choropleth by upstream area
     if (data.adjacent_basins) {
@@ -928,7 +939,7 @@
         onEachFeature: (f, layer) => {
           layer.bindTooltip(`upstream area: ${f.properties.up_area.toLocaleString()} km²`);
         }
-      }).addTo(previewMap);
+      }).addTo(mapPreview);
     }
 
     // Containing basin — orange
@@ -937,7 +948,7 @@
         style: { fillColor: '#e8660a', fillOpacity: 0.55, color: '#b84a00', weight: 2 }
       }).bindTooltip(
         `Current assignment<br>upstream area: ${data.containing_basin.properties.up_area.toLocaleString()} km²`
-      ).addTo(previewMap);
+      ).addTo(mapPreview);
     }
 
     // Rivers — blue, weight by order class (1=largest)
@@ -948,7 +959,7 @@
           weight: f.properties.ord_clas === 1 ? 2.5 : 1.2,
           opacity: 0.85
         })
-      }).addTo(previewMap);
+      }).addTo(mapPreview);
     }
 
     // Point marker
@@ -956,20 +967,20 @@
       radius: 7, fillColor: '#e03030', color: '#fff', weight: 2, fillOpacity: 1
     }).bindTooltip(
       `${resolvedName || ''}<br>${data.point.lat.toFixed(4)}, ${data.point.lon.toFixed(4)}`
-    ).addTo(previewMap);
+    ).addTo(mapPreview);
 
     // Fit to adjacent basins extent — defer until after container is fully visible
     setTimeout(() => {
-      previewMap.invalidateSize();
+      mapPreview.invalidateSize();
       if (previewLayers.adjacent) {
         const bounds = previewLayers.adjacent.getBounds();
         if (bounds && bounds.isValid()) {
-          previewMap.fitBounds(bounds, { padding: [20, 20] });
+          mapPreview.fitBounds(bounds, { padding: [20, 20] });
         } else {
-          previewMap.setView([data.point.lat, data.point.lon], 9);
+          mapPreview.setView([data.point.lat, data.point.lon], 9);
         }
       } else {
-        previewMap.setView([data.point.lat, data.point.lon], 9);
+        mapPreview.setView([data.point.lat, data.point.lon], 9);
       }
     }, 100);
 
@@ -980,6 +991,8 @@
       ? data.adjacent_basins.features[0].properties.up_area.toLocaleString() : '—';
     document.getElementById('sb-preview-meta').textContent =
       `Assigned: ${containUp} km²  ·  Largest nearby: ${maxAdj} km²`;
+    document.getElementById('sb-map-title').textContent =
+      `Neighborhood preview (level ${document.getElementById('sb-level').value})`;
   }
 
   // ── Shared modal: ecoregion Wikipedia + LLM interpretation ─────────────
