@@ -73,6 +73,29 @@ Solution implemented (option B — stay on current tab, re-fetch silently):
 - `31ff7c2` — Merge sandbox02: WHG reconcile+extend pipeline, edop.html cleanup
 - sandbox.html changes uncommitted at session end (pending Karl's GUI tweaks + combined commit)
 
+## 7. sandbox.html — 15aprtweaks branch
+
+UI polish committed to branch `15aprtweaks`, merged to main:
+
+- Band list `?` popovers with descriptive content for bands A–F
+- About modal with research preview text, obfuscated contact link (JS-assembled mailto)
+- EDOPS v0.2 Alpha version badge + About link flush right in header
+- Copy button for JSON payload in API/JSON modal (mirrors URL copy button)
+- Clear button replaced with `bi-x-circle` icon
+- Bootstrap popover init and contact link assembly added to JS
+
+## 8. Civilizational centers comparison script
+
+`scripts/edop/sig/civ_centers_compare.py` — fetches EDOPS signatures (Bands A, B, C, E, Level 06) for 10 major civilizational centers via the local API, z-score normalizes numeric fields, and outputs:
+
+- Top 15 fields by coefficient of variation (what drives the variation)
+- 10×10 pairwise Euclidean distance matrix
+- 5 most similar and most distant pairs
+
+Sites: Babylon, Memphis (Egypt), Mohenjo-daro, Anyang, Athens, Rome, Teotihuacan, Tiwanaku, Angkor, Aksum.
+
+Notable preliminary results: Babylon↔Anyang and Anyang↔Rome are the closest pairs; Tiwanaku↔Angkor most distant.
+
 ## Next
 
 - Karl to make GUI tweaks locally, then add/commit
