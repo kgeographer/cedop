@@ -4,12 +4,13 @@
 
 EDOPS generates structured environmental signatures for any location on Earth — characterizing the physical, hydrological, bioclimatic, and coastal conditions of a place and its upstream catchment. A central research question is whether these signatures correspond meaningfully with human settlement patterns, subsistence strategies, and social complexity.
 
-Two complementary datasets provide the cultural side of this evaluation:
+Three complementary datasets provide the cultural side of this evaluation:
 
 - **D-PLACE** — ethnographically documented societies, primarily pre-industrial, global coverage
 - **Seshat** — historically documented polities, state-level complexity over deep time, spatially linked via Cliopatria
+- **HYDE** — gridded historical population and land use reconstruction, 10,000 BCE to 2016 CE, global continuous coverage
 
-Together they span from prehistoric chiefdoms to modern empires, from hunter-gatherer bands to bureaucratic states, enabling evaluation across a wide range of human-environment relationships.
+Together they span from prehistoric hunter-gatherers to modern empires, from individual society locations to globally continuous population surfaces, enabling evaluation across the full range of human-environment relationships in space and time.
 
 ---
 
@@ -83,17 +84,51 @@ Identity, religion and religious tradition, language family, capital city, degre
 
 ---
 
+---
+
+## HYDE
+### History Database of the Global Environment
+
+**Source**: Utrecht University / PBL Netherlands Environmental Assessment Agency (Klein Goldewijk et al.) · Free
+**Scope**: Global · 10,000 BCE to 2016 CE · 5 arcminute resolution (~9 km at equator)
+
+HYDE provides modeled reconstructions of historical population and land use as global gridded surfaces at discrete time steps (decadal from 1700 CE; century or millennium intervals before that). Unlike D-PLACE and Seshat, HYDE is not limited to documented societies or matched polities — it provides an estimate for every cell on Earth, making it the only evaluation dataset with complete spatial coverage.
+
+### Key Variables
+
+| Category | Variables |
+|----------|-----------|
+| **Population** | `popc` — total population count per cell; `popd` — population density (persons/km²); `rurc` — rural; `urbc` / `uopp` — urban |
+| **Cropland** | `cropland` — total; `ir_norice` / `rf_norice` — irrigated/rainfed non-rice; `ir_rice` / `rf_rice` — irrigated/rainfed rice |
+| **Pasture & Grazing** | `pasture`, `grazing`, `rangeland`, `conv_rangeland` |
+| **Aggregates** | `tot_irri`, `tot_rainfed`, `tot_rice`, `shifting` |
+
+### Uncertainty Structure
+
+Each time step is distributed in three variants: **base** (best estimate), **lower**, and **upper** (uncertainty bounds). Pre-1700 CE reconstructions carry substantial uncertainty, increasing toward deeper prehistory. For evaluation purposes, the `base` variant is used.
+
+### Role in Evaluation
+
+HYDE's distinctive contribution is **global, continuous population coverage** across deep time. Where D-PLACE and Seshat sample specific societies and polities, HYDE allows evaluation at the level of all ~190,000 basin08 sub-basins simultaneously: does EDOPS environmental signature predict HYDE population density globally at a given century? This is a more demanding test than matched-sample experiments, and more robust to selection bias.
+
+A secondary use is **land use as cultural outcome**: irrigated cropland (`tot_irri`) is a direct indicator of hydraulic agriculture — the subsistence strategy most closely tied to riverine environmental affordance. Correlating EDOPS upstream water variables with HYDE irrigation extent tests the signature's ability to predict the most environmentally grounded form of human land transformation.
+
+**Note on conceptual framing**: HYDE encodes what humans *did* with their environment (population density, land transformation) rather than what the environment afforded. This places it squarely on the culture→environment axis that EDOP does not model directly, but which is central to CDOP. The evaluation use is directional: EDOP signature predicts HYDE outcome, not the reverse.
+
+---
+
 ## Combined Evaluation Framework
 
-| Dimension | D-PLACE | Seshat |
-|-----------|---------|--------|
-| **Unit** | Ethnographic society | Historical polity |
-| **Scale** | Band → chiefdom → state | State → empire |
-| **Time depth** | Ethnographic present (1850–1940) | ~3000 BCE to ~1900 CE |
-| **Spatial link** | Direct lat/lon → EDOPS basin | Cliopatria polygon → EDOPS basin |
-| **Polities / societies** | 1,291 (EA) to 6,684 (all datasets) | 329 matched to spatial data |
-| **Key cultural signal** | Subsistence type, kinship, settlement | Territory, population, complexity levels |
-| **Quantitative variables** | Subsistence % (Binford); population (EA202) | Territory (km²), population (time series) |
-| **Environmental cross-check** | D-PLACE env vars vs. EDOPS signatures | Cliopatria spatial extent vs. EDOPS basin profile |
+| Dimension | D-PLACE | Seshat | HYDE |
+|-----------|---------|--------|------|
+| **Unit** | Ethnographic society | Historical polity | Grid cell (5') |
+| **Scale** | Band → chiefdom → state | State → empire | Global continuous |
+| **Time depth** | Ethnographic present (1850–1940) | ~3000 BCE to ~1900 CE | 10,000 BCE to 2016 CE |
+| **Spatial link** | Direct lat/lon → EDOPS basin | Cliopatria polygon → EDOPS basin | Global raster → basin centroid |
+| **Records** | 1,291 (EA) to 6,684 (all datasets) | 329 matched to spatial data | ~190,000 basin08 centroids |
+| **Key cultural signal** | Subsistence type, kinship, settlement | Territory, population, complexity | Population density, land use |
+| **Quantitative variables** | Subsistence % (Binford); population (EA202) | Territory (km²), population (time series) | `popc`, `popd`, `tot_irri` (continuous) |
+| **Coverage bias** | Ethnographic record sampling bias | State-level societies; documentary record | Model uncertainty pre-1700 CE |
+| **EDOP cross-check** | D-PLACE env vars vs. EDOPS signatures | Cliopatria spatial extent vs. EDOPS basin profile | EDOPS signature vs. HYDE population globally |
 
-The combined record spans the full range of human social organization — from mobile foragers to industrial empires — across all world regions, providing a robust basis for evaluating whether EDOPS environmental signatures correspond with the scale, type, and trajectory of human settlement and complexity.
+The three datasets together span the full range of human social organization and spatial coverage — from individual mobile foragers to globally continuous population surfaces, from prehistoric chiefdoms to modern empires — providing a robust and complementary basis for evaluating whether EDOPS environmental signatures correspond with the scale, type, and trajectory of human settlement and complexity.

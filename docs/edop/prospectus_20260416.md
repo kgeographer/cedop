@@ -248,6 +248,27 @@ Environmental signatures define bounded possibility spaces — what natural sett
 
 The EDOPS element of **Computing Place** is being developed with the institutional partnership of ISHI (University of Pittsburgh), whose expertise in spatial history and whose ongoing work with the World Historical Gazetteer provides a natural integration context: Computing Place can publish environmental signatures as linked annotations keyed to WHG place identifiers, contributing to a growing ecosystem of richly described, computationally accessible historical places.
 
+## 10. Open Architectural Questions and Prospective Extensions `[Rev. 16 Apr]`
+
+This section collects scope extension ideas that have been raised by collaborators and are worth preserving for future design consideration, without committing them to the current development roadmap. New items will be added here as they arise.
+
+### Researcher-Contributed Regional Environmental Data
+
+*Raised by Ruth Mostern, 16 April 2026.*
+
+Computing Place currently assembles environmental signatures from globally consistent, centrally maintained datasets (BasinATLAS, LMR, eVolv2k, OneEarth, etc.). A natural extension — and one with significant architectural implications — would be to allow researchers to contribute high-resolution, region- and period-specific environmental data derived from their own work: paleoclimate reconstructions, regional pollen sequences, high-resolution sedimentation records, vegetation histories, and similar outputs of specialist environmental history research.
+
+Such contributions would enrich signatures for the specific areas and periods they cover, potentially with much higher spatial and temporal resolution than global baselines. The Yellow River loess and sedimentation record is a canonical example: a dedicated reconstruction for that region would substantially improve signatures for one of the most historically significant river systems in the world.
+
+The architectural implications are non-trivial:
+
+- **Provenance layer**: signatures would need to distinguish global-baseline fields from contributed regional data, with source attribution per field
+- **Coverage registry**: a catalog of contributed datasets specifying spatial extent, temporal range, resolution, variables, and contributor
+- **Priority/fallback logic**: query logic would prefer regional data where available and fall back to global baselines outside coverage — a layered source stack rather than a single authoritative source per variable
+- **Curation and quality standards**: contributed data would require vetting; not all regional reconstructions are equally reliable or methodologically consistent with global baselines
+
+This is in effect a **federated data architecture** — Computing Place as a platform aggregating community-contributed regional enrichments on top of global baselines. It is a significant scope expansion but a compelling direction for a humanities infrastructure project with a distributed scholarly community. It is noted here for future design consideration.
+
 ---
 
 *Sauer, C. O. (1925). The morphology of landscape. In Foundation Papers in Landscape Ecology (2007), 36–70.*

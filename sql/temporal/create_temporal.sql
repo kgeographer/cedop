@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS temporal.lmr_climate (
     lat     REAL NOT NULL,
     lon     REAL NOT NULL,
     pdsi    REAL[] NOT NULL,
-    geom    geometry(Point, 4326)
+    geom    geometry(Point, 4326),
+    air     REAL[],
+    prate   REAL[]
 );
 
 CREATE INDEX IF NOT EXISTS lmr_climate_geom_idx ON temporal.lmr_climate USING GIST (geom);
