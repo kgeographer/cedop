@@ -80,9 +80,30 @@ Designed and executed full CLDF load into new `dplace` schema. Existing `gaz.dpl
 - `app/templates/sandbox.html` — 15aprtweaks UI changes
 - `app/static/css/site.css` — minor style tweaks
 
+## 6. Seshat data loading
+
+Downloaded two Seshat Global History Databank exports to `data/seshat/` (pipe-delimited CSV, long format — one row per polity × variable × time slice):
+
+- `general_data_*.csv` — 8,170 rows, 544 polities, 23 variables (identity, religion, language, capital, degree of centralization, etc.)
+- `social_complexity_data_*.csv` — 26,164 rows, 621 polities, 77 variables across 9 subsections (Social Scale, Hierarchical Complexity, Information, Law, Professions, Bureaucracy, Transport, Specialized Buildings, Special-purpose Sites)
+
+**Schema**: `sql/cdop/seshat_schema.sql` — `seshat.general` and `seshat.social` tables, indexed on `polity_new_id`, `variable_name`, and year columns.
+
+**Loader**: `scripts/cdop/load_seshat.py`
+
+**Join to gaz.clio_polities** via `seshatid = polity_new_id`:
+- 329 distinct clio polities matched with seshat social data (of 621 seshat polities)
+- 200 distinct polities with real `polity_population` values (annual series in many cases)
+- Best-covered variables: `written_record`, `script`, `administrative_level`, `polity_territory`, `indigenous_coin`, `formal_legal_code` — all 260–314 matched polities
+- Unmatched seshat polities are mostly prehistoric or sub-state societies (Yangshao, Longshan, West Burkina Faso chiefdoms, Tiwanaku) that Cliopatria doesn't cover
+
+`polity_territory` and `polity_population` pair directly with clio spatial polygons and EDOPS basin signatures for territory + population density calculations over time.
+
 ## Commits
 
 - `34019fd` — 15aprtweaks: sandbox UI polish (merged to main, pushed)
+- `6c8cb82` — data branch: D-PLACE CLDF load, dplace schema, session logs
+- `f3e5aec` — data branch: Seshat schema and loader
 
 ---
 
