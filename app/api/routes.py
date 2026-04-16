@@ -5,6 +5,7 @@ import urllib.parse
 import urllib.request
 import ssl
 import certifi
+from datetime import datetime, timezone
 
 from app.db.signature import get_signature
 from app.db.temporal import get_temporal_context
@@ -443,6 +444,29 @@ def signature(
                 temporal["_status"] = "ok"
                 band_f = temporal
         sig.setdefault("profile_groups", {})["F"] = band_f
+
+    # Inject meta block — query context, data sources, versioning
+    query: Dict[str, Any] = {"lat": lat, "lon": lon, "bands": bands.upper(), "level": level}
+    if from_year is not None:
+        query["from_year"] = from_year
+    if to_year is not None:
+        query["to_year"] = to_year
+
+    sig["meta"] = {
+        "signature_version": "0.2",
+        "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "query": query,
+        "neighborhood": {
+            "type": "containing_basin",
+            "basin_level": level,
+        },
+        "data_sources": {
+            "basin": f"HydroATLAS v1.0 / BasinATLAS Level 0{level}",
+            "elevation_point": "OpenTopoData (mapzen DEM, ~30m) with Open-Meteo fallback",
+            "temporal_climate": "LMR v2.1 (Tardif et al. 2019); 0–1998 CE; 2°×2° grid, annual",
+            "volcanic": "eVolv2k v4 (Sigl & Toohey 2024)",
+        },
+    }
 
     return sig
 

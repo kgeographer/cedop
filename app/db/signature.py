@@ -502,10 +502,36 @@ def get_signature(
                     "items": items,
                 }
 
-            sig["profile_summary"] = summary_items
-            sig["profile_groups"] = grouped
+            # Return an explicit dict rather than the full DB row.
+            # Raw basin columns are intentionally excluded from the default response —
+            # they are duplicated in profile_groups and would clutter the payload for
+            # API consumers. A ?flat=true mode can expose them when a concrete use
+            # case requires direct field access (e.g. vector similarity pipelines).
+            out: Dict[str, Any] = {
+                # Basin / ecoregion identifiers
+                "id":           sig.get("id"),
+                "eco_id":       sig.get("eco_id"),
+                # Scale context — not in any profile group, used by analysis UI
+                "up_area":      sig.get("up_area"),
+                # Basin geometry (GeoJSON string, Leaflet-friendly)
+                "geom_geojson": sig.get("geom_geojson"),
+                # Point elevation (external provider; not in BasinATLAS)
+                "elev_point":        sig.get("elev_point"),
+                "elev_source":       sig.get("elev_source"),
+                "elev_dataset":      sig.get("elev_dataset"),
+                "elev_resolution_m": sig.get("elev_resolution_m"),
+                # Derived relief metrics
+                "relief_range_m":  sig.get("relief_range_m"),
+                "relief_position": sig.get("relief_position"),
+                # Structured presentation layers
+                "profile_summary": summary_items,
+                "profile_groups":  grouped,
+            }
+            # Carry elevation error when both providers failed
+            if "elev_error" in sig:
+                out["elev_error"] = sig["elev_error"]
 
-            return sig
+            return out
 
 
 def main() -> None:

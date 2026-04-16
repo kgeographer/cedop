@@ -481,6 +481,18 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     if (intro) intro.style.display = '';
   }
 
+  // ── sigVal: read a field value from profile_groups items by key ────────
+  // Used by renderAnalysis so it doesn't depend on flat top-level fields.
+  function sigVal(sig, key) {
+    const groups = sig.profile_groups || {};
+    for (const g of Object.values(groups)) {
+      for (const item of (g.items || [])) {
+        if (item.key === key) return item.value;
+      }
+    }
+    return undefined;
+  }
+
   // ── Bands checkboxes ───────────────────────────────────────────────────
   function updateBandsDisplay() {
     const selected = Array.from(document.querySelectorAll('.sb-band-chk:checked')).map(c => c.value);
@@ -826,15 +838,15 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     const ratio = (a, b) => (a && b && b !== 0) ? a / b : null;
 
     // ── extract fields ──
-    const upArea   = sig.up_area;           // km²
-    const distSink = sig.dist_sink;         // km (BasinATLAS stores in km)
-    const coast    = sig.coast_flag;
-    const endo     = sig.endorheic;
-    const precip_s = sig.precip_yr,          precip_u = sig.precip_yr_upstream;
-    const arid_s   = sig.aridity,            arid_u   = sig.aridity_upstream;
-    const temp_s   = sig.temp_yr,            temp_u   = sig.temp_yr_upstream;
-    const disch    = sig.discharge_yr;       // m³/s
-    const runoff   = sig.runoff;             // mm/yr
+    const upArea   = sig.up_area;                          // km² — top-level (not in profile_groups)
+    const distSink = sigVal(sig, 'dist_sink');             // km
+    const coast    = sigVal(sig, 'coast_flag');
+    const endo     = sigVal(sig, 'endorheic');
+    const precip_s = sigVal(sig, 'precip_yr'),   precip_u = sigVal(sig, 'precip_yr_upstream');
+    const arid_s   = sigVal(sig, 'aridity'),     arid_u   = sigVal(sig, 'aridity_upstream');
+    const temp_s   = sigVal(sig, 'temp_yr'),     temp_u   = sigVal(sig, 'temp_yr_upstream');
+    const disch    = sigVal(sig, 'discharge_yr');          // m³/s
+    const runoff   = sigVal(sig, 'runoff');                // mm/yr
 
     const precipR  = ratio(precip_u, precip_s);
     const aridR    = ratio(arid_u, arid_s);
