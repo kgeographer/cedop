@@ -24,7 +24,7 @@
     </span>
     <span class="d-flex align-items-center gap-2">
       <a href="#" class="fs-6 fw-normal me-2" data-bs-toggle="modal" data-bs-target="#about-modal">About</a>
-      <a href="http://cedop.kgeographer.org/docs" target="_blank" class="fs-6 fw-normal me-3">API docs</a>
+      <a href="#" class="fs-6 fw-normal me-3" data-bs-toggle="modal" data-bs-target="#api-guide-modal">API</a>
       <span class="badge rounded-pill bg-secondary fw-normal fs-6">v0.1 prototype, Jan. 2026</span>
     </span>
   </h3>
@@ -62,11 +62,29 @@
         </ul>
 
         <p><strong>API</strong><br>
-        RESTful endpoints return signatures, similarity rankings, and ecoregion metadata. Documentation at <a href="/docs" target="_blank">/docs</a>. Code at <a href="https://github.com/kgeographer/cedop" target="_blank">github.com/kgeographer/cedop</a>.</p>
+        RESTful endpoints return signatures, similarity rankings, and ecoregion metadata. Full interactive schema at <a href="/docs" target="_blank">/docs</a>. Code at <a href="https://github.com/kgeographer/cedop" target="_blank">github.com/kgeographer/cedop</a>.</p>
 
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API Guide Modal -->
+<div class="modal fade" id="api-guide-modal" tabindex="-1" aria-labelledby="api-guide-modal-label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable" style="max-width: 80%;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="api-guide-modal-label">EDOPS API Guide</h4>
+        <div class="ms-auto me-3">
+          <a href="/docs" target="_blank" class="btn btn-sm btn-outline-secondary">Interactive schema (Swagger) ↗</a>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe src="/static/api_guide.html" style="width:100%; height:80vh; border:none;"></iframe>
       </div>
     </div>
   </div>

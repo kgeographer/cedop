@@ -26,7 +26,7 @@ app/data/clio/
 app/data/ich/
 data/
 
-# Large binary/design files
+# Large binary/sandbox files
 logos/*.afphoto
 logos/*.afphoto~lock~
 logos/favicon.png

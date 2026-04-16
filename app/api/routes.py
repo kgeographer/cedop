@@ -446,7 +446,7 @@ def signature(
     return sig
 
 
-@router.get("/narrative")
+@router.get("/narrative", include_in_schema=False)
 def narrative(
     lat: float,
     lon: float,
@@ -482,7 +482,7 @@ def narrative(
     return {"narrative": text}
 
 
-@router.get("/temporal")
+@router.get("/temporal", include_in_schema=False)
 def temporal(
     lat: float,
     lon: float,
@@ -509,7 +509,7 @@ def temporal(
     return result
 
 
-@router.get("/resolve")
+@router.get("/resolve", include_in_schema=False)
 def resolve(name: str):
     """Resolve a place name using WHG suggest + entity detail.
 
@@ -580,7 +580,7 @@ def resolve(name: str):
     }
 
 
-@router.get("/whg-suggest")
+@router.get("/whg-suggest", include_in_schema=False)
 def whg_suggest(q: str, limit: int = 5):
     """Return up to `limit` WHG suggest candidates for autocomplete.
 
@@ -616,7 +616,7 @@ def whg_suggest(q: str, limit: int = 5):
     return {"results": results}
 
 
-@router.get("/whg-place")
+@router.get("/whg-place", include_in_schema=False)
 def whg_place(id: str):
     """Fetch WHG entity by ID and return coordinates + metadata.
 
@@ -664,7 +664,7 @@ def whg_place(id: str):
     }
 
 
-@router.get("/whg-reconcile")
+@router.get("/whg-reconcile", include_in_schema=False)
 def whg_reconcile(q: str, size: int = 10, bounds: str = None):
     """
     Search WHG using reconcile+extend pipeline.
@@ -713,7 +713,7 @@ def whg_reconcile(q: str, size: int = 10, bounds: str = None):
         raise HTTPException(status_code=502, detail=f"WHG search failed: {e}")
 
 
-@router.get("/wh-sites")
+@router.get("/wh-sites", include_in_schema=False)
 def wh_sites():
     """Return the small World Heritage seed set used by the pilot UI."""
     try:
@@ -731,7 +731,7 @@ def wh_sites():
     return {"count": len(sites), "sites": sites}
 
 
-@router.get("/similar")
+@router.get("/similar", include_in_schema=False)
 def similar(id_no: int, limit: int = 5):
     """Return most similar WH sites to the given site by id_no."""
     try:
@@ -774,7 +774,7 @@ def similar(id_no: int, limit: int = 5):
             conn.close()
 
 
-@router.get("/similar-text")
+@router.get("/similar-text", include_in_schema=False)
 def similar_text(id_no: int, limit: int = 5):
     """Return most similar WH sites by text/semantic similarity."""
     try:
@@ -821,7 +821,7 @@ def similar_text(id_no: int, limit: int = 5):
 # WH Cities (258) endpoints
 # -----------------------
 
-@router.get("/whc-cities")
+@router.get("/whc-cities", include_in_schema=False)
 def whc_cities():
     """Return World Heritage Cities with coordinates and cluster info (excludes 4 without basin data)."""
     try:
@@ -868,7 +868,7 @@ def whc_cities():
             conn.close()
 
 
-@router.get("/whc-similar")
+@router.get("/whc-similar", include_in_schema=False)
 def whc_similar(city_id: int, limit: int = 5):
     """Return most similar WH cities by environmental signature."""
     try:
@@ -926,7 +926,7 @@ def whc_similar(city_id: int, limit: int = 5):
             conn.close()
 
 
-@router.get("/whc-similar-env-by-coord")
+@router.get("/whc-similar-env-by-coord", include_in_schema=False)
 def whc_similar_env_by_coord(lon: float, lat: float, limit: int = 5):
     """Return most similar WH cities by environmental signature for any coordinate.
 
@@ -1051,7 +1051,7 @@ def whc_similar_env_by_coord(lon: float, lat: float, limit: int = 5):
             conn.close()
 
 
-@router.get("/whc-similar-text")
+@router.get("/whc-similar-text", include_in_schema=False)
 def whc_similar_text(city_id: int, band: str = "composite", limit: int = 5):
     """Return most similar WH cities by text/semantic similarity."""
     valid_bands = ['history', 'environment', 'culture', 'modern', 'composite']
@@ -1101,7 +1101,7 @@ def whc_similar_text(city_id: int, band: str = "composite", limit: int = 5):
             conn.close()
 
 
-@router.get("/whc-summaries")
+@router.get("/whc-summaries", include_in_schema=False)
 def whc_summaries(city_id: int):
     """Return band summaries for a WH city."""
     try:
@@ -1153,7 +1153,7 @@ def whc_summaries(city_id: int):
 # Basin Cluster endpoints
 # -----------------------
 
-@router.get("/basin-clusters")
+@router.get("/basin-clusters", include_in_schema=False)
 def basin_clusters():
     """Return all basin clusters with basin counts, city counts, and labels."""
     try:
@@ -1191,7 +1191,7 @@ def basin_clusters():
             conn.close()
 
 
-@router.get("/basin-clusters/{cluster_id}/cities")
+@router.get("/basin-clusters/{cluster_id}/cities", include_in_schema=False)
 def basin_cluster_cities(cluster_id: int):
     """Return cities in basins of a given cluster."""
     try:
@@ -1239,7 +1239,7 @@ def basin_cluster_cities(cluster_id: int):
 # Gazetteer endpoints
 # -----------------------
 
-@router.get("/gaz-similar")
+@router.get("/gaz-similar", include_in_schema=False)
 def gaz_similar(gaz_id: int, limit: int = 10):
     """Find environmentally similar gazetteer places using PCA vector distance."""
     if limit < 1:
@@ -1329,7 +1329,7 @@ def gaz_similar(gaz_id: int, limit: int = 10):
             conn.close()
 
 
-@router.get("/gaz-suggest")
+@router.get("/gaz-suggest", include_in_schema=False)
 def gaz_suggest(q: str, limit: int = 10):
     """Search the edop_gaz gazetteer for autocomplete suggestions."""
     q = (q or "").strip()
@@ -1378,7 +1378,7 @@ def gaz_suggest(q: str, limit: int = 10):
 # Ecoregion Hierarchy endpoints
 # -----------------------
 
-@router.get("/eco/realms")
+@router.get("/eco/realms", include_in_schema=False)
 def eco_realms():
     """List all realms (top level of hierarchy)."""
     try:
@@ -1407,7 +1407,7 @@ def eco_realms():
             conn.close()
 
 
-@router.get("/eco/subrealms")
+@router.get("/eco/subrealms", include_in_schema=False)
 def eco_subrealms(realm: str):
     """List subrealms within a realm."""
     try:
@@ -1437,7 +1437,7 @@ def eco_subrealms(realm: str):
             conn.close()
 
 
-@router.get("/eco/bioregions")
+@router.get("/eco/bioregions", include_in_schema=False)
 def eco_bioregions(subrealm_id: int):
     """List bioregions within a subrealm."""
     try:
@@ -1479,7 +1479,7 @@ def eco_bioregions(subrealm_id: int):
             conn.close()
 
 
-@router.get("/eco/ecoregions")
+@router.get("/eco/ecoregions", include_in_schema=False)
 def eco_ecoregions(bioregion: str):
     """List ecoregions within a bioregion."""
     try:
@@ -1508,7 +1508,7 @@ def eco_ecoregions(bioregion: str):
             conn.close()
 
 
-@router.get("/eco/realms/geom")
+@router.get("/eco/realms/geom", include_in_schema=False)
 def eco_realms_geom():
     """Get GeoJSON FeatureCollection of all realm geometries."""
     try:
@@ -1541,7 +1541,7 @@ def eco_realms_geom():
             conn.close()
 
 
-@router.get("/eco/subrealms/geom")
+@router.get("/eco/subrealms/geom", include_in_schema=False)
 def eco_subrealms_geom(realm: str):
     """Get GeoJSON FeatureCollection of subrealm geometries within a realm."""
     try:
@@ -1575,7 +1575,7 @@ def eco_subrealms_geom(realm: str):
             conn.close()
 
 
-@router.get("/eco/bioregions/geom")
+@router.get("/eco/bioregions/geom", include_in_schema=False)
 def eco_bioregions_geom(subrealm_id: int):
     """Get GeoJSON FeatureCollection of bioregion geometries within a subrealm."""
     try:
@@ -1615,7 +1615,7 @@ def eco_bioregions_geom(subrealm_id: int):
             conn.close()
 
 
-@router.get("/eco/ecoregions/geom")
+@router.get("/eco/ecoregions/geom", include_in_schema=False)
 def eco_ecoregions_geom(bioregion: str):
     """Get GeoJSON FeatureCollection of ecoregion geometries within a bioregion."""
     try:
@@ -1649,7 +1649,7 @@ def eco_ecoregions_geom(bioregion: str):
             conn.close()
 
 
-@router.get("/eco/geom")
+@router.get("/eco/geom", include_in_schema=False)
 def eco_geom(level: str, id: str):
     """Get GeoJSON geometry for a hierarchy level item."""
     valid_levels = ['realm', 'subrealm', 'bioregion', 'ecoregion']
@@ -1698,7 +1698,7 @@ def eco_geom(level: str, id: str):
             conn.close()
 
 
-@router.get("/eco/wikitext")
+@router.get("/eco/wikitext", include_in_schema=False)
 def eco_wikitext(eco_id: int):
     """Get Wikipedia summary and URL for an ecoregion."""
     try:
@@ -1733,7 +1733,7 @@ def eco_wikitext(eco_id: int):
 # Basin neighborhood preview
 # -----------------------
 
-@router.get("/basin-preview")
+@router.get("/basin-preview", include_in_schema=False)
 def basin_preview(lat: float, lon: float, level: int = 8):
     """Return hydro-context layers for a point: containing basin, adjacent basins, main river lines."""
     basin_table = "basin06" if level == 6 else "basin08"
@@ -1809,7 +1809,7 @@ def basin_preview(lat: float, lon: float, level: int = 8):
 # D-PLACE Societies
 # -----------------------
 
-@router.get("/societies")
+@router.get("/societies", include_in_schema=False)
 def societies():
     """Return all D-PLACE societies with coordinates, bioregion, and cultural variables."""
     try:

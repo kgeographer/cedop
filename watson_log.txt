@@ -1,0 +1,20 @@
+Tuesday 14 April 2026 (2h 37m 12s)
+	a9c46b5  08:20 to 10:30   2h 09m 58s  cedop edops sandbox
+	897b1f4  10:41 to 10:50      09m 10s  cedop edops sandbox
+	f1bc7ec  11:00 to 11:10      10m 03s  cedop edops sandbox
+	2d1ac1a  11:22 to 11:30      08m 01s  cedop edops sandbox
+
+Monday 13 April 2026 (7h 41m 36s)
+	f9e642d  08:30 to 13:03   4h 33m 49s  cedop  [edops, sandbox]
+	72c4133  16:52 to 20:00   3h 07m 47s  cedop  [edops, sandbox]
+
+Sunday 12 April 2026 (5h 23m 10s)
+	cedf783  08:16 to 11:28   3h 12m 00s  -p cedop  [sig_rev1, neighborhood-preview]
+	3a5f1b8  17:08 to 19:19   2h 11m 10s     cedop  [edops, scenarios]
+
+Saturday 11 April 2026 (6h 44m 00s)
+	9bdc824  08:00 to 13:30   5h 30m 00s     cedop  [sig_rev1, sandbox]
+	cd6d8c1  18:30 to 19:44   1h 14m 00s  -p cedop  [sig_rev1, sandbox-doc]
+
+Tuesday 07 April 2026 (5h 00m 00s)
+	e465794  09:00 to 14:00   5h 00m 00s  cedop  [sig_rev1]
