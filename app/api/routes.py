@@ -420,16 +420,16 @@ def signature(
     if sig.get("profile_groups"):
         sig["profile_groups"] = {k: v for k, v in sig["profile_groups"].items() if k in requested}
 
-    # Band F: temporal enrichment
+    # Band F: temporal enrichment — stored in profile_groups["F"]
     if "F" in requested:
         LMR_MIN, LMR_MAX = 0, 1998
         if from_year is None or to_year is None:
-            sig["temporal"] = {
+            band_f = {
                 "_status": "not_requested",
                 "_note": "Include from_year and to_year (CE integers) to retrieve Band F temporal data.",
             }
         elif from_year < LMR_MIN or to_year > LMR_MAX:
-            sig["temporal"] = {
+            band_f = {
                 "_status": "out_of_range",
                 "_note": f"LMR v2.1 coverage is {LMR_MIN}–{LMR_MAX} CE. Requested {from_year}–{to_year} is outside this range. Bands A–E are unaffected.",
                 "coverage_ce": [LMR_MIN, LMR_MAX],
@@ -438,10 +438,11 @@ def signature(
         else:
             temporal = get_temporal_context(lat=lat, lon=lon, year_start=from_year, year_end=to_year)
             if "error" in temporal:
-                sig["temporal"] = {"_status": "error", "_note": temporal["error"]}
+                band_f = {"_status": "error", "_note": temporal["error"]}
             else:
                 temporal["_status"] = "ok"
-                sig["temporal"] = temporal
+                band_f = temporal
+        sig.setdefault("profile_groups", {})["F"] = band_f
 
     return sig
 

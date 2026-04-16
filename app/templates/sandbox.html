@@ -505,12 +505,12 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     if (resolvedLat === null) return;
 
     const sigBands = Array.from(document.querySelectorAll('.sb-band-chk:checked'))
-      .map(cb => cb.value).filter(v => v !== 'F').join('');
+      .map(cb => cb.value).join('');
     const wantF   = document.getElementById('band-F').checked;
     const ys      = document.getElementById('f-year-start').value.trim();
     const ye      = document.getElementById('f-year-end').value.trim();
 
-    if (!sigBands && !wantF) { alert('Select at least one band.'); return; }
+    if (!sigBands) { alert('Select at least one band.'); return; }
     if (wantF && (!ys || !ye)) { alert('Band F requires a year range (from – to).'); return; }
 
     const level = document.getElementById('sb-level').value;
@@ -518,24 +518,17 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     sigBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading…';
 
     try {
-      let sig = null, temporalData = null;
+      let sig = null;
 
-      if (sigBands) {
-        const res = await fetch(`/api/signature?lat=${resolvedLat}&lon=${resolvedLon}&bands=${sigBands}&level=${level}`);
-        if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Signature request failed'); }
-        sig = await res.json();
-        currentSig = sig;
-        window.currentSig = sig;  // dev: inspect in console
-      }
+      let sigUrl = `/api/signature?lat=${resolvedLat}&lon=${resolvedLon}&bands=${sigBands}&level=${level}`;
+      if (wantF) sigUrl += `&from_year=${ys}&to_year=${ye}`;
+      const res = await fetch(sigUrl);
+      if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Signature request failed'); }
+      sig = await res.json();
+      currentSig = sig;
+      window.currentSig = sig;  // dev: inspect in console
 
-      if (wantF) {
-        const vmin = document.getElementById('f-vssi-min').value || 5;
-        const tres = await fetch(`/api/temporal?lat=${resolvedLat}&lon=${resolvedLon}&year_start=${ys}&year_end=${ye}&vssi_min=${vmin}`);
-        if (!tres.ok) { const e = await tres.json(); throw new Error(e.detail || 'Temporal request failed'); }
-        temporalData = await tres.json();
-      }
-
-      renderSignature(sig, temporalData, switchTab);
+      renderSignature(sig, sig?.profile_groups?.F || null, switchTab);
       if (sig) renderAnalysis(sig, previewData, parseInt(level));
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -708,8 +701,12 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     const metaEl = document.getElementById('sb-basin-meta');
     if (sig) {
       const sigBands = Array.from(document.querySelectorAll('.sb-band-chk:checked'))
-        .map(cb => cb.value).filter(v => v !== 'F').join('');
-      const apiUrl = `/api/signature?lat=${resolvedLat}&lon=${resolvedLon}&bands=${sigBands}&level=${document.getElementById('sb-level').value}`;
+        .map(cb => cb.value).join('');
+      const wantF = document.getElementById('band-F').checked;
+      const ys = document.getElementById('f-year-start').value.trim();
+      const ye = document.getElementById('f-year-end').value.trim();
+      let apiUrl = `/api/signature?lat=${resolvedLat}&lon=${resolvedLon}&bands=${sigBands}&level=${document.getElementById('sb-level').value}`;
+      if (wantF && ys && ye) apiUrl += `&from_year=${ys}&to_year=${ye}`;
       metaEl.innerHTML = `Basin ${escapeHtml(String(sig.id ?? ''))}
         &ensp;<i class="bi bi-braces"></i>
         <a href="#" id="sb-json-link" class="text-primary text-decoration-none" title="API URL &amp; JSON">
@@ -790,10 +787,9 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
         panels += buildAccordionPanel(code, g.label || code, body, first, accId);
         first = false;
       });
-    }
-
-    if (temporalData) {
-      panels += buildAccordionPanel('F', 'Temporal context (LMR PDSI + eVolv2k)', buildTemporalBody(temporalData), first, accId);
+      if (temporalData && temporalData._status === 'ok') {
+        panels += buildAccordionPanel('F', 'Temporal context (LMR PDSI + eVolv2k)', buildTemporalBody(temporalData), first, accId);
+      }
     }
 
     accEl.innerHTML = `<div class="accordion" id="${accId}">${panels}</div>`;
