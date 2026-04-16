@@ -143,7 +143,7 @@ def load_society_env_data(conn, bands=None):
             s.name as society,
             s.region,
             {field_list}
-        FROM gaz.dplace_societies s
+        FROM dplace.societies s
         JOIN public.basin08 b ON b.hybas_id = s.basin_id
         JOIN public.v_basin08_persist v ON v.id = b.id
         WHERE s.basin_id IS NOT NULL
@@ -160,9 +160,9 @@ def load_cultural_data(conn, var_ids):
             v.id as var_id,
             v.name as var_name,
             c.name as value
-        FROM gaz.dplace_data d
-        JOIN gaz.dplace_variables v ON v.id = d.var_id
-        JOIN gaz.dplace_codes c ON c.id = d.code_id
+        FROM dplace.data d
+        JOIN dplace.variables v ON v.id = d.var_id
+        JOIN dplace.codes c ON c.id = d.code_id
         WHERE d.var_id IN ('{var_list}')
           AND c.name NOT IN ('Missing data', '')
     """

@@ -1817,28 +1817,31 @@ def societies():
         with conn.cursor() as cur:
             # Get societies with bioregion, ecoregion, realm, basin cluster, EA042 (subsistence), EA034 (religion)
             cur.execute("""
-                SELECT s.id, s.name, s.region, s.bioregion_id,
+                SELECT s.id, s.name, s.region, ss.bioregion_id,
                        m.title as bioregion_name,
-                       ST_X(s.geom) as lon, ST_Y(s.geom) as lat,
+                       s.longitude as lon, s.latitude as lat,
                        c.name as subsistence,
-                       s.eco_id, e.eco_name,
+                       ss.eco_id, e.eco_name,
                        r.realm,
                        ba.cluster_id,
                        rel.name as religion
-                FROM gaz.dplace_societies s
-                LEFT JOIN gaz.bioregion_meta m ON m.bioregion_id = s.bioregion_id
-                LEFT JOIN gaz.dplace_data d ON d.soc_id = s.id AND d.var_id = 'EA042'
-                LEFT JOIN gaz.dplace_codes c ON c.id = d.code_id
+                FROM dplace.societies s
+                LEFT JOIN dplace.society_spatial ss ON ss.soc_id = s.id
+                LEFT JOIN gaz.bioregion_meta m ON m.bioregion_id = ss.bioregion_id
+                LEFT JOIN dplace.data d ON d.soc_id = s.id AND d.var_id = 'EA042'
+                LEFT JOIN dplace.codes c ON c.id = d.code_id
                     AND c.name NOT IN ('Missing data', '', 'Missing for at least 1 activity', 'Two or more sources')
-                LEFT JOIN gaz.dplace_data rd ON rd.soc_id = s.id AND rd.var_id = 'EA034'
-                LEFT JOIN gaz.dplace_codes rel ON rel.id = rd.code_id
+                LEFT JOIN dplace.data rd ON rd.soc_id = s.id AND rd.var_id = 'EA034'
+                LEFT JOIN dplace.codes rel ON rel.id = rd.code_id
                     AND rel.name != 'Missing data'
-                LEFT JOIN gaz."Ecoregions2017" e ON e.eco_id = s.eco_id
-                LEFT JOIN gaz."Bioregions2023" b ON b.bioregions = s.bioregion_id
+                LEFT JOIN gaz."Ecoregions2017" e ON e.eco_id = ss.eco_id
+                LEFT JOIN gaz."Bioregions2023" b ON b.bioregions = ss.bioregion_id
                 LEFT JOIN gaz."Subrealm2023" sr ON sr.subrealmid = b.subrealm_id
                 LEFT JOIN gaz."Realm2023" r ON r.biogeorelm = sr.biogeorelm
-                LEFT JOIN basin08 ba ON ba.hybas_id::bigint = s.basin_id
-                ORDER BY s.bioregion_id, s.name
+                LEFT JOIN dplace.society_basin sb ON sb.soc_id = s.id AND sb.basin_level = 8
+                LEFT JOIN basin08 ba ON ba.hybas_id = sb.basin_id
+                WHERE s.contribution_id = 'dplace-dataset-ea'
+                ORDER BY ss.bioregion_id, s.name
             """)
             rows = cur.fetchall()
 
@@ -1902,7 +1905,7 @@ def societies():
             # Get variable descriptions for tooltips
             cur.execute("""
                 SELECT id, name, description
-                FROM gaz.dplace_variables
+                FROM dplace.variables
                 WHERE id IN ('EA042', 'EA034')
             """)
             var_rows = cur.fetchall()
