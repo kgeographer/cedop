@@ -107,7 +107,44 @@ Downloaded two Seshat Global History Databank exports to `data/seshat/` (pipe-de
 
 ---
 
+## 7. API payload fixes — afternoon session
+
+Three branches merged to main and deployed.
+
+### payload_fix branch
+
+Root cause: sandbox was making two separate API calls (`/api/signature` bands A–E + `/api/temporal` separately), and the JSON download link excluded temporal data entirely. Fix:
+
+- `fetchSignature` consolidated to a single `/api/signature` call with `bands=ABCDEF&from_year=...&to_year=...`
+- `profile_groups["F"]` is now the canonical home for temporal data (was `sig["temporal"]` at top level)
+- `renderSignature` F accordion rendered inside profile_groups loop, guarded by `_status=ok`
+- `renderSignature` API URL display updated to match actual call
+
+### gitignore cleanup
+
+Several directories that should have been excluded were tracked: `misc/`, `.claude/`, `sysop/`, `watson_log.txt`, `__pycache__`. Added rules and un-tracked with `git rm --cached`.
+
+### noflat branch
+
+`/api/signature` response cleaned up to match the schema:
+
+- `signature.py`: explicit whitelisted return dict instead of full DB row — raw basin columns excluded from default payload (duplicated in `profile_groups`, can be added via `?flat=true` when a concrete use case exists)
+- `routes.py`: `meta` key added — `signature_version`, `generated` timestamp, `query` params (lat, lon, bands, level, from_year, to_year), `neighborhood`, `data_sources` (basin level dynamic)
+- `sandbox.html`: `sigVal(sig, key)` helper reads field values from `profile_groups` items by key; `renderAnalysis` updated to use it (was reading flat top-level fields)
+
+### Commits
+
+- `80a2c1c` — payload_fix: Band F temporal in profile_groups.F, single API call
+- `6554f13` — gitignore: exclude misc/, .claude/, sysop/, watson_log.txt, __pycache__
+- `0e80792` — noflat: clean payload, meta key, sigVal JS helper
+
+---
+
 ## Next up
+
+### API guide update
+
+`app/static/api_guide.html` is now out of date — payload structure has changed significantly (meta key, no flat fields, profile_groups.F for temporal). Resume tomorrow.
 
 ### T5 — Retire gaz.dplace_* tables (branch: data)
 

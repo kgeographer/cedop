@@ -80,10 +80,13 @@ metadata/*.tsv           # Lookup tables for categorical fields
 ### Key Endpoints
 
 ```
-/api/signature?lat=X&lon=Y[&bands=ABCDEF&from_year=N&to_year=N]
-                              Environmental signature; Band F requires from_year+to_year (0–1998 CE)
+/api/signature?lat=X&lon=Y[&bands=ABCDEF&from_year=N&to_year=N&level=6|8]
+                              Environmental signature. Single call handles all bands including F.
+                              Response: meta (version, timestamp, query, data_sources) + profile_groups A–F.
+                              Band F requires from_year+to_year (0–1998 CE); stored at profile_groups["F"].
+                              Flat basin fields excluded by default; profile_groups is canonical.
 /api/temporal?lat=X&lon=Y&year_start=N&year_end=N
-                              LMR v2.1 PDSI + eVolv2k volcanic events for a period
+                              LMR v2.1 PDSI + eVolv2k volcanic events (legacy; prefer /api/signature?bands=F)
 /api/basin-preview?lat=X&lon=Y
                               Containing basin + adjacent basins + river lines for neighborhood map
 /api/basin-preview?lat=X&lon=Y[&level=6|8]
@@ -136,16 +139,16 @@ curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Ti
 - LLM narrative interpretation button
 
 Key design docs:
-- **`docs/gui/scenarios.md`** — User profiles (user00=Karl, user01=humanities researcher, user02=Federico) and scenarios driving design. **Read before any sandbox UI work.**
-- **`docs/gui/prelim_notes.md`** — Earlier screen requirement notes (superseded by scenarios.md)
-- **`docs/edop/edops_schema.json`** — Signature schema: current API output (status=implemented) + planned fields. Real Timbuktu values as examples.
+- **`docs/design/scenarios.md`** — User profiles (user00=Karl, user01=humanities researcher, user02=Federico) and scenarios driving design. **Read before any sandbox UI work.**
+- **`docs/design/prelim_notes.md`** — Earlier screen requirement notes (superseded by scenarios.md)
+- **`docs/edop/edops_schema.json`** — Signature schema: current API output (status=implemented) + planned fields. Real Timbuktu values as examples. Note: `app/static/api_guide.html` is a narrative guide for external API users (Federico et al.) — needs update after 2026-04-16 payload changes.
 - **`metadata/edops_codebook.tsv`** — Field reference: schema_key, friendly_name, units, basin08_col_s/u, **api_key_s/u** (added 2026-04-12), notes. Loaded at startup by `signature.py` to generate accordion labels.
 
 ## Session Context Files
 
 - **`logs/CEDOP_LOG.md`** — Development journal with dated entries
 - **`prompts/seed-prompt-ongoing.md`** — Running prompt/context notes
-- **`docs/edop/prospectus_20260404.md`** — Current authoritative research direction document (living prospectus, updated from outline v3 Feb 2026). ISHI-supported program as of Apr 2026. Core conceptual framing: *process-aware environmental characterization* — what a place experiences through directed spatial processes. Key features: (1) local/upstream `s`/`u` duality as first-class signature feature; (2) distance-weighted upstream profiling via `next_down` DAG; (3) coastality (`dist_sink`, outlet type) as first-class signature component; (4) settlement correspondence as external validation objective (Section 9); (5) drainage topology implementation (Section 10); (6) temporal enrichment via LMR v2.1 and eVolv2k v4. Use cases driving design: `docs/edops_use_cases.md`. Prior versions archived as `prospectus_20260402.md`, `prospectus_20260403.md`. Blog post master: `docs/blog/computing_place_prospectus.md`.
+- **`docs/edop/prospectus_20260416.md`** — Current authoritative research direction document (living prospectus, updated from outline v3 Feb 2026). ISHI-supported program as of Apr 2026. Core conceptual framing: *process-aware environmental characterization* — what a place experiences through directed spatial processes. Key features: (1) local/upstream `s`/`u` duality as first-class signature feature; (2) distance-weighted upstream profiling via `next_down` DAG; (3) coastality (`dist_sink`, outlet type) as first-class signature component; (4) settlement correspondence as external validation objective (Section 9); (5) drainage topology implementation (Section 10); (6) temporal enrichment via LMR v2.1 and eVolv2k v4. Use cases driving design: `docs/edops_use_cases.md`. Prior versions archived as `prospectus_20260402.md`, `prospectus_20260403.md`. Blog post master: `docs/blog/computing_place_prospectus.md`.
 
 ## External Dependencies
 
