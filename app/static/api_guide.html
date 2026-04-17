@@ -91,7 +91,7 @@ aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pr
 
 <div class="note"><strong>Local vs. upstream:</strong> Most Band A–C fields appear as pairs — a local value (conditions within the sub-basin only) and an upstream value (area-weighted accumulation across all upstream contributing basins). Upstream keys carry an <code>_upstream</code> suffix, e.g. <code>aridity</code> / <code>aridity_upstream</code>. The divergence between the two is itself environmentally meaningful: a site where local aridity diverges sharply from upstream aridity (e.g. a desert city fed by a distant mountain river) occupies a qualitatively different position than one where they converge.</div>
 
-<h3>Band A — Physiographic <span class="pill impl">implemented</span> <code>profile_groups["A"]</code></h3>
+<h3>Band A — Physiographic <code>(profile_groups["A"])</code> <span class="pill impl">implemented</span></h3>
 <p>Stable over geological timescales; defensible as a historical baseline for any period.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
@@ -104,7 +104,7 @@ aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pr
   <tr><td class="planned"><code>elev_mean</code> (s/u), <code>erosion_rate</code>, <code>glacier_pct</code>, <code>permafrost_pct</code></td><td class="planned">Planned additions</td><td class="planned">—</td></tr>
 </table>
 
-<h3>Band B — Hydroclimatic <span class="pill impl">implemented</span> <code>profile_groups["B"]</code></h3>
+<h3>Band B — Hydroclimatic <code>(profile_groups["B"])</code> <span class="pill impl">implemented</span> </h3>
 <p>Hydrological fluxes and soil characteristics integrating the full upstream catchment under the current climatic regime. Discharge and runoff reflect contemporary conditions, including the effects of upstream dams and diversions where present.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
@@ -119,7 +119,7 @@ aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pr
   <tr><td><code>pnv_majority</code>, <code>pnv_shares</code></td><td>Potential natural vegetation — dominant class and share breakdown</td><td>—; %</td></tr>
 </table>
 
-<h3>Band C — Bioclimatic <span class="pill impl">implemented</span> <code>profile_groups["C"]</code></h3>
+<h3>Band C — Bioclimatic <code>(profile_groups["C"])</code> <span class="pill impl">implemented</span> </h3>
 <p>Contemporary climate baseline from BasinATLAS. These are long-run averages — for historical temperature and precipitation, Band F provides LMR anomalies relative to a 20th-century reference.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
@@ -133,7 +133,7 @@ aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pr
   <tr><td><code>freshwater_type</code>, <code>freshwater_ecoregion_class</code>, <code>freshwater_ecoregion_name</code></td><td>Freshwater ecoregion classification</td><td>—</td></tr>
 </table>
 
-<h3>Band D — Anthropocene <span class="pill impl">implemented</span> <code>profile_groups["D"]</code></h3>
+<h3>Band D — Anthropocene <code>(profile_groups["D"])</code> <span class="pill impl">implemented</span> </h3>
 <p>Present-day only. Exclude or qualify for pre-modern analyses; useful as a contrast baseline.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
@@ -144,7 +144,7 @@ aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pr
   <tr><td><code>human_dev_idx</code></td><td>Human Development Index</td><td>0–1</td></tr>
 </table>
 
-<h3>Band E — Coastality <span class="pill impl">implemented</span> <code>profile_groups["E"]</code></h3>
+<h3>Band E — Coastality <code>(profile_groups["E"])</code> <span class="pill impl">implemented</span> </h3>
 <p>Hydrological connectivity to the marine outlet. Always returned; the <code>endorheic</code> flag changes the interpretation of <code>dist_sink</code>.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
@@ -154,9 +154,9 @@ aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pr
   <tr><td class="planned"><code>outlet_type</code>, <code>topo_depth_from_coast</code>, marine ecological variables</td><td class="planned">Planned additions (Phase 2)</td><td class="planned">—</td></tr>
 </table>
 
-<h3>Band F — Temporal <span class="pill impl">implemented</span> <code>profile_groups["F"]</code></h3>
+<h3>Band F — Temporal <code>(profile_groups["F"])</code> <span class="pill impl">implemented</span> </h3>
 <p>Period-specific climate enrichment from LMR v2.1 (Tardif et al. 2019) and volcanic event annotation from eVolv2k v4 (Sigl & Toohey 2024). Requires <code>from_year</code> and <code>to_year</code>. Coverage: 0–1998 CE.</p>
-<p>Band F data is in <code>profile_groups["F"]</code>, consistent with other bands. If the period is outside the LMR range, <code>profile_groups["F"]</code> will contain a <code>_status: "out_of_range"</code> message; bands A–E are unaffected.</p>
+<p>If an entered period is outside the LMR range, <code>profile_groups["F"]</code> will contain a <code>_status: "out_of_range"</code> message; bands A–E are unaffected.</p>
 
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>

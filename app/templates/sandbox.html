@@ -34,6 +34,8 @@
     </span>
     <span class="d-flex align-items-center gap-3">
       <a href="#" class="text-decoration-none small" data-bs-toggle="modal" data-bs-target="#aboutModal" style="font-size:0.8rem;">About</a>
+      <span class="text-secondary" style="font-size:0.8rem;">|</span>
+      <a href="#" class="text-decoration-none small" data-bs-toggle="modal" data-bs-target="#apiGuideModal" style="font-size:0.8rem;">API Guide</a>
       <span class="badge bg-secondary-subtle text-dark fw-normal" style="font-size:0.85rem;">EDOPS v0.2 Alpha</span>
     </span>
   </h4>
@@ -230,6 +232,24 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API Guide modal -->
+<div class="modal fade" id="apiGuideModal" tabindex="-1" aria-labelledby="apiGuideModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable" style="max-width: 80%;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="apiGuideModalLabel">EDOPS API Guide</h5>
+        <div class="ms-auto me-3">
+          <a href="/docs" target="_blank" class="btn btn-sm btn-outline-secondary">Interactive schema (Swagger) ↗</a>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe src="/static/api_guide.html" style="width:100%; height:80vh; border:none;"></iframe>
       </div>
     </div>
   </div>
