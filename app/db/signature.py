@@ -531,6 +531,13 @@ def get_signature(
             if "elev_error" in sig:
                 out["elev_error"] = sig["elev_error"]
 
+            # Flat field mirror — all profile_groups values also returned as top-level
+            # keys for backwards compatibility with external consumers (e.g. graph DB
+            # ingestion pipelines) that read primitive fields directly from the response.
+            for _gcode, gdata in grouped.items():
+                for item in gdata.get("items", []):
+                    out[item["key"]] = item["value"]
+
             return out
 
 
