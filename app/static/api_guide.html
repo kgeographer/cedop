@@ -80,10 +80,12 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
 </table>
 
 <h3>Accessing field values</h3>
-<p>To read a specific field, walk <code>profile_groups</code>. For example, to get aridity in Python:</p>
+<p>The canonical location for all environmental variables is <code>profile_groups</code>. To read a specific field, walk the items list for the relevant band:</p>
 <pre><code>sig = requests.get("https://cedop.kgeographer.org/api/signature?lat=16.77&lon=-3.01&bands=C").json()
 items = sig["profile_groups"]["C"]["items"]
 aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pre>
+
+<p>Band A–E variables are also mirrored as flat top-level keys (e.g. <code>sig["aridity"]</code>), appended after <code>profile_groups</code>, for backwards compatibility with ingestion pipelines that read primitive fields directly from the response. Band F temporal fields are only in <code>profile_groups["F"]</code>. If <code>profile_groups</code> and a flat key ever differ, trust <code>profile_groups</code>.</p>
 
 <hr>
 
