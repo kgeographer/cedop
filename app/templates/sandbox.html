@@ -141,12 +141,12 @@
           <div class="mt-2">
             <select id="sb-example-select" class="form-select form-select-sm text-muted">
               <option value="">— load an example —</option>
-              <option value="16.7742,-3.0079,Timbuktu,8">Timbuktu (L8)</option>
-              <option value="16.7742,-3.0079,Timbuktu,6">Timbuktu (L6)</option>
-              <option value="41.8933,12.4828,Rome,8">Rome (L8)</option>
-              <option value="41.8933,12.4828,Rome,6">Rome (L6)</option>
-              <option value="34.7972,114.3069,Kaifeng,8">Kaifeng (L8)</option>
-              <option value="34.7972,114.3069,Kaifeng,6">Kaifeng (L6)</option>
+              <option value="16.7742,-3.0079,Timbuktu,8,1100,1200">Timbuktu (L8)</option>
+              <option value="16.7742,-3.0079,Timbuktu,6,1100,1200">Timbuktu (L6)</option>
+              <option value="41.8933,12.4828,Rome,8,0,300">Rome (L8)</option>
+              <option value="41.8933,12.4828,Rome,6,0,300">Rome (L6)</option>
+              <option value="34.7972,114.3069,Kaifeng,8,1000,1100">Kaifeng (L8)</option>
+              <option value="34.7972,114.3069,Kaifeng,6,1000,1100">Kaifeng (L6)</option>
             </select>
           </div>
         </div>
@@ -538,9 +538,13 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
   // ── Example selector ────────────────────────────────────────────────────
   document.getElementById('sb-example-select').addEventListener('change', function() {
     if (!this.value) return;
-    const [lat, lon, name, level] = this.value.split(',');
+    const [lat, lon, name, level, fromYear, toYear] = this.value.split(',');
     this.value = '';  // reset dropdown
     document.getElementById('sb-level').value = level;
+    document.getElementById('band-F').checked = true;
+    document.getElementById('f-year-start').value = fromYear;
+    document.getElementById('f-year-end').value = toYear;
+    updateBandsDisplay();
     setResolved(parseFloat(lat), parseFloat(lon), name);
     fetchSignature();
   });
