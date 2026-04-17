@@ -20,7 +20,7 @@
     #sb-band-checks .form-check { margin-bottom: 0; }
     #sb-band-checks .form-check-label { font-size: 0.8rem; }
     #band-list {list-style: none;}
-    #sb-intro-text p {}
+    #sb-intro-text p {margin-bottom: .5rem}
   </style>
 </head>
 <body>
@@ -124,7 +124,7 @@
           </button>
 
           <!-- Intro / instructions — hidden after first resolution -->
-          <div id="sb-intro-text" class="text-muted small mt-2" style="line-height:1.2;">
+          <div id="sb-intro-text" class="text-muted small mt-2"">
             <p>On the map, <strong>zoom to a study area</strong>. This constrains the name search spatially</p>
             <p>Enter a place name or coordinates and <strong>click Resolve</strong></p>
             <p><strong>Select a candidate</strong> to preview its hydrological neighborhood at the selected basin scale level (08 is default)</p>
@@ -178,11 +178,11 @@
                     data-bs-target="#pane-map" type="button" role="tab">Map</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-sig-btn" data-bs-toggle="tab"
+            <button class="nav-link disabled" id="tab-sig-btn" data-bs-toggle="tab"
                     data-bs-target="#pane-sig" type="button" role="tab">Signature</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-analysis-btn" data-bs-toggle="tab"
+            <button class="nav-link disabled" id="tab-analysis-btn" data-bs-toggle="tab"
                     data-bs-target="#pane-analysis" type="button" role="tab">Analysis <span class="badge bg-secondary ms-1" style="font-size:0.65rem;">α</span></button>
           </li>
         </ul>
@@ -506,6 +506,9 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     // Clear analysis tab
     document.getElementById('sb-analysis-body').innerHTML =
       '<p class="mt-3">Run <strong>Get signature</strong> to populate analysis.</p>';
+    // Disable sig/analysis tabs until next signature fetch
+    document.getElementById('tab-sig-btn').classList.add('disabled');
+    document.getElementById('tab-analysis-btn').classList.add('disabled');
     // Return to map tab and reset map view
     bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-map-btn')).show();
     if (mapPreview) mapPreview.setView([20, 10], 2);
@@ -552,6 +555,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
   // ── Level switch: re-fetch sig + neighborhood if place already resolved ─
   document.getElementById('sb-level').addEventListener('change', () => {
     if (resolvedLat === null) return;
+    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-map-btn')).show();
     fetchPreview();
     if (currentSig !== null) fetchSignature(false);
   });
@@ -586,6 +590,8 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
       currentSig = sig;
       window.currentSig = sig;  // dev: inspect in console
 
+      document.getElementById('tab-sig-btn').classList.remove('disabled');
+      document.getElementById('tab-analysis-btn').classList.remove('disabled');
       renderSignature(sig, sig?.profile_groups?.F || null, switchTab);
       if (sig) renderAnalysis(sig, previewData, parseInt(level));
     } catch (err) {

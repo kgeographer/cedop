@@ -16,7 +16,7 @@ import anthropic
 
 PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "edop_narrative_rev1.md"
 DEFAULT_MODEL  = "claude-sonnet-4-6"
-DEFAULT_TOKENS = 600
+DEFAULT_TOKENS = 1000
 
 # Aridity index interpretation per EDOP convention
 def _aridity_label(v) -> str:
