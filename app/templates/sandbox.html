@@ -20,6 +20,7 @@
     #sb-band-checks .form-check { margin-bottom: 0; }
     #sb-band-checks .form-check-label { font-size: 0.8rem; }
     #band-list {list-style: none;}
+    #sb-intro-text p {}
   </style>
 </head>
 <body>
@@ -78,8 +79,8 @@
               </select>
             </div>
             <div style="flex:1 1 auto;">
-              <label class="form-label mb-0" style="font-size:0.9rem;">Bands</label>
-              <div id="sb-band-checks" class="d-flex flex-wrap gap-2 mt-1 ps-1 bg-light">
+              <label class="form-label mb-0" style="font-size:0.9rem;">Signature Bands</label>
+              <div id="sb-band-checks" class="d-flex flex-wrap gap-2 mt-1 ps-1">
                 <div class="form-check form-check-inline me-0">
                   <input class="form-check-input sb-band-chk" type="checkbox" id="band-A" value="A" checked>
                   <label class="form-check-label" for="band-A" title="Physiographic">A</label>
@@ -123,7 +124,7 @@
           </button>
 
           <!-- Intro / instructions — hidden after first resolution -->
-          <div id="sb-intro-text" class="text-muted small mt-2" style="line-height:1.4;">
+          <div id="sb-intro-text" class="text-muted small mt-2" style="line-height:1.2;">
             <p>On the map, <strong>zoom to a study area</strong>. This constrains the name search spatially</p>
             <p>Enter a place name or coordinates and <strong>click Resolve</strong></p>
             <p><strong>Select a candidate</strong> to preview its hydrological neighborhood at the selected basin scale level (08 is default)</p>
@@ -131,11 +132,22 @@
               <ul id="band-list">
                 <li>A - Physiographic bedrock <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Elevation, slope, relief, lithology, karst. Stable over geological timescales; valid baseline for any historical period."></i></li>
                 <li>B - Hydro-climatic baselines <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="River discharge, runoff, groundwater, soils, wetlands. Discharge reflects the full upstream catchment, not just the local site."></i></li>
-                <li>C - Bioclimatic proxies <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Temperature, precipitation, aridity, biome, ecoregion. Contemporary WorldClim baseline; Band F supersedes for period-specific queries."></i></li>
+                <li>C - Bioclimatic proxies <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Temperature, precipitation, aridity, biome, ecoregion. Contemporary climate baseline from BasinATLAS; Band F supersedes for period-specific queries."></i></li>
                 <li>D - Anthropocene markers <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Population density, cropland, human footprint, GDP. Present-day only — exclude for pre-modern analyses."></i></li>
                 <li>E - Coastality <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Distance to marine outlet, endorheic flag, outlet type. Captures hydrological connectivity to the sea."></i></li>
                 <li>F - Temporal climate (0–1998 CE) <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Period-specific PDSI drought index, temperature and precipitation anomalies from LMR v2.1, and volcanic events from eVolv2k. Requires a date range."></i></li>
               </ul>
+          </div>
+          <div class="mt-2">
+            <select id="sb-example-select" class="form-select form-select-sm text-muted">
+              <option value="">— load an example —</option>
+              <option value="16.7742,-3.0079,Timbuktu,8">Timbuktu (L8)</option>
+              <option value="16.7742,-3.0079,Timbuktu,6">Timbuktu (L6)</option>
+              <option value="41.8933,12.4828,Rome,8">Rome (L8)</option>
+              <option value="41.8933,12.4828,Rome,6">Rome (L6)</option>
+              <option value="34.7972,114.3069,Kaifeng,8">Kaifeng (L8)</option>
+              <option value="34.7972,114.3069,Kaifeng,6">Kaifeng (L6)</option>
+            </select>
           </div>
         </div>
       </div>
@@ -521,6 +533,16 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
 
   document.querySelectorAll('.sb-band-chk').forEach(cb => {
     cb.addEventListener('change', updateBandsDisplay);
+  });
+
+  // ── Example selector ────────────────────────────────────────────────────
+  document.getElementById('sb-example-select').addEventListener('change', function() {
+    if (!this.value) return;
+    const [lat, lon, name, level] = this.value.split(',');
+    this.value = '';  // reset dropdown
+    document.getElementById('sb-level').value = level;
+    setResolved(parseFloat(lat), parseFloat(lon), name);
+    fetchSignature();
   });
 
   // ── Level switch: re-fetch sig + neighborhood if place already resolved ─
