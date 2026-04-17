@@ -31,9 +31,18 @@ def about(request: Request):
     return templates.TemplateResponse("about.html", {"request": request})
 
 @router.get("/edop")
-def edop(request: Request):
-    return templates.TemplateResponse("edop.html", {"request": request})
+def edop_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/workbench", status_code=301)
+
+@router.get("/workbench")
+def workbench(request: Request):
+    return templates.TemplateResponse("workbench.html", {"request": request})
 
 @router.get("/sandbox")
 def sandbox(request: Request):
     return templates.TemplateResponse("sandbox.html", {"request": request})
+
+@router.get("/edops")
+def edops(request: Request):
+    return templates.TemplateResponse("edops.html", {"request": request})
