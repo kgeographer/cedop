@@ -636,7 +636,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     const airTab = airSeries.length
       ? `<div class="small mb-1 text-muted">
            Mean anomaly <strong>${data.air_mean_anom_k} K</strong>
-           ${tipIcon('2m air temperature anomaly (K) from LMR v2.1 ensemble mean. Positive = warmer than reference period average.')}
+           ${tipIcon('2m air temperature anomaly (K) from LMR v2.1 ensemble mean. Positive = warmer than the 20th-century reference period average (1951–1980).')}
          </div>
          ${buildClimSvg(airSeries, 'air_anom_k', '#c0392b', '#2980b9')}`
       : `<div class="text-muted small">No temperature data.</div>`;
@@ -646,7 +646,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     const prateTab = prateSeries.length
       ? `<div class="small mb-1 text-muted">
            Mean anomaly <strong>${data.prate_mean_anom_mm_day} mm/day</strong>
-           ${tipIcon('Precipitation rate anomaly (mm/day) from LMR v2.1 ensemble mean. Positive = wetter than reference period average.')}
+           ${tipIcon('Precipitation rate anomaly (mm/day) from LMR v2.1 ensemble mean. Positive = wetter than the 20th-century reference period average (1951–1980).')}
          </div>
          ${buildClimSvg(prateSeries, 'prate_anom_mm_day', '#27ae60', '#8e44ad')}`
       : `<div class="text-muted small">No precipitation data.</div>`;

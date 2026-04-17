@@ -30,7 +30,7 @@
 
 <h1>EDOPS API Guide <span style="font-size:0.7rem;font-weight:normal;color:#888;font-family:monospace">v0.2 alpha · April 2026</span></h1>
 
-<p>EDOPS — the Environmental Dimensions of Place Service — generates structured environmental signatures for geographic coordinates worldwide. Signatures are derived from globally consistent datasets at the hydrological sub-basin level (HydroATLAS / BasinATLAS), with optional historical climate enrichment from LMR v2.1 (paleoclimate) and eVolv2k v4 (volcanic events).</p>
+<p>EDOPS — the Environmental Dimensions of Place Service — generates structured environmental signatures for geographic coordinates worldwide. Signatures are derived from global datasets aggregated at the hydrological sub-basin level in <a href="https://www.hydrosheds.org/products/hydroatlas" target="_blank">BasinATLAS</a>, with optional historical climate enrichment from LMR v2.1 (paleoclimate) and eVolv2k v4 (volcanic events).</p>
 
 <p>Base URL: <code>https://cedop.kgeographer.org/api</code><br>
 Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank">cedop.kgeographer.org/docs</a></p>
@@ -55,7 +55,7 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
   <tr><td><code>lat</code></td><td>float</td><td>required</td><td>Latitude in decimal degrees (−90 to 90)</td></tr>
   <tr><td><code>lon</code></td><td>float</td><td>required</td><td>Longitude in decimal degrees (−180 to 180)</td></tr>
   <tr><td><code>bands</code></td><td>string</td><td><code>ABCDE</code></td><td>Profile groups to include — any combination of A B C D E F with no separator, e.g. <code>ABF</code>. Band F requires <code>from_year</code> and <code>to_year</code>.</td></tr>
-  <tr><td><code>level</code></td><td>integer</td><td><code>8</code></td><td>Basin hierarchy level. <code>8</code> = sub-basin (median ~200 km²). Level 6 (regional, ~tens of thousands km²) is partially implemented.</td></tr>
+  <tr><td><code>level</code></td><td>integer</td><td><code>8</code></td><td>Basin hierarchy level. <code>8</code> = sub-basin (median ~200 km²). Level 6 is regional (~tens of thousands km²).</td></tr>
   <tr><td><code>from_year</code></td><td>integer</td><td>—</td><td>Start year CE for Band F temporal enrichment. Range: 0–1998.</td></tr>
   <tr><td><code>to_year</code></td><td>integer</td><td>—</td><td>End year CE for Band F temporal enrichment. Range: 0–1998.</td></tr>
 </table>
@@ -64,20 +64,26 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
 
 <h2>Response Structure</h2>
 
-<p>The response is a flat JSON object. All signature fields (Bands A–E) are returned as top-level keys regardless of which bands were requested. The <code>profile_groups</code> key provides the same data organized by band for display purposes. Band F data, when requested, appears in a <code>temporal</code> sub-object.</p>
+<p>The response is a structured JSON object. Environmental variables (Bands A–E) are accessed under <code>profile_groups</code>. Band F temporal data is in <code>profile_groups["F"]</code> when requested.</p>
 
 <table>
-  <tr><th>Key(s)</th><th>Description</th></tr>
-  <tr><td><code>id</code>, <code>zone_id</code>, <code>zone_name</code>, <code>strata_id</code>, <code>strata_code</code>, <code>land_cover_id</code>, <code>land_cover_name</code></td><td>Basin identifier and bioclimate classification</td></tr>
-  <tr><td><code>elev_point</code>, <code>elev_source</code>, <code>elev_dataset</code>, <code>elev_resolution_m</code></td><td>Point elevation at query coordinate (from OpenTopoData / Open-Meteo)</td></tr>
-  <tr><td><code>relief_range_m</code>, <code>relief_position</code></td><td>Derived: elev_max − elev_min; (elev_point − elev_min) / relief_range</td></tr>
+  <tr><th>Key</th><th>Description</th></tr>
+  <tr><td><code>meta</code></td><td>Request context: <code>signature_version</code>, <code>generated</code> (ISO timestamp), <code>query</code> (lat, lon, bands, level, from_year, to_year), <code>neighborhood</code> (type, basin_level), <code>data_sources</code></td></tr>
+  <tr><td><code>id</code></td><td>Basin identifier (BasinATLAS hybas_id)</td></tr>
+  <tr><td><code>eco_id</code></td><td>OneEarth ecoregion identifier</td></tr>
   <tr><td><code>up_area</code></td><td>Total upstream contributing area (km²)</td></tr>
   <tr><td><code>geom_geojson</code></td><td>Basin polygon as GeoJSON MultiPolygon string</td></tr>
-  <tr><td><em>Band A–E fields</em></td><td>All environmental variables as flat top-level keys — see band tables below</td></tr>
-  <tr><td><code>profile_summary</code></td><td>Ordered array of highlight fields: <code>[{key, label, value}, …]</code> — for summary panel display</td></tr>
-  <tr><td><code>profile_groups</code></td><td>Dict keyed A–F, each <code>{label, items: [{key, label, value}, …]}</code> — presentation-ready, filtered to requested bands</td></tr>
-  <tr><td><code>temporal</code></td><td>Band F sub-object — present when F is in bands and period is valid (see below)</td></tr>
+  <tr><td><code>elev_point</code>, <code>elev_source</code>, <code>elev_dataset</code>, <code>elev_resolution_m</code></td><td>Point elevation at query coordinate (external provider: OpenTopoData / Open-Meteo fallback)</td></tr>
+  <tr><td><code>relief_range_m</code>, <code>relief_position</code></td><td>Derived terrain metrics: elev_max − elev_min; (elev_point − elev_min) / relief_range</td></tr>
+  <tr><td><code>profile_summary</code></td><td>Ordered array of highlight fields: <code>[{key, label, value}, …]</code></td></tr>
+  <tr><td><code>profile_groups</code></td><td>Dict keyed A–F (filtered to requested bands). Each entry: <code>{label, items: [{key, label, value}, …]}</code>. This is where all environmental variables live — see band tables below.</td></tr>
 </table>
+
+<h3>Accessing field values</h3>
+<p>To read a specific field, walk <code>profile_groups</code>. For example, to get aridity in Python:</p>
+<pre><code>sig = requests.get("https://cedop.kgeographer.org/api/signature?lat=16.77&lon=-3.01&bands=C").json()
+items = sig["profile_groups"]["C"]["items"]
+aridity = next(it["value"] for it in items if it["key"] == "aridity")</code></pre>
 
 <hr>
 
@@ -85,7 +91,7 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
 
 <div class="note"><strong>Local vs. upstream:</strong> Most Band A–C fields appear as pairs — a local value (conditions within the sub-basin only) and an upstream value (area-weighted accumulation across all upstream contributing basins). Upstream keys carry an <code>_upstream</code> suffix, e.g. <code>aridity</code> / <code>aridity_upstream</code>. The divergence between the two is itself environmentally meaningful: a site where local aridity diverges sharply from upstream aridity (e.g. a desert city fed by a distant mountain river) occupies a qualitatively different position than one where they converge.</div>
 
-<h3>Band A — Physiographic <span class="pill impl">implemented</span></h3>
+<h3>Band A — Physiographic <span class="pill impl">implemented</span> <code>profile_groups["A"]</code></h3>
 <p>Stable over geological timescales; defensible as a historical baseline for any period.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
@@ -98,8 +104,8 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
   <tr><td class="planned"><code>elev_mean</code> (s/u), <code>erosion_rate</code>, <code>glacier_pct</code>, <code>permafrost_pct</code></td><td class="planned">Planned additions</td><td class="planned">—</td></tr>
 </table>
 
-<h3>Band B — Hydroclimatic <span class="pill impl">implemented</span></h3>
-<p>Largely stable over centuries. Discharge and runoff are delivered/integrated measures reflecting the full upstream catchment.</p>
+<h3>Band B — Hydroclimatic <span class="pill impl">implemented</span> <code>profile_groups["B"]</code></h3>
+<p>Hydrological fluxes and soil characteristics integrating the full upstream catchment under the current climatic regime. Discharge and runoff reflect contemporary conditions, including the effects of upstream dams and diversions where present.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
   <tr><td><code>discharge_yr</code>, <code>discharge_min</code>, <code>discharge_max</code></td><td>River discharge annual mean, min, max</td><td>m³/s</td></tr>
@@ -113,32 +119,32 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
   <tr><td><code>pnv_majority</code>, <code>pnv_shares</code></td><td>Potential natural vegetation — dominant class and share breakdown</td><td>—; %</td></tr>
 </table>
 
-<h3>Band C — Bioclimatic <span class="pill impl">implemented</span></h3>
-<p>Contemporary WorldClim baseline. For period-specific queries, Band F LMR values provide anomalies relative to this baseline.</p>
+<h3>Band C — Bioclimatic <span class="pill impl">implemented</span> <code>profile_groups["C"]</code></h3>
+<p>Contemporary climate baseline from BasinATLAS. These are long-run averages — for historical temperature and precipitation, Band F provides LMR anomalies relative to a 20th-century reference.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
   <tr><td><code>temp_yr</code>, <code>temp_min</code>, <code>temp_max</code></td><td>Annual mean, min month, max month temperature (local)</td><td>°C</td></tr>
   <tr><td><code>temp_yr_upstream</code></td><td>Annual mean temperature upstream</td><td>°C</td></tr>
   <tr><td><code>precip_yr</code>, <code>precip_yr_upstream</code></td><td>Annual precipitation local / upstream</td><td>mm/yr</td></tr>
   <tr><td><code>aridity</code>, <code>aridity_upstream</code></td><td>Aridity index (P/PET) local / upstream — higher = wetter</td><td>dimensionless</td></tr>
-  <tr><td><code>permafrost_extent</code></td><td>Permafrost extent (currently assigned to Band C; targets Band A)</td><td>%</td></tr>
+  <tr><td><code>permafrost_extent</code></td><td>Permafrost extent</td><td>%</td></tr>
   <tr><td><code>biome_id</code>, <code>biome</code></td><td>OneEarth biome code and name</td><td>—</td></tr>
   <tr><td><code>eco_id</code>, <code>ecoregion</code></td><td>OneEarth ecoregion code and name</td><td>—</td></tr>
   <tr><td><code>freshwater_type</code>, <code>freshwater_ecoregion_class</code>, <code>freshwater_ecoregion_name</code></td><td>Freshwater ecoregion classification</td><td>—</td></tr>
 </table>
 
-<h3>Band D — Anthropocene <span class="pill impl">implemented</span></h3>
+<h3>Band D — Anthropocene <span class="pill impl">implemented</span> <code>profile_groups["D"]</code></h3>
 <p>Present-day only. Exclude or qualify for pre-modern analyses; useful as a contrast baseline.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
   <tr><td><code>pop_density</code></td><td>Contemporary population density</td><td>persons/km²</td></tr>
   <tr><td><code>human_footprint_09</code>, <code>human_footprint_09_upstream</code></td><td>Human footprint index local / upstream</td><td>0–100</td></tr>
   <tr><td><code>cropland_extent</code>, <code>cropland_extent_upstream</code></td><td>Cropland extent local / upstream</td><td>%</td></tr>
-  <tr><td><code>gdp_avg</code></td><td>Average GDP</td><td>USD/km²</td></tr>
+  <tr><td><code>gdp_avg</code></td><td>GDP per capita (PPP, 2015)</td><td>2011 int'l USD</td></tr>
   <tr><td><code>human_dev_idx</code></td><td>Human Development Index</td><td>0–1</td></tr>
 </table>
 
-<h3>Band E — Coastality <span class="pill impl">implemented</span></h3>
+<h3>Band E — Coastality <span class="pill impl">implemented</span> <code>profile_groups["E"]</code></h3>
 <p>Hydrological connectivity to the marine outlet. Always returned; the <code>endorheic</code> flag changes the interpretation of <code>dist_sink</code>.</p>
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
@@ -148,25 +154,25 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
   <tr><td class="planned"><code>outlet_type</code>, <code>topo_depth_from_coast</code>, marine ecological variables</td><td class="planned">Planned additions (Phase 2)</td><td class="planned">—</td></tr>
 </table>
 
-<h3>Band F — Temporal <span class="pill impl">implemented</span></h3>
+<h3>Band F — Temporal <span class="pill impl">implemented</span> <code>profile_groups["F"]</code></h3>
 <p>Period-specific climate enrichment from LMR v2.1 (Tardif et al. 2019) and volcanic event annotation from eVolv2k v4 (Sigl & Toohey 2024). Requires <code>from_year</code> and <code>to_year</code>. Coverage: 0–1998 CE.</p>
-<p>Band F data appears in a <code>temporal</code> sub-object, not as flat top-level keys. If the period is outside the LMR range, <code>temporal</code> will contain a <code>_status: out_of_range</code> message; bands A–E are returned normally.</p>
+<p>Band F data is in <code>profile_groups["F"]</code>, consistent with other bands. If the period is outside the LMR range, <code>profile_groups["F"]</code> will contain a <code>_status: "out_of_range"</code> message; bands A–E are unaffected.</p>
 
 <table>
   <tr><th>Field</th><th>Description</th><th>Units</th></tr>
-  <tr><td><code>temporal.grid_cell</code></td><td>LMR grid cell used for extraction <code>{lat, lon}</code> — 2°×2° grid snapped to nearest centre</td><td>—</td></tr>
-  <tr><td><code>temporal.year_start</code>, <code>temporal.year_end</code></td><td>Requested period echoed back</td><td>CE</td></tr>
-  <tr><td><code>temporal.pdsi_series</code></td><td>Annual PDSI values: <code>[{year, pdsi}, …]</code>. Negative = dry, positive = wet.</td><td>dimensionless</td></tr>
-  <tr><td><code>temporal.pdsi_mean</code>, <code>pdsi_min</code>, <code>pdsi_max</code></td><td>Period summary statistics for PDSI</td><td>dimensionless</td></tr>
-  <tr><td><code>temporal.air_series</code></td><td>Annual temperature anomaly values: <code>[{year, air_anom_k}, …]</code>. Anomaly relative to LMR climatology baseline.</td><td>K (anomaly)</td></tr>
-  <tr><td><code>temporal.air_mean_anom_k</code></td><td>Period mean temperature anomaly</td><td>K (anomaly)</td></tr>
-  <tr><td><code>temporal.prate_series</code></td><td>Annual precipitation rate anomaly: <code>[{year, prate_anom_mm_day}, …]</code>. Anomaly relative to LMR baseline.</td><td>mm/day (anomaly)</td></tr>
-  <tr><td><code>temporal.prate_mean_anom_mm_day</code></td><td>Period mean precipitation anomaly</td><td>mm/day (anomaly)</td></tr>
-  <tr><td><code>temporal.volcanic_events</code></td><td>Eruptions within the period from eVolv2k v4: <code>[{year_ad, month, vssi_tg, vssi_1sig, asymmetry, location, tephra}, …]</code></td><td>—</td></tr>
-  <tr><td><code>temporal._status</code></td><td><code>"ok"</code> when data returned; <code>"out_of_range"</code> or <code>"not_requested"</code> otherwise</td><td>—</td></tr>
+  <tr><td><code>grid_cell</code></td><td>LMR grid cell used for extraction <code>{lat, lon}</code> — 2°×2° grid snapped to nearest centre</td><td>—</td></tr>
+  <tr><td><code>year_start</code>, <code>year_end</code></td><td>Requested period echoed back</td><td>CE</td></tr>
+  <tr><td><code>pdsi_series</code></td><td>Annual PDSI values: <code>[{year, pdsi}, …]</code>. Negative = dry, positive = wet.</td><td>dimensionless</td></tr>
+  <tr><td><code>pdsi_mean</code>, <code>pdsi_min</code>, <code>pdsi_max</code></td><td>Period summary statistics for PDSI</td><td>dimensionless</td></tr>
+  <tr><td><code>air_series</code></td><td>Annual temperature anomaly values: <code>[{year, air_anom_k}, …]</code>. Anomaly relative to 1951–1980 reference period.</td><td>K (anomaly)</td></tr>
+  <tr><td><code>air_mean_anom_k</code></td><td>Period mean temperature anomaly</td><td>K (anomaly)</td></tr>
+  <tr><td><code>prate_series</code></td><td>Annual precipitation rate anomaly: <code>[{year, prate_anom_mm_day}, …]</code>. Anomaly relative to 1951–1980 reference period.</td><td>mm/day (anomaly)</td></tr>
+  <tr><td><code>prate_mean_anom_mm_day</code></td><td>Period mean precipitation anomaly</td><td>mm/day (anomaly)</td></tr>
+  <tr><td><code>volcanic_events</code></td><td>Eruptions within the period from eVolv2k v4: <code>[{year_ad, month, vssi_tg, vssi_1sig, asymmetry, location, tephra}, …]</code></td><td>—</td></tr>
+  <tr><td><code>_status</code></td><td><code>"ok"</code> when data returned; <code>"out_of_range"</code> or <code>"not_requested"</code> otherwise</td><td>—</td></tr>
 </table>
 
-<div class="note"><strong>Temporal values are anomalies, not absolutes.</strong> LMR delivers temperature and precipitation as anomalies relative to its own climatological baseline. To obtain an estimate of absolute conditions, add the anomaly to the corresponding Band C baseline value (<code>temp_yr</code> for temperature; convert <code>precip_yr</code> from mm/yr to mm/day for precipitation comparison).</div>
+<div class="note"><strong>Temporal values note.</strong> LMR temperature and precipitation values are anomalies relative to a 20th-century reference period (1951–1980), not absolute values. PDSI is a drought severity index in its own right — positive values indicate wetter-than-average conditions for that location, negative values drier. Band C baselines reflect contemporary long-run averages from a different source and reference period; they are not directly comparable to LMR anomalies.</div>
 
 <hr>
 
@@ -197,9 +203,9 @@ Interactive schema: <a href="https://cedop.kgeographer.org/docs" target="_blank"
 <ul>
   <li><strong>CORS:</strong> Cross-origin requests are allowed. You can call the API directly from browser JavaScript.</li>
   <li><strong>No basin found:</strong> If the coordinate falls outside all known sub-basins (open ocean, ice sheet), the API returns HTTP 404.</li>
-  <li><strong>All fields always returned:</strong> The response includes all Band A–E fields at the top level regardless of which bands were requested. Use the <code>bands</code> parameter to filter <code>profile_groups</code> for display; consume top-level fields directly for computation.</li>
-  <li><strong>Band F anomalies:</strong> LMR temperature and precipitation values are anomalies relative to a baseline climatology, not absolute values. Add to Band C baselines to estimate period conditions.</li>
-  <tr><td><strong>Endorheic basins:</strong></td><td> <code>dist_sink = 0</code> in BasinATLAS means <em>no marine outlet</em>, not zero distance. Always check the <code>endorheic</code> flag.</td></tr>
+  <li><strong>Data is in <code>profile_groups</code>:</strong> Environmental variables are not returned as flat top-level keys. Use <code>profile_groups["A"].items</code> etc. to access field values. The <code>bands</code> parameter controls which groups are included.</li>
+  <li><strong>Band F anomalies:</strong> LMR temperature and precipitation values are anomalies relative to a 20th-century reference period (1951–1980), not absolute values. PDSI is a drought severity index — not an anomaly relative to a baseline. See the Band F note below the field table.</li>
+  <li><strong>Endorheic basins:</strong> <code>dist_sink = 0</code> in BasinATLAS means <em>no marine outlet</em>, not zero distance. Always check the <code>endorheic</code> flag.</li>
   <li><strong>Rate limits:</strong> None enforced currently. Contact us for bulk request needs.</li>
 </ul>
 

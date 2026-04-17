@@ -26,7 +26,7 @@ app/data/clio/
 app/data/ich/
 data/
 
-# Large binary/sandbox files
+# Large binary/design files
 logos/*.afphoto
 logos/*.afphoto~lock~
 logos/favicon.png
@@ -37,14 +37,22 @@ docs/**/*.pdf
 # Office temp/lock files
 ~$*
 
-# Misc data files
-misc/*.jsonl
+# Misc (scratch dir — nothing here should be tracked)
+misc/
 
 # Scraped web pages
 metadata/ich.unesco.org*
 
+# Logs
+watson_log.txt
+
+# Claude Code internals
+.claude/
+
+# Sysop / hosting data
+sysop/
+
 # Misc
-misc/DEPLOYING.txt
 pitches/
 biz/
 

@@ -406,7 +406,7 @@ def signature(
     ----------
     lat, lon   : coordinates
     bands      : which profile groups to include, e.g. "ABCDE" or "ABCDEF" (default ABCDE)
-    level      : basin hierarchy level — only 8 currently supported (6 pending data load)
+    level      : basin hierarchy level — only 8 and 6 are currently supported
     from_year  : start year CE for Band F temporal enrichment (0–1998)
     to_year    : end year CE for Band F temporal enrichment (0–1998)
     """
