@@ -29,20 +29,23 @@ app/
 ├── db/
 │   ├── connection.py    # Centralized db_connect() function
 │   └── signature.py     # Core signature query logic
-├── web/pages.py         # Jinja2 template routes (/, /edop, /about)
+├── web/pages.py         # Jinja2 template routes
 ├── templates/
 │   ├── base_cedop.html  # Base template for splash/about pages
 │   ├── base.html        # Base template for EDOP app (includes Leaflet)
-│   ├── index.html       # Computing Place splash page
-│   ├── edop.html        # EDOP app (tabs: Main, Basins, Ecoregions, etc.)
+│   ├── index.html       # Computing Place splash page (cedop.kgeographer.org/)
+│   ├── edops.html       # EDOPS landing page (edops.kgeographer.org/)
+│   ├── sandbox.html     # EDOPS researcher sandbox
+│   ├── workbench.html   # Computing Place Workbench (formerly edop.html)
 │   └── about.html       # About page with architecture diagram
 └── static/
     ├── css/site.css     # All custom styles
-    ├── js/main.js       # EDOP JavaScript
+    ├── js/main.js       # Workbench JavaScript
     └── images/          # Logos, tile images
 
 scripts/
 ├── edop/                # EDOP data pipelines, clustering, corpus generation
+│   ├── explore/         # Data exploration phase scripts (see docs/edop/data_exploration.md)
 │   ├── corpus/          # Wikipedia harvesting and summarization
 │   └── polity_basin_overlay.py  # Areal interpolation demo
 ├── cdop/                # CDOP scripts
@@ -50,32 +53,55 @@ scripts/
     ├── db_utils.py      # Centralized db_connect() for scripts
     └── utils.py         # Common utilities
 
+notebooks/
+└── edop/
+    └── explore/         # Exploration phase notebooks
+
 sql/
 ├── edop/                # EDOP schema definitions
 ├── cdop/                # CDOP schemas
 └── shared/              # Shared schemas (ecoregions, cliopatria)
 
 output/                  # Regenerable artifacts (gitignored)
-├── edop/                # PCA, clusters, embeddings, polity overlays
+├── edop/
+│   └── explore/         # Exploration phase outputs
 └── cdop/                # ICH extractions, etc.
+
+logs/
+├── session_log_YYYYMMDD.md  # Daily work logs
+└── exploration_log.md       # Accreting findings log for data exploration phase
 
 metadata/*.tsv           # Lookup tables for categorical fields
 ```
 
 ### Page Routes
 
-- `/` — Computing Place splash page (module tiles)
-- `/edop` — EDOP application
+- `/` — Computing Place splash (cedop.kgeographer.org) or EDOPS landing (edops.kgeographer.org) — host-based
+- `/edops` — EDOPS landing page
+- `/sandbox` — EDOPS researcher sandbox (primary tool)
+- `/workbench` — Computing Place Workbench (experimental demonstrators)
+- `/edop` — 301 redirect to `/workbench` (legacy URL preservation)
 - `/about` — Architecture diagram
 
-### EDOP UI Tabs
+### Sandbox (`/sandbox`) — Primary Researcher Tool
 
-- **Main**: Coordinate/place lookup → environmental signature
-- **Basins**: 20 clusters of 190k sub-basins with WH cities
-- **Ecoregions**: OneEarth hierarchy browser
+- WHG place lookup (reconcile+extend, zoom ≥ 4) → candidate markers → basin assignment → neighborhood map
+- Level 08/06 toggle: switching always lands on Map tab; re-fetches preview + sig if sig exists
+- Band A–F signature accordion; Signature/Analysis tabs disabled until sig fetched
+- Analysis α tab: water provenance, s/u divergence table, scale mismatch alert
+- Band F temporal: PDSI / Temperature / Precipitation SVG charts + volcanic events
+- Ecoregion → Wikipedia modal; LLM narrative button
+- Example selector: Timbuktu (1100–1200), Rome (0–300), Kaifeng (1000–1100) at L8/L6
+- API Guide modal in header
+
+### Workbench (`/workbench`) — Experimental Demonstrators
+
+- **Main**: Place lookup → signature (Bands A–F)
+- **Basins**: 20 PCA-derived environmental clusters of 190k sub-basins + WH cities
+- **Ecoregions**: OneEarth hierarchy browser (Realms → Ecoregions)
 - **Societies**: 1,291 D-PLACE societies with subsistence/religion filters
-- **WH Cities**: 258 World Heritage Cities with clustering
-- **WH Sites**: 20 World Heritage pilot sites with env/text similarity
+- **WH Cities**: 258 World Heritage Cities with env + semantic similarity
+- **WH Sites**: 20 World Heritage pilot sites with env + semantic similarity
 
 ### Key Endpoints
 
@@ -104,7 +130,7 @@ metadata/*.tsv           # Lookup tables for categorical fields
 
 ## Deployment
 
-- **URL**: `cedop.kgeographer.org` (SSL via certbot)
+- **URLs**: `cedop.kgeographer.org` (Computing Place) and `edops.kgeographer.org` (EDOPS service) — both SSL via certbot, same server
 - **Server**: Hetzner CPX32, Nuremberg — `kgeographer-1` (46.225.125.25), Ubuntu 24.04, Nginx reverse proxy → Gunicorn on port 8001
 - **Service**: `cedop.service` (systemd), virtualenv at `/home/karlg/envs/cedop/`
 - **Working dir**: `/var/www/cedop`
@@ -149,6 +175,20 @@ Key design docs:
 - **`logs/CEDOP_LOG.md`** — Development journal with dated entries
 - **`prompts/seed-prompt-ongoing.md`** — Running prompt/context notes
 - **`docs/edop/prospectus_20260416.md`** — Current authoritative research direction document (living prospectus, updated from outline v3 Feb 2026). ISHI-supported program as of Apr 2026. Core conceptual framing: *process-aware environmental characterization* — what a place experiences through directed spatial processes. Key features: (1) local/upstream `s`/`u` duality as first-class signature feature; (2) distance-weighted upstream profiling via `next_down` DAG; (3) coastality (`dist_sink`, outlet type) as first-class signature component; (4) settlement correspondence as external validation objective (Section 9); (5) drainage topology implementation (Section 10); (6) temporal enrichment via LMR v2.1 and eVolv2k v4. Use cases driving design: `docs/edops_use_cases.md`. Prior versions archived as `prospectus_20260402.md`, `prospectus_20260403.md`. Blog post master: `docs/blog/computing_place_prospectus.md`.
+
+## Data Exploration Phase
+
+The next major work phase is systematic characterization of the EDOPS signature dataset before any correspondence testing, PCA, or rubric design. See **`docs/edop/data_exploration.md`** for the full task list, conventions, and guardrails.
+
+Key locations:
+- **Scripts**: `scripts/edop/explore/` — numbered exploration scripts
+- **Notebooks**: `notebooks/edop/explore/`
+- **Outputs**: `output/edop/explore/` (gitignored)
+- **Findings log**: `logs/exploration_log.md` — accretes findings over time; do not confuse with daily session logs
+
+Tasks in order: (1) marginal distributions for all scalar variables globally at L8, (2) missing-data and degenerate-value patterns by level, (3) local/upstream divergence distribution, (4) full correlation matrix, (5) geographic pre-clustering.
+
+**Do not** start correspondence testing (D-PLACE, settlement patterns) until the exploration phase findings are documented.
 
 ## External Dependencies
 

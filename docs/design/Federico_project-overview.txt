@@ -1,0 +1,57 @@
+1. What the project is
+
+NileGraphRAG is a research tool for studying water infrastructure in the ancient Mediterranean. It takes two large collections of ancient texts — 178,000 passages from Greek and Latin literary works (Herodotus, Strabo, Pliny, etc.) and 66,000 documentary papyri from Egypt (tax receipts, canal inspection orders, contracts, personal letters) — translates them into English, identifies every place name mentioned, links those places to the Pleiades ancient gazetteer, and loads everything into a knowledge graph. Each passage is classified by how it functions as evidence: is it a direct administrative record (attestation), a literary author's general description (inference), or a moralizing/rhetorical account (framing)? Each passage is also tagged with a controlled vocabulary of 80 water infrastructure terms — canals, dikes, irrigation, dredging, water wheels, nilometers, etc.
+
+The result is a searchable graph of 244,000 text passages connected to 4,600 places, 44 ancient administrative regions, and environmental data from EDOP.
+
+2. Sample queries that show why EDOP matters
+
+Query 1: "Where is canal maintenance most attested, and what do those places look like environmentally?"
+
+Canal mentions by place with EDOP:
+  Arsinoites (Fayum):  1,240 canal mentions  |  aridity: 0-1, precip: 0-18 mm/yr
+  Theben:                372 canal mentions  |  aridity: 0,   precip: 0 mm/yr
+  Oxyrhynchites:         188 canal mentions  |  aridity: 0,   precip: 5 mm/yr
+  Memphis:               171 canal mentions  |  aridity: 1,   precip: 18 mm/yr
+
+The driest places have the most canal infrastructure — which makes ecological sense. Without EDOP, this is just a list of place names. With EDOP, it becomes an environmental argument.
+
+Query 2: "Show all irrigation attestations from places with precipitation under 50mm"
+
+This filters 244,000 passages down to only those that mention a place in an arid environment AND are tagged with irrigation vocabulary AND are direct documentary evidence. The graph traverses: Chunk → MENTIONS → Place → HAS_EDOP → EDOPSignature (precip < 50) + Chunk → TAGGED_WITH → VocabTerm (irrigation) + Chunk → HAS_INTERPRETATION → InterpretationAct (attestation).
+
+Query 3: "Compare water infrastructure vocabulary across regions, contextualized by environment"
+
+  Arsinoites (precip 0-18mm):   irrigation 4,649 | dike 3,647 | canal 2,218 | water wheel 1,056
+  Oxyrhynchites (precip 5mm):   irrigation 1,200 | canal 385   | dike 300
+  Hermopolites (precip 3mm):    irrigation 800   | canal 269   | dike 200
+
+Different regions have different infrastructure profiles. EDOP lets you ask whether those profiles correlate with environmental conditions.
+
+3. How EDOP data was ingested (plain English)
+
+Step by step:
+
+1. We started with 2,600 unique Place nodes in the graph, each linked to a Pleiades gazetteer ID.
+2. We downloaded the Pleiades JSON dump (42,000 ancient places with coordinates). For each of our Place nodes that had a Pleiades ID, we looked up its latitude and longitude from the dump.
+3. For each place with coordinates (464 unique places), we called Karl's EDOP API once: GET https://cedop.kgeographer.org/api/signature?lon=X&lat=Y. We waited 1 second between calls to be respectful to the server. The whole process took about 10 minutes.
+4. The API returned a JSON response for each place. We stored every top-level primitive value (numbers and short strings) as a queryable property on an EDOPSignature node in Neo4j. We also saved the full raw JSON response as a string, so nothing is lost.
+5. We linked each EDOPSignature to its Place node via a HAS_EDOP relationship.
+6. Result: 438 places with environmental data (out of 464 queried — 26 had coordinates outside EDOP coverage). A second batch for Perseus literary places brought the total to 2,140 EDOPSignature nodes.
+
+4. What we actually stored (current schema)
+
+What's on each EDOPSignature node right now:
+
+(:EDOPSignature {
+  aridity: 1,              // aridity index (Band C — modern)
+  precip_yr: 18,           // annual precipitation mm (Band C — modern)
+  biome: "Deserts & Xeric Shrublands",  // (Band C — modern)
+  ecoregion: "Sahara desert",           // (Band C — modern)
+  elevation: 27,           // meters above sea level (Band A — stable)
+  edop_json: "{...full raw API response...}"  // everything preserved
+})
+
+Linked via: (:Place)-[:HAS_EDOP]->(:EDOPSignature)
+
+Most of what we stored and query on is Band C (modern bioclimatic). We use it as a relative ranking — the Fayum was always drier than the Delta, even if the absolute aridity value was different 2,000 years ago. But we'd benefit from Band A/B data (elevation, slope, discharge, basin area) which are stable over millennia and directly defensible for ancient contexts.
