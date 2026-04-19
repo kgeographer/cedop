@@ -241,3 +241,81 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding**: Timbuktu, Ur, and Kaifeng each fall in the extreme tail (p95+) for at least one divergence variable, confirming that historically significant exotic-river settlements are not in the modal basin class. But their divergence profiles are structurally different: Timbuktu's signal is pure moisture delivery (upstream precipitation p99.9, aridity p99.8) with minimal temperature divergence; Ur's signal is moisture plus thermal plus a social reversal (upstream agricultural core); Kaifeng's dominant signal is topographic (slope p99.9) with inverted moisture gradient (locally wetter). No single variable captures all three. The s/u divergence is multidimensional, and different river systems produce distinctive divergence signatures.
 
 **Implication**: The s/u duality's contribution is not reducible to a single "exotic river index." Different environmental mechanisms produce different divergence fingerprints. A composite divergence profile — which variables diverge, in which direction, and by how much — is more informative than any single divergence score. This has direct implications for how the signature is used in correspondence testing and in the narrative layer: the divergence profile should be described per-variable, not collapsed. Practically, this also means the three example sites should not be treated as equivalent instances of the same type — they should be used to illustrate different divergence regimes.
+
+---
+
+## 2026-04-19 · Task 4 · Correlation structure within and across bands
+
+**Method**: `notebooks/edop/explore/04_correlation_matrix.ipynb` · L8: 190,675 basins · 37 scalar variables · Spearman rank correlation (pairwise complete observations) · outputs: `04_correlation_matrix.csv`, `04_correlation_heatmap.png`, `04_high_correlation_pairs.csv`
+
+---
+
+### F4.1 — s/u pair redundancy: local and upstream climate variables are globally near-identical
+
+**Finding**: The three climate s/u pairs are the most correlated in the entire matrix: `aridity` / `aridity_upstream` r = 0.984; `precip_yr` / `precip_yr_upstream` r = 0.987; `temp_yr` / `temp_yr_upstream` r = 0.989. Human variable pairs follow: `human_footprint_09` / `human_footprint_09_upstream` r = 0.951; `cropland_extent` / `cropland_extent_upstream` r = 0.950. These are not independent variables — globally, local and upstream values are nearly interchangeable for these variables.
+
+**Implication**: The global near-identity of s/u pairs is consistent with F3.1 (median divergence = 0 for all pairs). For the majority of basins, including both local and upstream versions of the same climate or land-use variable in PCA adds a near-duplicate dimension without new information. In dimensionality reduction, one member of each s/u pair should be dropped — retain whichever is more theoretically motivated (upstream for process-aware characterization, local for site description). The divergence value itself (u−s or log₂(u/s)) may be more useful than either raw value for capturing the signature's distinctive content.
+
+---
+
+### F4.2 — Temperature internal redundancy; four variables behave as one
+
+**Finding**: `temp_yr`, `temp_min`, `temp_max`, and `temp_yr_upstream` form the tightest cluster in the matrix. All six pairwise correlations exceed r = 0.77; four of six exceed r = 0.88. The highest: `temp_yr` / `temp_yr_upstream` = 0.989, `temp_yr` / `temp_min` = 0.963, `temp_min` / `temp_yr_upstream` = 0.954. The exception: `temp_min` / `temp_max` = 0.771 — seasonal range is partially independent of mean. Visible on the heatmap as the dark red 4×4 block in the Band C region.
+
+**Implication**: For PCA or any dimensionality reduction, including all four temperature variables contributes three near-redundant dimensions. A single temperature variable (most likely `temp_yr`) represents the cluster; `temp_max` is the most independent of the four (lowest average r with others) and could be retained as a second temperature dimension if capturing thermal range is analytically important. `temp_yr_upstream` adds negligible information over `temp_yr` globally (r = 0.989) and can be dropped from dimensionality reduction — its signal is already in `temp_yr`.
+
+---
+
+### F4.3 — Discharge cluster redundancy; discharge_max proxies network size
+
+**Finding**: `discharge_yr`, `discharge_min`, and `discharge_max` are strongly mutually correlated: yr/max r = 0.967; yr/min r = 0.933; max/min r = 0.855. Additionally, `discharge_max` / `river_area_upstream` r = 0.937 — the peak discharge of a basin is almost perfectly predicted by its total upstream network area. `discharge_yr` / `river_area_upstream` r = 0.886. These hydrological size variables form a single redundant cluster.
+
+**Implication**: Only one discharge variable is needed in dimensionality reduction — `discharge_yr` is the natural choice (most commonly reported, best-studied). `river_area_upstream` is nearly redundant with `discharge_max` and represents the same underlying quantity (drainage network magnitude). The three discharge variables + `river_area_upstream` can be treated as four measures of one latent variable: basin hydrological size. Retain one; note the others as alternative representations.
+
+---
+
+### F4.4 — Human variables split into two sub-clusters: intensity and development
+
+**Finding**: Band D contains two near-redundant sub-clusters. Sub-cluster 1 (human intensity): `pop_density`, `human_footprint_09`, `human_footprint_09_upstream`, `cropland_extent`, `cropland_extent_upstream` — all pairwise r = 0.72–0.95. Sub-cluster 2 (economic development): `gdp_avg` / `human_dev_idx` r = 0.910. The two sub-clusters are weakly to negatively correlated with each other: `gdp_avg` / `human_footprint_09` r = −0.307; `gdp_avg` / `pop_density` r = −0.452. High GDP/HDI areas are not the same as densely populated or heavily farmed areas — wealthy but sparsely settled economies (Northern Europe, North America) drive the negative cross-cluster correlation.
+
+**Implication**: The two human sub-clusters measure different things and should not be collapsed. Sub-cluster 1 (intensity) captures anthropogenic landscape modification — agriculture, settlement, infrastructure. Sub-cluster 2 (development) captures economic modernity. For PCA, retain one variable from each sub-cluster: `human_footprint_09` from sub-cluster 1 (composite index), `gdp_avg` or `human_dev_idx` from sub-cluster 2. The negative cross-cluster correlation is itself a finding: intensive land use and economic development are not the same axis, and confusing them in a rubric would produce misleading environmental characterizations.
+
+---
+
+### F4.5 — Cross-band: soil texture co-varies with temperature; a weathering signal
+
+**Finding**: The strongest cross-band correlations in the matrix involve soil texture (Band B) and temperature (Band C). `pct_clay` / `temp_min` r = 0.754; `pct_clay` / `temp_yr` r = 0.710; `pct_clay` / `temp_yr_upstream` r = 0.703. Inverse for silt: `pct_silt` / `temp_min` r = −0.701; `pct_silt` / `temp_yr` r = −0.658. Sand is less strongly correlated with temperature. Also: `pct_clay` / `permafrost_extent` r = −0.582 (warm soils have more clay; permafrost regions less). Visible on the heatmap as a red rectangle crossing the Band B soil-texture rows into the Band C temperature block.
+
+**Implication**: This is a pedogenic signal, not a methodological artifact. Chemical weathering (which produces clay minerals) is temperature-dependent — hot, humid tropical environments produce deep, clay-rich soils; cold, high-latitude or high-altitude environments are dominated by physical weathering (which produces silt and sand from parent rock). The B×C correlation encodes a fundamental climate-soil feedback that operates over geological timescales. Practically: `pct_clay` is not an independent variable for PCA relative to temperature. Including both adds limited new information in warm-climate basins, though they diverge in cold or arid regions where weathering regimes differ.
+
+---
+
+### F4.6 — Cross-band: runoff and aridity are climate-determined; Band B partially redundant with Band C
+
+**Finding**: `runoff` (Band B) / `aridity` (Band C) r = 0.782; `runoff` / `aridity_upstream` r = 0.775; `runoff` / `precip_yr` r = 0.774; `runoff` / `precip_yr_upstream` r = 0.760. Runoff is more strongly correlated with the climate variables than with most of its Band B neighbors. `discharge_yr` / `precip_yr` r = 0.544; `discharge_yr` / `aridity` r = 0.496.
+
+**Implication**: Runoff is largely predictable from precipitation and aridity — it measures what is left after evapotranspiration, which is climate-driven. For dimensionality reduction, runoff does not add substantial new information beyond what aridity and precipitation already encode, except at the margin (where local geology, soil permeability, and land cover modify the climate signal). It may be worth retaining as a Band B representative if the goal is to have hydrology represented independently of climate, but its inclusion should be flagged as partially redundant.
+
+---
+
+### F4.7 — Permafrost as cross-band bridge: cold = uninhabited = high silt
+
+**Finding**: `permafrost_extent` correlates negatively with the entire Band D human cluster: `pop_density` r = −0.512; `human_footprint_09` r = −0.534; `human_footprint_09_upstream` r = −0.557; `cropland_extent` r = −0.437; `cropland_extent_upstream` r = −0.452. It also correlates negatively with `pct_clay` (r = −0.582, Band B) and strongly negatively with all temperature variables (r = −0.688 to −0.720, Band C). In the heatmap: permafrost appears as a blue stripe running across both the Band C temperature block and the Band D human block.
+
+**Implication**: Permafrost is a cross-band integrator: it encodes cold climate (C), physically-weathered soils (B), and absence of human settlement (D) in a single variable. Its correlations are not coincidences but reflect a coherent environmental syndrome — the high-latitude/high-altitude biome where climate, pedology, and human geography all co-vary. This makes permafrost a potentially powerful typological discriminator for clustering (Task 5), even though it is zero for 77% of basins (F1.7). When it fires, it organizes structure across multiple bands simultaneously.
+
+---
+
+### F4.8 — Band E (dist_sink) is structurally independent
+
+**Finding**: `dist_sink` (flow distance to marine outlet) has no correlation above |r| = 0.41 with any other variable. Its strongest correlations: `elev_min` r = 0.408 (higher minimum elevation → farther from coast, expected); `discharge_yr` r = 0.270; `discharge_min` r = 0.280. All others are r < 0.25. The dist_sink row/column appears as a largely neutral (pale) stripe in the heatmap.
+
+**Implication**: Coastality is structurally independent from climate, terrain, hydrology, and human variables — it adds a genuinely orthogonal dimension to the signature. A basin 5,000 km from the ocean is not systematically different in temperature, rainfall, or human footprint from a coastal basin — the position in the drainage network is a separate axis. This validates the prospectus claim that coastality is a "first-class signature component" — it is not captured by any other variable in the dataset.
+
+---
+
+### F4.9 — PCA exclusion candidates: variables redundant at |r| > 0.9
+
+**Finding**: Eleven variable pairs exceed |r| = 0.9 (full list in `04_high_correlation_pairs.csv`). Grouped by redundancy cluster, the recommended exclusions for any PCA or clustering are: (1) from the climate s/u pairs, drop `temp_yr_upstream`, `precip_yr_upstream`, `aridity_upstream` — retain local values; (2) from the discharge cluster, drop `discharge_min` and `discharge_max` — retain `discharge_yr`; (3) drop `river_area_upstream` (r = 0.937 with `discharge_max`); (4) from human footprint, drop `human_footprint_09_upstream` — retain local; (5) drop `cropland_extent_upstream` — retain local; (6) drop `human_dev_idx` — retain `gdp_avg`. These six drops reduce the 37-variable set to 31 without losing substantial information.
+
+**Implication**: The 31-variable reduced set retains one representative per redundant cluster and eliminates the most egregiously collinear variables. A further reduction to ~20 variables would require judgment calls about which cross-band redundancies to address (soil texture vs. temperature, runoff vs. aridity). That reduction decision belongs in Task 5 design, not Task 4 characterization — document it there with explicit rationale.
