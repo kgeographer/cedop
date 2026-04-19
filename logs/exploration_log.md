@@ -155,3 +155,89 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding** (review note): Two limits of the Task 2 classification scheme warrant flagging before any paper-writing use of these results. (1) The L6 sample is 16,397 basins vs. L8's 190,675 — an 11.6× ratio. Standardized mean shifts computed across these different-sized samples have different statistical power characteristics. Variables classified as "N-artifacts" (discharge_yr, discharge_min, dist_sink — F2.5) were flagged as *possibly* confounded by smaller-N rather than confirmed to be so. A permutation or bootstrap test would be needed to formally distinguish "apparent shift due to smaller sample" from "real shift that is harder to detect with fewer observations." (2) The std_shift threshold of 0.1 for the stable/scale-sensitive boundary is a reasonable heuristic but a heuristic. No variables in this dataset sit conspicuously near 0.1, so edge cases are not acute here, but any dichotomous classification of this kind has a fuzzy boundary that warrants visual inspection of borderline cases before treating the classification as definitive.
 
 **Implication**: F2.3–F2.6 findings are reliable for characterization purposes. For any methodology paper, the N-artifact cases should either be formally tested or explicitly flagged as provisional classifications pending a more rigorous comparison. The stable/scale-sensitive dichotomy should be presented as a heuristic summary, not a sharp boundary.
+
+---
+
+## 2026-04-19 · Task 3 · Local/upstream divergence distribution
+
+**Method**: `notebooks/edop/explore/03_su_divergence.ipynb` · L8: 190,675 basins · 9 s/u pairs · divergence metric: log₂(u/s) for ratio pairs (aridity, precip, slope, river_area); u−s for difference pairs (temp, wetland, karst, cropland, human footprint) · outputs: `03_su_divergence_summary.csv`, `03_su_divergence_ecdf.png`
+
+---
+
+### F3.1 — Median divergence is zero for all nine pairs; s/u duality is a tail phenomenon
+
+**Finding**: For every s/u variable pair, the global median divergence is exactly 0 — local and upstream values are identical at the 50th percentile. The interquartile range (p25–p75) is also at or near zero for six of nine pairs. Strong divergence is concentrated in the tails: p95+ for most variables, p99+ for the strongest cases. By basin count, most L8 sub-basins are headwaters or near-headwaters whose upstream footprint is approximately equal to their local footprint.
+
+**Implication**: The s/u duality is not a generic feature of the dataset; it is a signal that fires in specific basin positions. A large divergence value is itself a meaningful finding — it identifies a basin that sits at an environmental boundary between local conditions and its upstream source region. For the majority of basins, reporting s and u separately adds no information. For the minority where they diverge, the divergence is the environmentally distinctive fact. This has direct implications for how the signature should be presented: the divergence magnitude (not just the u value) is the contribution.
+
+---
+
+### F3.2 — Temperature divergence is directionally asymmetric: upstream is almost always colder
+
+**Finding**: `temp_yr` divergence (u−s, °C) is strongly left-skewed. Only 8.2% of basins have upstream warmer than local; 91.8% have upstream colder or identical. The cold tail is heavy: p05 = −3.13°C, p01 = −7.2°C. The warm tail is short: p95 = +0.2°C, p99 = +1.3°C. This is the most directionally asymmetric of all nine pairs.
+
+**Implication**: The asymmetry is physically consistent: tributaries and upstream sub-basins are overwhelmingly at higher elevation than lowland outlet basins. Where the signature shows a large negative temp divergence, the basin sits in a lowland receiving cold-source water from mountain headwaters — a hydrologically distinctive position. The Tigris/Euphrates and Nile are canonical cases of this pattern. A rare positive divergence (warm upstream) would signal a thermally unusual configuration worth investigating.
+
+---
+
+### F3.3 — Aridity and precipitation divergence: moderate symmetric tails; 30% of basins receive upstream moisture
+
+**Finding**: `aridity` and `precip_yr` have nearly identical divergence distributions (high correlation, expected from shared underlying hydrology). Both show moderate, roughly symmetric tails: aridity p95 = +0.555 log₂ (upstream 1.47× wetter), p05 = −0.15. Precipitation p95 = +0.393 log₂, p05 = −0.159. About 30–31% of basins have upstream wetter than local; 69–70% have local wetter or identical.
+
+**Implication**: Positive aridity/precipitation divergence (wetter upstream) is the characteristic signature of exotic river systems — rivers that originate in humid mountains and flow into arid lowlands. About one-third of all basins globally have some degree of this pattern. The claim that "Ur is a distinctive exotic-river case" requires placing Ur in this distribution — whether it falls at p90, p95, or p99 determines how distinctive the claim is. That analysis requires the place-percentile output from Cells 8–10 (not yet run).
+
+---
+
+### F3.4 — Slope divergence: widest environmental tails; upstream-steeper pattern common
+
+**Finding**: `slope` has the widest ratio-pair tails: p95 = +2.32 log₂ (upstream 5× steeper than local), p99 = +4.59 (24× steeper). The negative tail is also significant: p01 = −1.81 (local 3.5× steeper than upstream). 31% of basins have upstream steeper than local — the same proportion as aridity and precip, suggesting a structural correlation: steep upstream terrain drives both cold temperatures and concentrated precipitation.
+
+**Implication**: Large positive slope divergence identifies piedmont and alluvial-fan basins — locally flat terrain at the base of steep upstream catchments. This is an important class for historical settlement (Ur, Nippur, the Indus cities all sit on alluvial plains fed by mountain catchments). The combination of steep-upstream + cold-upstream + wet-upstream is the signature of the exotic river basin type; Task 4's correlation matrix should confirm these variables co-vary.
+
+---
+
+### F3.5 — Human footprint and land use: local concentration is the dominant pattern
+
+**Finding**: `human_fp_09`, `cropland`, `wet_pct_g1`, and `karst` all show left-skewed divergence distributions: local values exceed upstream values for 80–90% of basins. `human_fp_09` has the largest absolute divergence values of the difference pairs: p01 = −113 index points (local footprint 113 points above upstream), p95 = +23. Cropland: p01 = −33%, p95 = +6%. Wetlands: p01 = −82%, p95 = +3%.
+
+**Implication**: Human activity, agriculture, and wetland occurrence are predominantly local phenomena — they occur in lowland, accessible basin positions and are absent or reduced in upstream catchments. The left skew means that for most historically significant sites, local human footprint exceeds upstream footprint: the settlement IS the concentration. Cases where upstream footprint exceeds local (13–20% of basins) could identify downstream agricultural peripheries or basins where agricultural land is disproportionately concentrated in headwater valleys — a less common but analytically interesting configuration.
+
+---
+
+### F3.6 — River area divergence: a network-geometry artifact, not an environmental variable
+
+**Finding**: `river_area` has extreme ratio tails: p95 = +6.68 log₂ (upstream network 102× larger than local basin river area), p99 = +9.18 (575× larger). The distribution is driven by basin position in the drainage network: headwater basins have u≈s (log₂≈0), while basins near major river mouths have upstream network areas orders of magnitude larger. 44.5% of basins show upstream-greater — higher than any other pair.
+
+**Implication**: River area divergence measures network position, not environmental character. Including it in a divergence ranking alongside climate or terrain variables is misleading. For the signature, `river_area` (local) and `river_area_upstream` are better treated as independent descriptors of local channel size and network magnitude respectively, not as a local/upstream pair in the divergence sense. Flag for any future dimensionality-reduction work: these two variables are not measuring the same phenomenon at different scales.
+
+---
+
+### F3.7 — Timbuktu: extreme exotic moisture at p99.9, Inner Niger Delta wetland position
+
+**Finding**: Timbuktu (hybas_id 1080561810, up_area 379,818 km²). Dominant divergence signals, ranked by deviation from median: `precip_yr` log₂(u/s) = 2.369 (upstream 5.1× wetter, **p99.9**); `aridity` = 2.385 (upstream 5.2× more humid, **p99.8**); `slope` = 3.585 (upstream 12× steeper, p97.9); `human_fp_09` = +31 (local footprint higher, p96.7); `wet_pct_g1` = −56% (local 56% more wetland than upstream, **p2.2**). Temperature divergence is modest: −1.6°C upstream colder (p11.4).
+
+**Implication**: Timbuktu is in the top 0.1% of all basins globally for upstream moisture divergence — this is not a moderate exotic-river signal but an extreme one. The Niger's headwaters in the Fouta Djallon highlands (~2,000 mm/yr precipitation) feed into the hyper-arid Saharan basin (~200 mm/yr locally). The simultaneously low wetland-divergence percentile (p2.2) is not paradoxical — it confirms Timbuktu's position at the edge of the Inner Niger Delta, where Niger water creates one of Africa's largest wetland complexes locally, producing a wetland concentration that exceeds the upstream average. The signature is: extreme upstream moisture delivery + local wetland terminus + local human concentration. Temperature divergence is slight because the Niger headwaters are not high-altitude cold sources — the exotic character is purely hydrological, not thermal.
+
+---
+
+### F3.8 — Ur: dual asymmetry — upstream agricultural core, local marsh terminus
+
+**Finding**: Ur (hybas_id 2080818060, up_area 456,772 km²). `aridity` log₂(u/s) = 2.070 (upstream 4.2× more humid, **p99.6**); `precip_yr` = 1.457 (upstream 2.75× wetter, p99.5); `temp_yr` = −6.0°C (upstream 6°C colder, p1.6); `wet_pct_g1` = −46% (local 46% more wetland, p3.0); `karst` = +16% (upstream more karst, p95.6). The surprises: `human_fp_09` = −64 index points (upstream footprint **64 points higher** than local, p2.5); `cropland` = −45% (upstream **45% more cropland**, p0.4).
+
+**Implication**: Ur occupies a structurally distinctive position in the Tigris–Euphrates drainage. Two divergence signals point in opposite directions simultaneously. The moisture/temperature signals (aridity p99.6, temp p1.6) confirm the classic exotic-river pattern: cold, wet Zagros and Taurus headwaters draining into a hyper-arid lowland. The human and cropland signals reverse: Ur's local basin is the southern marshland terminus (Mesopotamian marshes), while the upstream basin encompasses the Tigris–Euphrates agricultural heartland — Baghdad, the Fertile Crescent irrigation zone, the full Mesopotamian agricultural core. At the time of Ur's florescence, the upstream was already intensively farmed; Ur itself sat at the wetland edge. The karst signal (upstream more karst, p95.6) reflects Zagros/Taurus limestone terrain. The combination — upstream wetter + upstream colder + upstream more agricultural + local more wetland — is a compact environmental description of what Ur was: a marsh-edge settlement at the foot of a massive agricultural and hydraulic system.
+
+---
+
+### F3.9 — Kaifeng: extreme topographic discontinuity, inverted moisture gradient
+
+**Finding**: Kaifeng (hybas_id 4080602410, up_area 734,701 km²). `slope` log₂(u/s) = 6.492 (upstream **91× steeper**, **p99.9**); `temp_yr` = −8.8°C (upstream 8.8°C colder, p0.6); `human_fp_09` = −85 (upstream footprint 85 points higher, p1.6); `cropland` = −48% (upstream 48% more cropland, p0.3). Crucially: `precip_yr` log₂(u/s) = −0.393 (local **1.3× wetter** than upstream, p1.8); `aridity` = +0.084 (effectively zero divergence, p79.0).
+
+**Implication**: Kaifeng has a fundamentally different divergence profile from Timbuktu and Ur. The dominant signal is topographic, not hydrological: the Yellow River descends from the Tibetan Plateau through the Loess Plateau onto the North China Plain, producing the most extreme slope divergence of the three sites (p99.9, upstream 91× steeper). The cold upstream (-8.8°C, p0.6) follows from altitude. But the moisture gradient runs in the opposite direction from the other two: Kaifeng is wetter locally than upstream, because the East Asian monsoon delivers increasing precipitation eastward toward the coast while the Yellow River headwaters lie in the rain-shadow interior. The cropland and human-footprint inversions (upstream more agricultural, p0.3 and p1.6) reflect the Loess Plateau and Wei River valley agricultural landscape, which has been intensively farmed for millennia — the upstream here is not wilderness but the older, denser agricultural core from which the Yellow River civilizations descended. Kaifeng's position on the North China Plain gives it local agricultural productivity but the plain was settled later and less intensively than the upriver valleys. The signature is: extreme topographic descent, cold source, wetter locally (monsoon), and agricultural antiquity concentrated upstream.
+
+---
+
+### F3.10 — Comparative: three sites, three divergence types; no single exotic-river template
+
+**Finding**: Timbuktu, Ur, and Kaifeng each fall in the extreme tail (p95+) for at least one divergence variable, confirming that historically significant exotic-river settlements are not in the modal basin class. But their divergence profiles are structurally different: Timbuktu's signal is pure moisture delivery (upstream precipitation p99.9, aridity p99.8) with minimal temperature divergence; Ur's signal is moisture plus thermal plus a social reversal (upstream agricultural core); Kaifeng's dominant signal is topographic (slope p99.9) with inverted moisture gradient (locally wetter). No single variable captures all three. The s/u divergence is multidimensional, and different river systems produce distinctive divergence signatures.
+
+**Implication**: The s/u duality's contribution is not reducible to a single "exotic river index." Different environmental mechanisms produce different divergence fingerprints. A composite divergence profile — which variables diverge, in which direction, and by how much — is more informative than any single divergence score. This has direct implications for how the signature is used in correspondence testing and in the narrative layer: the divergence profile should be described per-variable, not collapsed. Practically, this also means the three example sites should not be treated as equivalent instances of the same type — they should be used to illustrate different divergence regimes.
