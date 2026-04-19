@@ -186,9 +186,11 @@ Key locations:
 - **Outputs**: `output/edop/explore/` (gitignored)
 - **Findings log**: `logs/exploration_log.md` — accretes findings over time; do not confuse with daily session logs
 
-Tasks in order: (1) marginal distributions for all scalar variables globally at L8, (2) missing-data and degenerate-value patterns by level, (3) local/upstream divergence distribution, (4) full correlation matrix, (5) geographic pre-clustering.
+Tasks 1–6 complete (2026-04-19). Findings in `logs/exploration_log.md` (F1.1–F6.5).
 
-**Do not** start correspondence testing (D-PLACE, settlement patterns) until the exploration phase findings are documented.
+Completed: (1) marginal distributions, (2) missing-data patterns, (3) local/upstream divergence + reference site percentiles, (4) full Spearman correlation matrix, (5) geographic pre-clustering (k-means k=20, committed as working typology), (6) coverage/sampling-bias characterization (D-PLACE + WH Cities vs. global basin distribution).
+
+Next exploration work: Band F temporal characterization (LMR PDSI, temperature, precipitation distributions across basins). **Do not** start correspondence testing (D-PLACE, settlement patterns) until that phase is also documented.
 
 ## External Dependencies
 
