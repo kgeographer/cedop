@@ -147,3 +147,11 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding**: Climate variables (temperature, precipitation, aridity — local and upstream), soil texture, human footprint, GDP, cropland extent, karst, permafrost, slope, runoff, and groundwater depth all show |std_shift| < 0.1 with zero null delta. These 27 variables classify as stable across L8 and L6.
 
 **Implication**: The signature's climatic and socioeconomic content is essentially level-invariant — the same environmental regime description applies whether queried at L8 or L6 resolution. For correspondence testing (D-PLACE, settlement patterns), these variables can be used at either level without cross-level comparability concerns. Scale-sensitivity is primarily a hydrological geometry problem, concentrated in river area and discharge max.
+
+---
+
+### F2.7 — Methodological caveats on the N-artifact classification and std_shift threshold
+
+**Finding** (review note): Two limits of the Task 2 classification scheme warrant flagging before any paper-writing use of these results. (1) The L6 sample is 16,397 basins vs. L8's 190,675 — an 11.6× ratio. Standardized mean shifts computed across these different-sized samples have different statistical power characteristics. Variables classified as "N-artifacts" (discharge_yr, discharge_min, dist_sink — F2.5) were flagged as *possibly* confounded by smaller-N rather than confirmed to be so. A permutation or bootstrap test would be needed to formally distinguish "apparent shift due to smaller sample" from "real shift that is harder to detect with fewer observations." (2) The std_shift threshold of 0.1 for the stable/scale-sensitive boundary is a reasonable heuristic but a heuristic. No variables in this dataset sit conspicuously near 0.1, so edge cases are not acute here, but any dichotomous classification of this kind has a fuzzy boundary that warrants visual inspection of borderline cases before treating the classification as definitive.
+
+**Implication**: F2.3–F2.6 findings are reliable for characterization purposes. For any methodology paper, the N-artifact cases should either be formally tested or explicitly flagged as provisional classifications pending a more rigorous comparison. The stable/scale-sensitive dichotomy should be presented as a heuristic summary, not a sharp boundary.
