@@ -10,7 +10,7 @@ The exploration phase produces working knowledge and documented findings, not de
 
 ## Task List
 
-### 1. Marginal distributions — all scalar variables, globally
+    ### 1. Marginal distributions — all scalar variables, globally
 
 For every scalar variable in the L8 signature, compute the global distribution across all 190,075 sub-basins. Produce histograms (and summary statistics: mean, median, std, min, max, skew, % zero/null). Variables include at minimum:
 
@@ -107,6 +107,21 @@ This is not validation; it is scope characterization. It tells you in advance wh
 ## Band F Note
 
 The F-band returns three full annual series (`pdsi_series`, `air_series`, `prate_series`) plus summary statistics and volcanic events. For individual place-period queries this is appropriate. For batch characterization across thousands of locations, the annual arrays are heavy. A lightweight F-band mode returning only means and ranges (no annual arrays) would make exploration tractable. Consider adding `?bands=F&detail=summary` or similar to the API before the exploration batch runs begin.
+
+---
+
+## Phase 2: Temporal Variable Characterization (Band F)
+
+Tasks 1–6 above cover the **static basin signature** — variables stored in `basin08`/`basin06` and returned as fixed attributes of a location. Band F variables (LMR v2.1 and eVolv2k) are fundamentally different: they are **time-series pulled per query**, not static table columns, so they cannot be characterized by running distributions over a basin table.
+
+Characterizing Band F is a separate exploratory phase, to be designed after Tasks 1–6 are complete. Likely questions:
+
+- What does the PDSI distribution look like across a sample of locations and time periods? How much variance is geographic vs. temporal?
+- How often do volcanic events (eVolv2k) fall within a typical query window (e.g., a 100-year period)? What is the distribution of VSSI magnitudes?
+- How do LMR temperature and precipitation anomalies relate to the static Band C climate variables at the same locations?
+- What sample design (how many locations, which periods) gives adequate coverage for characterization without prohibitive API load?
+
+This phase will likely produce its own small notebook series (e.g., `07_band_f_pdsi.ipynb`, `08_band_f_volcanic.ipynb`) and a separate section of `exploration_log.md`.
 
 ---
 
