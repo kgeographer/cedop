@@ -51,7 +51,7 @@ precipitation_annual	precipitation	C	pre_mm_syr	pre_mm_uyr	Precipitation annual	
 precipitation_monthly	precipitation	C	pre_mm_s01..s12		Precipitation monthly	float[12]	mm	s	planned	C04	Jan–Dec array		
 pet_annual	moisture_balance	C	pet_mm_syr	pet_mm_uyr	Potential evapotranspiration annual	float	mm/yr	s+u	planned	C05	u available in basin08		
 aet_annual	moisture_balance	C	aet_mm_syr	aet_mm_uyr	Actual evapotranspiration annual	float	mm/yr	s+u	planned	C06	u available in basin08		
-aridity_index	moisture_balance	C	ari_ix_sav	ari_ix_uav	Aridity index (P/PET)	float		s+u	implemented	C07	Higher = wetter. Key s/u divergence variable. u available in basin08	aridity	aridity_upstream
+aridity_index	moisture_balance	C	ari_ix_sav	ari_ix_uav	Aridity index (P/PET)	float	P/PET ×100	s+u	implemented	C07	Global Aridity Index: stored as P/PET × 100. Value of 100 = P equals PET (arid/humid boundary). Values >100 = humid (P > PET); wet tropics reach ~1000. Global median ~68 (semi-arid). Higher = wetter. Key s/u divergence variable. u available in basin08	aridity	aridity_upstream
 climate_moisture_index	moisture_balance	C	cmi_ix_syr	cmi_ix_uyr	Climate moisture index	float		s+u	planned	C08	u available in basin08		
 ecoregion_terrestrial_id	vegetation	C	tec_cl_smj		Terrestrial ecoregion ID	integer		s	implemented		Lookup: lu_tec	eco_id	
 ecoregion_terrestrial_name	vegetation	C	tec_cl_smj		Terrestrial ecoregion name	string		s	implemented		Resolved via lu_tec	ecoregion	

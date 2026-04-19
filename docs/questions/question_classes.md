@@ -12,4 +12,4 @@
 
 ## Divergence / Dependency Analysis
 - How dependent is a place on upstream/nonlocal environmental inputs?
-- Where do outcomes diverge from environmental expectation?
+- Where do outcomes diverge from environmental expectation?**
