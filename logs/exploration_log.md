@@ -319,3 +319,55 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding**: Eleven variable pairs exceed |r| = 0.9 (full list in `04_high_correlation_pairs.csv`). Grouped by redundancy cluster, the recommended exclusions for any PCA or clustering are: (1) from the climate s/u pairs, drop `temp_yr_upstream`, `precip_yr_upstream`, `aridity_upstream` — retain local values; (2) from the discharge cluster, drop `discharge_min` and `discharge_max` — retain `discharge_yr`; (3) drop `river_area_upstream` (r = 0.937 with `discharge_max`); (4) from human footprint, drop `human_footprint_09_upstream` — retain local; (5) drop `cropland_extent_upstream` — retain local; (6) drop `human_dev_idx` — retain `gdp_avg`. These six drops reduce the 37-variable set to 31 without losing substantial information.
 
 **Implication**: The 31-variable reduced set retains one representative per redundant cluster and eliminates the most egregiously collinear variables. A further reduction to ~20 variables would require judgment calls about which cross-band redundancies to address (soil texture vs. temperature, runoff vs. aridity). That reduction decision belongs in Task 5 design, not Task 4 characterization — document it there with explicit rationale.
+
+---
+
+## 2026-04-19 · Task 5 · Geographic pre-clustering
+
+**Method**: `notebooks/edop/explore/05_preclustering.ipynb` · L8: 190,675 basins · 20 Band A+B+C variables (post-F4.9 reductions) · log1p + StandardScaler normalization · k-means k=20 (n_init=10) + sklearn HDBSCAN (min_cluster_size=1000, min_samples=50) · outputs: `05_kmeans_global_map.png`, `05_hdbscan_global_map.png`, `05_kmeans_cluster_summary.csv`, `05_cluster_comparison.png`, `05_cluster_assignments.csv`
+
+---
+
+### F5.1 — k-means global map: clusters recover recognizable environmental zones without geographic input
+
+**Finding**: The k-means global map shows strong geographic coherence — contiguous regional blocks aligning with known environmental zones — despite the algorithm receiving no geographic coordinates, only environmental variables. Major correspondences: cold permafrost clusters concentrate in Siberia, northern Canada, and high-altitude interiors; hyperarid clusters (km=2, precip=37mm/yr) cover Sahara, Arabian Peninsula, central Australia, and Atacama; tropical wet clusters (km=0, precip=2,049mm/yr) cover the equatorial belt; tropical wetland clusters (km=5) appear in Amazon and Congo floodplains; mountain-specific clusters appear along the Andes, Himalayas, Rockies, and Ethiopian Highlands. Similar-colored basins appear on different continents when their environmental signatures match.
+
+**Implication**: Geographic coherence without geographic input is a validation of the signature variables — they carry sufficient environmental information to reconstruct approximate biome geography. This is necessary but not sufficient validation: a bad variable set could produce geographically coherent but environmentally meaningless clusters. The coherence confirms the variables are measuring real structure, but the cluster boundaries are imposed cuts on a continuous surface (see F5.2) and should not be treated as natural types except at the extremes.
+
+---
+
+### F5.2 — HDBSCAN finds one natural cluster: Greenland; global basin distribution is continuous
+
+**Finding**: HDBSCAN (min_cluster_size=1000) produced 2 clusters and 37.7% noise (71,810 unclustered basins). Cluster 1 (4,856 basins) isolates Greenland and similar glaciated/periglacial Arctic environments. Cluster 0 (114,009 basins) is a single massive catch-all encompassing most of the world's landmass. The remaining 37.7% of basins are structurally ambiguous in HDBSCAN's density framework. Reducing min_cluster_size to 500 or adjusting min_samples would increase cluster count but at the cost of more noise — the fundamental result is robust: the global basin population does not contain sharply bounded natural types.
+
+**Implication**: With one exception (glaciated Arctic environments), global basin character is a continuum. There are no sharp density peaks in environmental feature space corresponding to distinct basin types — the variation grades from one environment to another without gaps. This has two implications: (1) k-means clusters are working typology, not natural kinds — the cuts are analytically useful but arbitrary; (2) HDBSCAN is not the appropriate method for global basin typology at this dimensionality. The dimensionality issue is secondary: even with PCA reduction, the underlying continuity of the global basin distribution would likely produce a similar result. The commit is k-means for downstream use; HDBSCAN findings should be reported in any methods paper as evidence for the continuity claim.
+
+---
+
+### F5.3 — Three karst clusters span the temperature gradient; karst is a cross-cutting typological axis
+
+**Finding**: Three of the 20 k-means clusters are karst-dominated, distributed across the full temperature range: km=4 (cold, −8°C, karst=76%, permafrost=69% — cold karst highlands, likely Tibet/Qinghai margins); km=18 (warm, 15°C, karst=66%, humid, precip=1,073mm — warm humid karst, likely southern China/Southeast Asia); km=7 (hot, 22°C, karst=81%, arid — hot dry karst, Middle East/North Africa). The global mean karst coverage is ~10%; these clusters run 7–8× above that.
+
+**Implication**: Karst geology creates a distinctive environmental signature that overrides climate in the clustering — even though karst% is one variable among 20, it pulls basins into separate clusters when it is extreme enough. This confirms F1.7 (karst as a flag variable rather than continuous) and suggests that for future typology work, karst presence should be treated as a stratifying variable, not just another input dimension. The three karst clusters also represent three genuinely different environmental conditions despite sharing the same geology — karst is a substrate that interacts differently with cold/wet/dry regimes, and any rubric that treats karst as a single type would miss this.
+
+---
+
+### F5.4 — Special clusters: large rivers, regulated rivers, and flat tropical lowlands
+
+**Finding**: Three clusters are defined by extreme single-variable values rather than a coherent environmental syndrome. **km=17** (n=5,416): mean annual discharge 5,693 m³/s (11× global mean), reservoir volume 33,432 km³ — the large river systems cluster dominated by Amazon, Congo, Ganges, and Mississippi basin sub-basins. **km=8** (n=8,524): discharge 581 m³/s, reservoir volume 6,592 km³ — heavily regulated rivers with major dam infrastructure. **km=14** (n=7,276): slope 1.21° (flattest cluster), elevation range 34m — tropical lowland deltas and coastal plains, structurally flat.
+
+**Implication**: The large-river and regulated-river clusters are partially artifacts of the basin-count representation: large river systems are split into many L8 sub-basins, each carrying the upstream discharge signal, which concentrates them in a cluster that is really a "position in large drainage network" type rather than a local environmental type. For any correspondence testing that uses cluster membership to situate historical sites, these three clusters require special interpretive care — a site in km=17 is being classified by the regional river system it sits within, not its local environment. This is not wrong, but it should be stated.
+
+---
+
+### F5.5 — Comparison with existing workbench clustering: ARI=0.179, variable-set difference is the driver
+
+**Finding**: Adjusted Rand Index between the new k-means (20 variables, Bands A+B+C) and the existing workbench `cluster_id` (bands A–D, includes human variables) = 0.179. This is substantially above chance (0.0) but far from perfect agreement (1.0). The contingency heatmap shows: a small number of extreme-environment old clusters map cleanly to specific new clusters (dark blue cells — the permafrost and hyperarid cases are stable); most mid-range old clusters spread diffusely across multiple new clusters.
+
+**Implication**: The two clusterings agree on the environmental extremes (where the signal is strong enough to dominate regardless of variable set) but diverge significantly in the middle of the distribution, where Band D human variables were reshaping cluster boundaries in the old result. This answers the question raised in the exploration plan: the difference between the two clusterings is primarily driven by variable set, not by random initialization or different underlying structure. Including human variables (Band D) in the old clustering pulled mid-range basins into groupings reflecting agricultural and settlement patterns rather than purely physical environment. Whether that was appropriate depends on the analytical question — for characterizing the physical environment that settlements exist within, the A+B+C-only clustering is more appropriate. For characterizing how human activity interacts with environment, including Band D is justified. Document this distinction before using either clustering in downstream analysis.
+
+---
+
+### F5.6 — Method resolution: commit to k-means; normalization decision documented
+
+**Finding**: k-means (k=20) is the working typology for all downstream exploration and correspondence work. HDBSCAN is rejected for global basin typology at this resolution on the grounds that: (1) the global basin distribution is fundamentally continuous (F5.2), making density-based cluster detection largely futile; (2) 37.7% noise is not analytically useful for a typology that needs to situate every site; (3) the two clusters HDBSCAN found (Greenland + rest-of-world) provide no discrimination within the historically relevant portion of the basin distribution. Normalization: log1p applied to all non-negative right-skewed variables (terrain, hydrology, aridity, precipitation, sparse indicators); StandardScaler applied throughout; temperature (can be negative) receives StandardScaler only. Median imputation for the ~9% null rate in soil texture variables and ~4% in slope/gradient. k=20 retained to enable comparison with existing workbench result; this choice is arbitrary and should be revisited before any formal typology is published.
