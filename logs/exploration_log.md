@@ -371,3 +371,49 @@ Each entry: **Date · Task · Method · Finding · Implication**
 ### F5.6 — Method resolution: commit to k-means; normalization decision documented
 
 **Finding**: k-means (k=20) is the working typology for all downstream exploration and correspondence work. HDBSCAN is rejected for global basin typology at this resolution on the grounds that: (1) the global basin distribution is fundamentally continuous (F5.2), making density-based cluster detection largely futile; (2) 37.7% noise is not analytically useful for a typology that needs to situate every site; (3) the two clusters HDBSCAN found (Greenland + rest-of-world) provide no discrimination within the historically relevant portion of the basin distribution. Normalization: log1p applied to all non-negative right-skewed variables (terrain, hydrology, aridity, precipitation, sparse indicators); StandardScaler applied throughout; temperature (can be negative) receives StandardScaler only. Median imputation for the ~9% null rate in soil texture variables and ~4% in slope/gradient. k=20 retained to enable comparison with existing workbench result; this choice is arbitrary and should be revisited before any formal typology is published.
+
+---
+
+## 2026-04-19 · Task 6 · Geographic coverage and sampling-bias characterization
+
+**Method**: `notebooks/edop/explore/06_coverage_sampling_bias.ipynb` · D-PLACE (6,408 societies with coordinates) and WH Cities (258) assigned to k-means clusters via PostGIS nearest-basin lookup (`basin08.geog` column + GIST index). Distribution comparison and log₂ representation ratios computed against global basin baseline (190,675 L8 basins). Outputs: `06_coverage_distribution.csv`, `06_dplace_cluster_assignments.csv`, `06_representation_ratios.png`, `06_coverage_map.png`.
+
+---
+
+### F6.1 — D-PLACE over-samples tropical wet mountains (3.65×); all cold and arid types severely under-sampled
+
+**Finding**: D-PLACE has a single strongly over-represented cluster — "Tropical wet mountains" (5.9% of global basins, 21.6% of D-PLACE societies; ratio 3.65×). Ten clusters are under-represented at ratio < 0.5, including Arctic highland (0.01×), hyperarid desert (0.11×), cold boreal (0.16×), cold karst highland (0.23×). Cool temperate lowlands (7% of global basins, the second-largest cluster) is at 0.40×.
+
+**Implication**: D-PLACE ethnographic coverage reflects fieldwork access patterns and population density, not environmental prevalence. Mesoamerican, Andean, and SE Asian societies dominate. Cold and hyperarid environments are structurally absent from correspondence testing using D-PLACE alone.
+
+---
+
+### F6.2 — WH Cities is dominated by regulated river corridors (5.55×); a civilization-geography bias
+
+**Finding**: WH Cities has three over-represented clusters: "Regulated rivers" (4.47% global → 24.81% WHC; ratio 5.55×), "Warm humid karst" (3.27×), and "Tropical wet mountains" (2.68×). Six cluster types have zero WHC representation: warm semi-arid, cold boreal, subarctic wetlands, northern peatlands, cold karst highland, Arctic highland. "Tropical humid" — the single largest global cluster at 9.49% of all basins — has only 1.16% of WH Cities (ratio 0.12×).
+
+**Implication**: WH Cities is a *river-corridor civilization* artifact: the Nile, Tigris-Euphrates, Indus, Yellow River, Rhine and analogous regulated systems account for a disproportionate share. Sub-Saharan Africa and Amazonia are essentially absent — a known critique of UNESCO designation patterns quantified here. "Regulated rivers" and "Warm humid karst" are the clusters with greatest WHC statistical power for correspondence testing.
+
+---
+
+### F6.3 — D-PLACE and WH Cities have divergent biases; they sample different parts of the environmental space
+
+**Finding**: The two scholarship datasets concentrate in different clusters. D-PLACE over-samples tropical mountains (ethnographic reach); WHC over-samples river corridors and karst (monumental urbanism). Cool temperate lowlands are under-sampled by D-PLACE (0.40×) but near-proportional in WHC (1.60×), reflecting European academic bias in UNESCO nominations but relative absence from the fieldwork tradition. Neither dataset covers cold or hyperarid environments.
+
+**Implication**: For correspondence testing, the two datasets are complementary rather than redundant. Combining them broadens coverage but does not resolve the shared cold/arid blind spot. Any rubric developed from a dataset skewed toward one cluster type should be validated against the other before generalization.
+
+---
+
+### F6.4 — Coverage map confirms D-PLACE has impressive global reach but Argentina/Pampas is a notable blank
+
+**Finding**: The global coverage map (`06_coverage_map.png`) shows D-PLACE societies spread across six continents with dense coverage in sub-Saharan Africa, SE Asia, North America, and Amazonia. A striking blank appears across Argentina (Pampas, Patagonia) and parts of the southern cone. Northwest North America is well covered.
+
+**Implication**: The Argentine gap reflects colonial erasure before the ethnographic moment — the Conquest of the Desert (1870s–80s) decimated Tehuelche, Mapuche, and Querandí populations before systematic fieldwork was possible. The Ethnographic Atlas and HRAF had no data to draw from. This contrasts with the Northwest US, where rugged geography (Coast Range, dense rainforest, fjords) slowed colonial advance sufficiently for Boas-era documentation (1880s–1900s) to occur. D-PLACE blank spots have heterogeneous causes: sampling reach, population sparsity, and colonial destruction of source populations are distinct mechanisms that should not be conflated in interpreting under-representation.
+
+---
+
+### F6.5 — Clusters with correspondence-testing power vs. clusters with no statistical basis
+
+**Finding**: Clusters where both D-PLACE and WHC ratios are near zero (Arctic highland, cold boreal, subarctic wetlands, northern peatlands, cold karst highland) represent environments where no statistical correspondence testing is feasible with current datasets. These account for ~20% of global basin area. Clusters with strong signal in both datasets: tropical wet mountains, regulated rivers, warm humid karst. Clusters with signal in one only: hot wet tropics and tropical humid (D-PLACE only); cool temperate lowlands (WHC slightly).
+
+**Implication**: Power analysis should precede any correspondence test design. Do not report null results for cold/arid environments as evidence against environmental correspondence — absence of data is the explanation.
