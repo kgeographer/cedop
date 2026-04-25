@@ -42,8 +42,8 @@ acknowledgment when there isn't — I don't need thorough reactions to every art
    - The basin-count-vs-basin-importance distinction (F1.10, F3.1, F5.4)
    - The divergent-bias-of-cultural-datasets finding (F6.3)
 
-3. **Tasks 1–6 have not yet covered Band F** (temporal: LMR PDSI/temperature/precip 
-   series plus eVolv2k volcanic events). Band F characterization is structurally 
+3. **Tasks 1–6 have not yet covered Band T** (temporal: LMR PDSI/temperature/precip 
+   series plus eVolv2k volcanic events). Band T characterization is structurally 
    different from scalar-band characterization and will be its own task family.
 
 4. **Chandler-Modelski (Reba et al. 2016) should probably be integrated as a third 
@@ -80,7 +80,7 @@ acknowledgment when there isn't — I don't need thorough reactions to every art
 Primary options, in rough order of my current interest — I'll pick or name a 
 different direction:
 
-- **Design Task 7 as Band F characterization.** What does pre-analytical 
+- **Design Task 7 as Band T characterization.** What does pre-analytical 
   characterization look like for LMR time-series data at place-period resolution? 
   What are the adapted equivalents of marginal-distributions, missing-data-
   patterns, and structural-correlation tasks for time-series plus sparse-event 

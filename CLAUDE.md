@@ -87,16 +87,16 @@ metadata/*.tsv           # Lookup tables for categorical fields
 
 - WHG place lookup (reconcile+extend, zoom ≥ 4) → candidate markers → basin assignment → neighborhood map
 - Level 08/06 toggle: switching always lands on Map tab; re-fetches preview + sig if sig exists
-- Band A–F signature accordion; Signature/Analysis tabs disabled until sig fetched
+- Band A–T signature accordion; Signature/Analysis tabs disabled until sig fetched
 - Analysis α tab: water provenance, s/u divergence table, scale mismatch alert
-- Band F temporal: PDSI / Temperature / Precipitation SVG charts + volcanic events
+- Band T temporal: PDSI / Temperature / Precipitation SVG charts + volcanic events
 - Ecoregion → Wikipedia modal; LLM narrative button
 - Example selector: Timbuktu (1100–1200), Rome (0–300), Kaifeng (1000–1100) at L8/L6
 - API Guide modal in header
 
 ### Workbench (`/workbench`) — Experimental Demonstrators
 
-- **Main**: Place lookup → signature (Bands A–F)
+- **Main**: Place lookup → signature (Bands A–T)
 - **Basins**: 20 PCA-derived environmental clusters of 190k sub-basins + WH cities
 - **Ecoregions**: OneEarth hierarchy browser (Realms → Ecoregions)
 - **Societies**: 1,291 D-PLACE societies with subsistence/religion filters
@@ -106,13 +106,13 @@ metadata/*.tsv           # Lookup tables for categorical fields
 ### Key Endpoints
 
 ```
-/api/signature?lat=X&lon=Y[&bands=ABCDEF&from_year=N&to_year=N&level=6|8]
+/api/signature?lat=X&lon=Y[&bands=ABCDET&from_year=N&to_year=N&level=6|8]
                               Environmental signature. Single call handles all bands including F.
-                              Response: meta (version, timestamp, query, data_sources) + profile_groups A–F.
-                              Band F requires from_year+to_year (0–1998 CE); stored at profile_groups["F"].
+                              Response: meta (version, timestamp, query, data_sources) + profile_groups A–T.
+                              Band T requires from_year+to_year (0–1998 CE); stored at profile_groups["T"].
                               Flat basin fields excluded by default; profile_groups is canonical.
 /api/temporal?lat=X&lon=Y&year_start=N&year_end=N
-                              LMR v2.1 PDSI + eVolv2k volcanic events (legacy; prefer /api/signature?bands=F)
+                              LMR v2.1 PDSI + eVolv2k volcanic events (legacy; prefer /api/signature?bands=T)
 /api/basin-preview?lat=X&lon=Y
                               Containing basin + adjacent basins + river lines for neighborhood map
 /api/basin-preview?lat=X&lon=Y[&level=6|8]
@@ -158,9 +158,9 @@ curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Ti
 `/sandbox` is the primary design and demonstration interface (`app/templates/sandbox.html`). Current capabilities:
 - WHG place lookup (reconcile+extend pipeline, zoom ≥ 4, viewport bounds) → candidate markers → basin assignment → neighborhood preview map
 - Level 08/06 toggle (`#sb-level`): switching re-fetches neighborhood always, sig only if one exists; no tab jumping
-- Band A–F signature with schema_key labels; sig heading shows place name + active level
+- Band A–T signature with schema_key labels; sig heading shows place name + active level
 - Analysis α tab: water provenance classification, s/u divergence table, scale mismatch alert
-- Band F temporal: PDSI / Temperature / Precipitation tabs with SVG bar charts + volcanic events
+- Band T temporal: PDSI / Temperature / Precipitation tabs with SVG bar charts + volcanic events
 - Ecoregion clickable in summary panel → Wikipedia modal (pre-summarized, 97% coverage)
 - LLM narrative interpretation button
 
@@ -190,7 +190,7 @@ Tasks 1–6 complete (2026-04-19). Findings in `logs/exploration_log.md` (F1.1�
 
 Completed: (1) marginal distributions, (2) missing-data patterns, (3) local/upstream divergence + reference site percentiles, (4) full Spearman correlation matrix, (5) geographic pre-clustering (k-means k=20, committed as working typology), (6) coverage/sampling-bias characterization (D-PLACE + WH Cities vs. global basin distribution).
 
-Next exploration work: Band F temporal characterization (LMR PDSI, temperature, precipitation distributions across basins). **Do not** start correspondence testing (D-PLACE, settlement patterns) until that phase is also documented.
+Next exploration work: Band T temporal characterization (LMR PDSI, temperature, precipitation distributions across basins). **Do not** start correspondence testing (D-PLACE, settlement patterns) until that phase is also documented.
 
 ## External Dependencies
 

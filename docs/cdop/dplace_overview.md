@@ -194,6 +194,6 @@ EDOPS complements and extends D-PLACE's own environmental data:
 | Biodiversity/NPP | 9 variables | — (gap) |
 | Seasonality | Colwell indices for temp, precip, NPP | — (gap; candidate for future addition) |
 | Upstream context | None | Local/upstream duality throughout |
-| Temporal | — | LMR v2.1 paleoclimate + eVolv2k (Band F) |
+| Temporal | — | LMR v2.1 paleoclimate + eVolv2k (Band T) |
 
 **License**: All D-PLACE datasets are CC-BY-NC-4.0 (non-commercial use).

@@ -1,5 +1,5 @@
 {
-  "_doc": "EDOPS Signature Schema — updated 12 April 2026. Documents both the current API output (status: implemented) and planned extensions (status: planned). Example values are real API output for Timbuktu (16.766°N, -3.008°E), BasinATLAS Level 08, bands A–F, period 1350–1600 CE. _note and _status fields are documentation only and are stripped from API responses in future versions.",
+  "_doc": "EDOPS Signature Schema — updated 12 April 2026. Documents both the current API output (status: implemented) and planned extensions (status: planned). Example values are real API output for Timbuktu (16.766°N, -3.008°E), BasinATLAS Level 08, bands A–T, period 1350–1600 CE. _note and _status fields are documentation only and are stripped from API responses in future versions.",
 
   "_design_note": "Aspirational target: each field will carry {s: local_value, u: upstream_value} sub-objects with explicit null for uncomputed counterparts. Current API returns flat keys with '_upstream' suffix for u-values (e.g. aridity / aridity_upstream). The nested s/u structure is a planned schema revision, not current output.",
 
@@ -10,7 +10,7 @@
     "query": {
       "lat": 16.76618535,
       "lon": -3.00777252,
-      "bands": "ABCDEF",
+      "bands": "ABCDET",
       "from_year": 1350,
       "to_year": 1600
     },
@@ -125,7 +125,7 @@
 
     "C_bioclimatic": {
       "_status": "implemented",
-      "_band_note": "Contemporary WorldClim baseline. For period queries, Band F LMR values supersede or supplement these.",
+      "_band_note": "Contemporary WorldClim baseline. For period queries, Band T LMR values supersede or supplement these.",
       "temp_yr": 28.2,
       "temp_min": 20.7,
       "temp_max": 33.9,
@@ -184,7 +184,7 @@
       },
       "_not_requested_response": {
         "_status": "not_requested",
-        "_note": "Include from_year and to_year (CE integers) to retrieve Band F temporal data."
+        "_note": "Include from_year and to_year (CE integers) to retrieve Band T temporal data."
       },
       "temporal": {
         "_status": "ok — example for Timbuktu 1350–1600 CE",
@@ -216,7 +216,7 @@
 
   "profile_groups": {
     "_status": "implemented",
-    "_note": "Dict keyed A–F. Each value is {label, items: [{key, label, value}]}. label is currently the raw API key; friendly labels are the next UI task.",
+    "_note": "Dict keyed A–T. Each value is {label, items: [{key, label, value}]}. label is currently the raw API key; friendly labels are the next UI task.",
     "_example": {
       "A": {
         "label": "Physiographic bedrock",

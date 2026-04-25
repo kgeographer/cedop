@@ -102,8 +102,8 @@
                   <label class="form-check-label" for="band-E" title="Coastality">E</label>
                 </div>
                 <div class="form-check form-check-inline me-0">
-                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-F" value="F">
-                  <label class="form-check-label" for="band-F" title="Temporal (needs year range)">F</label>
+                  <input class="form-check-input sb-band-chk" type="checkbox" id="band-T" value="T">
+                  <label class="form-check-label" for="band-T" title="Temporal (needs year range)">T</label>
                 </div>
               </div>
             </div>
@@ -132,7 +132,7 @@
               <ul id="band-list">
                 <li>A - Physiographic bedrock <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Elevation, slope, relief, lithology, karst. Stable over geological timescales; valid baseline for any historical period."></i></li>
                 <li>B - Hydro-climatic baselines <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="River discharge, runoff, groundwater, soils, wetlands. Discharge reflects the full upstream catchment, not just the local site."></i></li>
-                <li>C - Bioclimatic proxies <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Temperature, precipitation, aridity, biome, ecoregion. Contemporary climate baseline from BasinATLAS; Band F supersedes for period-specific queries."></i></li>
+                <li>C - Bioclimatic proxies <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Temperature, precipitation, aridity, biome, ecoregion. Contemporary climate baseline from BasinATLAS; Band T supersedes for period-specific queries."></i></li>
                 <li>D - Anthropocene markers <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Population density, cropland, human footprint, GDP. Present-day only — exclude for pre-modern analyses."></i></li>
                 <li>E - Coastality <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Distance to marine outlet, endorheic flag, outlet type. Captures hydrological connectivity to the sea."></i></li>
                 <li>F - Temporal climate (0–1998 CE) <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Period-specific PDSI drought index, temperature and precipitation anomalies from LMR v2.1, and volcanic events from eVolv2k. Requires a date range."></i></li>
@@ -231,7 +231,7 @@
       </div>
       <div class="modal-body fs-6">
         <p>This sandbox is a prototype interface for <strong>EDOPS</strong> (Environmental Dimensions of Place Signature), a system for generating structured environmental profiles of geographic locations drawn from global physical and climatic data. EDOPS is designed and developed by <a href="https://kgeographer.org" target="_blank">Dr. Karl Grossner (@kgeographer)</a> with support and collaboration from the <a href="https://ishi.pitt.edu/" target="_blank">Institute for Spatial History Innovation (ISHI)</a> at the University of Pittsburgh.</p>
-        <p>For any place — located by name or coordinates — EDOPS returns a multi-band signature characterizing the local and upstream hydrological environment, bioclimate, physiography, and coastality. Band F adds period-specific paleoclimate reconstruction for queries anchored to a historical date range (0–1998 CE).</p>
+        <p>For any place — located by name or coordinates — EDOPS returns a multi-band signature characterizing the local and upstream hydrological environment, bioclimate, physiography, and coastality. Band T adds period-specific paleoclimate reconstruction for queries anchored to a historical date range (0–1998 CE).</p>
         <h6 class="mt-3">Status</h6>
         <p>The signature data schema, API, and the sandbox page are under active development as of April 2026 and may change without notice. This interface is shared here for early feedback from collaborators and is not a public release.</p>
         <p>Place lookup is powered by the <a href="https://whgazetteer.org/" target="_blank">World Historical Gazetteer</a> reconcile API, which is itself a work in progress; coverage varies by region and period, and results will improve over time.</p>
@@ -544,7 +544,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     const [lat, lon, name, level, fromYear, toYear] = this.value.split(',');
     this.value = '';  // reset dropdown
     document.getElementById('sb-level').value = level;
-    document.getElementById('band-F').checked = true;
+    document.getElementById('band-T').checked = true;
     document.getElementById('f-year-start').value = fromYear;
     document.getElementById('f-year-end').value = toYear;
     updateBandsDisplay();
@@ -568,12 +568,12 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
 
     const sigBands = Array.from(document.querySelectorAll('.sb-band-chk:checked'))
       .map(cb => cb.value).join('');
-    const wantF   = document.getElementById('band-F').checked;
+    const wantT   = document.getElementById('band-T').checked;
     const ys      = document.getElementById('f-year-start').value.trim();
     const ye      = document.getElementById('f-year-end').value.trim();
 
     if (!sigBands) { alert('Select at least one band.'); return; }
-    if (wantF && (!ys || !ye)) { alert('Band F requires a year range (from – to).'); return; }
+    if (wantT && (!ys || !ye)) { alert('Band T requires a year range (from – to).'); return; }
 
     const level = document.getElementById('sb-level').value;
     sigBtn.disabled = true;
@@ -583,7 +583,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
       let sig = null;
 
       let sigUrl = `/api/signature?lat=${resolvedLat}&lon=${resolvedLon}&bands=${sigBands}&level=${level}`;
-      if (wantF) sigUrl += `&from_year=${ys}&to_year=${ye}`;
+      if (wantT) sigUrl += `&from_year=${ys}&to_year=${ye}`;
       const res = await fetch(sigUrl);
       if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Signature request failed'); }
       sig = await res.json();
@@ -766,11 +766,11 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     if (sig) {
       const sigBands = Array.from(document.querySelectorAll('.sb-band-chk:checked'))
         .map(cb => cb.value).join('');
-      const wantF = document.getElementById('band-F').checked;
+      const wantT = document.getElementById('band-T').checked;
       const ys = document.getElementById('f-year-start').value.trim();
       const ye = document.getElementById('f-year-end').value.trim();
       let apiUrl = `/api/signature?lat=${resolvedLat}&lon=${resolvedLon}&bands=${sigBands}&level=${document.getElementById('sb-level').value}`;
-      if (wantF && ys && ye) apiUrl += `&from_year=${ys}&to_year=${ye}`;
+      if (wantT && ys && ye) apiUrl += `&from_year=${ys}&to_year=${ye}`;
       metaEl.innerHTML = `Basin ${escapeHtml(String(sig.id ?? ''))}
         &ensp;<i class="bi bi-braces"></i>
         <a href="#" id="sb-json-link" class="text-primary text-decoration-none" title="API URL &amp; JSON">
