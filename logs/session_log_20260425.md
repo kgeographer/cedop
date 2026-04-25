@@ -31,6 +31,20 @@ High-level results:
 - eVolv2k and LMR should be decoupled in the API — volcanic events are valid for ~500 BCE, LMR is not
 - Kaifeng 1000–1100 sits at the end of the Medieval volcanic quiet; the 1200–1300 century (Samalas 1257, 59 Tg) is the most volcanically intense in the record — relevant to Song dynasty collapse and Mongol expansion narrative
 
-## Up next
+## Up next — Task 9 (start of next session)
 
-Task 8: HYDE 3.5 per-epoch marginal distributions (`notebooks/edop/explore/08_hyde_distributions.ipynb`)
+**Branch**: `explore02`
+
+**Guiding doc**: `docs/edop/exploration_bandT.md` — Opus 4.7 draft of Tasks 7–12. Notebooks follow this plan but not slavishly — findings from each task inform adjustments to the next. Read the relevant task section before designing each notebook.
+
+**Task 9**: HYDE basin aggregation and s/u characterization (`notebooks/edop/explore/09_hyde_basin_aggregation.ipynb`)
+- Two aggregation rules to compare: area-weighted mean vs. centroid lookup for HYDE cells → L8 basins
+- Sample design: ~500 L8 basins stratified by Task 5 k-means clusters (file: `output/edop/explore/05_cluster_assignments.csv`)
+- s/u duality for HYDE variables via `next_down` traversal — prediction is wider divergence than climate variables (Task 3), especially for downstream-of-civilization basins
+- Cross-check HYDE 2000 CE cropland against static BasinATLAS `cropland_extent` at same basins
+- Key design decision first: area-weighted vs centroid aggregation — run both on the sample, report disagreement distribution, then commit to one
+
+**Task 8 findings to carry into Task 9**:
+- Only cropland and grazing_land are worth aggregating to basins — urban_area and total_rice are near-zero globally, population_density reliability is questionable (F8.3, F8.6)
+- 1000 BCE established as global land-use baseline for anomaly reporting (F8.7)
+- HYDE files are in `data/hyde/NetCDF/`; variable names match filenames; units are km² except population_density (capita/km²)
