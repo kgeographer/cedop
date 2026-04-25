@@ -417,3 +417,81 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding**: Clusters where both D-PLACE and WHC ratios are near zero (Arctic highland, cold boreal, subarctic wetlands, northern peatlands, cold karst highland) represent environments where no statistical correspondence testing is feasible with current datasets. These account for ~20% of global basin area. Clusters with strong signal in both datasets: tropical wet mountains, regulated rivers, warm humid karst. Clusters with signal in one only: hot wet tropics and tropical humid (D-PLACE only); cool temperate lowlands (WHC slightly).
 
 **Implication**: Power analysis should precede any correspondence test design. Do not report null results for cold/arid environments as evidence against environmental correspondence — absence of data is the explanation.
+
+---
+
+## 2026-04-25 · Task 7 · eVolv2k v4 distribution and aggregation design
+
+**Method**: `notebooks/edop/explore/07_evolv2k_distribution.ipynb` · 256 events total, 1–1890 CE (LMR window) · CSV only, no DB required
+
+---
+
+### F7.1 — Catalog ends at 1890 CE; 20th-century queries return empty volcanic record
+
+**Finding**: The eVolv2k v4 CSV contains 256 events with `year_ad` max = 1890. No events exist for 1891–1998 CE, despite the LMR window extending to 1998. Pinatubo 1991, Agung 1963, El Chichón 1982, and other major 20th-century eruptions are absent. This is an ice-core archive coverage limitation, not quiescence.
+
+**Implication**: Band T queries with date ranges extending past ~1890 will return empty `volcanic_events` lists — which could be misread as "no significant eruptions." A `volcanic_events_coverage_note` field (or equivalent warning) should be added to the API response to flag this. The eVolv2k component of Band T is reliable only to ~1890 CE.
+
+---
+
+### F7.2 — Catalog is dominated by small, anonymous events; named volcanoes are 16% of the record
+
+**Finding**: 83.6% of events (214/256) have no named source volcano — they are ice-core-detected sulfate anomalies with no attributed eruption. Named events are 42/256 (16.4%). Tephra confirmation is even sparser (21 events). All canonical historically significant eruptions are present and correctly attributed: Samalas 1257 (59.42 Tg), Tambora 1815 (28.08 Tg), Eldgjá 939 (16.23 Tg), 536 CE mystery eruption (18.81 Tg), Krakatoa 1883 (9.34 Tg), Kuwae 1453 (9.97 Tg).
+
+**Implication**: Users expect named volcanoes; most events have none. API responses should set this expectation explicitly. The unnamed events are still valid forcing signals — they simply lack attribution. Do not filter to named events only.
+
+---
+
+### F7.3 — 5 Tg is the right default threshold; 10 Tg excludes Krakatoa and Kuwae
+
+**Finding**: At VSSI ≥ 5 Tg: 55 events (21% of catalog). At ≥ 10 Tg: 33 events. Krakatoa 1883 (9.34 Tg) and Kuwae 1453 (9.97 Tg) fall below the 10 Tg threshold. Both are historically consequential and climatically documented. The 5 Tg floor captures the interpretable tier without pulling in marginal noise.
+
+**Implication**: Confirm `vssi_min=5.0` as the API default. Document as a named, adjustable parameter with rationale. The 10 Tg level is useful as a "major event" label in response fields but should not be the default filter.
+
+---
+
+### F7.4 — Empty-window rates at 5 Tg: 30% at 50 yr, 3% at 100 yr, 0% at 200 yr
+
+**Finding**: Sliding-window analysis (step=10 yr) across 1–1998 CE: at VSSI ≥ 5 Tg, 70.3% of 50-yr windows contain ≥1 event; 96.8% of 100-yr windows; 100% of 200-yr windows. At ≥ 10 Tg: 50.8% / 78.9% / 97.2% respectively.
+
+**Implication**: For 100-year queries (the dominant humanities use case), volcanic context is almost always available at the 5 Tg threshold. For 50-year queries, 30% will return empty — this is a genuine "no significant forcing" finding, not an error. The API should frame empty returns explicitly. Rubric: 100-year window + 5 Tg threshold is the reliable operating zone; 50-year + 10 Tg is probabilistic.
+
+---
+
+### F7.5 — Aggregation: count and sum-VSSI are correlated (r=0.868) but not interchangeable; all three summaries serve distinct purposes
+
+**Finding**: In 100-yr sliding windows at ≥5 Tg: median count=2, median sum-VSSI=28 Tg, median time-since-last-major=47 yr. Count and sum-VSSI correlate at r=0.868 — high but not redundant. The 13% unexplained variance is driven by Samalas-class outliers: a window containing Samalas 1257 (59 Tg) registers count=4 (unremarkable) but sum-VSSI=120 Tg (extraordinary). Time-since-last-major captures recency structure count and sum cannot.
+
+**Implication**: Return all three aggregations in the API response: `volcanic_event_count`, `volcanic_vssi_sum_tg`, `years_since_last_major`. They are complementary, not redundant. Sum-VSSI is the key discriminator for outlier centuries.
+
+---
+
+### F7.6 — Asymmetry field is binary for small events, continuous for climatically significant ones
+
+**Finding**: Full catalog asymmetry distribution is strongly bimodal at 0.0 and 1.0 — most small events are coded as purely SH or purely NH based on detection in a single polar ice sheet. Above 5 Tg, the distribution becomes genuinely spread across intermediate values (0.0–1.0), reflecting real bilateral stratospheric dispersal for large tropical eruptions (Samalas 0.588, Tambora 0.456, Krakatoa 0.629).
+
+**Implication**: Asymmetry is not a reliable continuous filter across the full catalog — it is an encoding artifact for sub-threshold events. Above 5 Tg it carries real signal about hemispheric reach. Return `asymmetry` as a per-event field; do not use it as a hard API filter. Location-aware weighting (if ever added) should apply only to events above threshold.
+
+---
+
+### F7.7 — Kaifeng 1000–1100 CE sits at the end of the Medieval volcanic quiet; the following century is the most volcanically intense in the record
+
+**Finding**: The 950–1100 CE window is the deepest volcanic quiet in the 2000-year eVolv2k record — near-zero event count and sum-VSSI. The Northern Song flourished in this period (consistent with the benign climatic baseline). The 1200–1300 CE window — covering the Northern Song's aftermath and the Mongol expansion — contains Samalas 1257 (59 Tg), making it the highest sum-VSSI century in the record (~120 Tg in 100-yr windows centered on 1250).
+
+**Implication**: The Kaifeng 1000–1100 query (baked in as a sandbox example by Ruth) captures the *end* of a climatically favorable period. The collapse of the Northern Song (1127 CE, Jingkang Incident) and subsequent Southern Song vulnerability to Mongol conquest (1279 CE) both fall in a dramatically more volcanically active and likely climatically disrupted period. This is a worked example of why temporal window choice matters — and a candidate correspondence hypothesis for future Band T work. Flag to Ruth.
+
+---
+
+### F7.8 — Hemispheric filtering is asymmetric and should not be implemented as a default API behavior
+
+**Finding**: 100-yr sliding window counts at VSSI ≥ 5 Tg by hemispheric filter: NH-relevant (asymmetry > 0.5) median=2, empty=10.5% — virtually identical to unfiltered (median=2, empty=3.2%). SH-relevant (asymmetry < 0.5) median=0, empty=60.5%. Symmetric-only median=1, empty=45.8%. NH filtering has near-zero effect because the catalog is 64.5% NH-dominant by event count. SH filtering makes the record uninformative — 60% of century-scale windows contain no SH-dominant events at the 5 Tg threshold.
+
+**Implication**: Do not implement hemispheric filtering as an API parameter. The catalog's NH bias is a dataset property to be documented, not compensated for. All events above the VSSI threshold should be returned regardless of query location, with `asymmetry` included as a per-event field for users who want to apply their own weighting. The "SH-relevant reduces median by 100%" result is a consequence of the median hitting zero, not universal emptiness — but the 60% empty-window rate is sufficient to rule out filtering as a useful default. API guide should note that eVolv2k is NH-biased by construction and that asymmetry should be interpreted accordingly.
+
+---
+
+### F7.9 — eVolv2k and LMR are currently coupled by the LMR date window, but should be decoupled in the API
+
+**Finding**: The current Band T implementation gates eVolv2k returns by the LMR date range (1–1998 CE), because both layers were introduced together. But eVolv2k's actual coverage extends to ~500 BCE — the full catalog contains 45 pre-CE events, including the 44 BCE Okmok eruption (a candidate forcing event for the fall of the Roman Republic) and other historically significant BCE eruptions. These are inaccessible to any current Band T query. LMR's 1 CE floor is a proxy-network limitation: paleoclimate reanalysis requires sufficient tree ring, ice core, and speleothem density, which thins rapidly before ~200 CE and is untenable before 1 CE globally. That constraint is specific to LMR and does not apply to eVolv2k.
+
+**Implication**: Decouple the two layers in the API. eVolv2k should be queryable for any window within its actual coverage (~500 BCE–1890 CE), returning events with a status indicating the volcanic record is available even when LMR is not. LMR should retain its 1–1998 CE gate with a note about proxy network thinning. A query for Babylon 600–400 BCE should return volcanic events (if any above threshold) alongside an explicit `lmr_status: out_of_range` — not silence. This is a design change to route and document before the API is finalized, not a characterization task. Flag for prospectus update.
