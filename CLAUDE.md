@@ -188,9 +188,15 @@ Key locations:
 
 Tasks 1–6 complete (2026-04-19). Findings in `logs/exploration_log.md` (F1.1–F6.5).
 
-Completed: (1) marginal distributions, (2) missing-data patterns, (3) local/upstream divergence + reference site percentiles, (4) full Spearman correlation matrix, (5) geographic pre-clustering (k-means k=20, committed as working typology), (6) coverage/sampling-bias characterization (D-PLACE + WH Cities vs. global basin distribution).
+Tasks 1–6 complete (static bands A–E). Tasks 7–8 complete (Band T, 2026-04-25, branch explore02).
 
-Next exploration work: Band T temporal characterization (LMR PDSI, temperature, precipitation distributions across basins). **Do not** start correspondence testing (D-PLACE, settlement patterns) until that phase is also documented.
+Completed static (Tasks 1–6): (1) marginal distributions, (2) missing-data patterns, (3) local/upstream divergence + reference site percentiles, (4) full Spearman correlation matrix, (5) geographic pre-clustering (k-means k=20, committed as working typology), (6) coverage/sampling-bias characterization (D-PLACE + WH Cities vs. global basin distribution).
+
+Completed Band T (Tasks 7–8): (7) eVolv2k v4 distribution and aggregation design — vssi_min=5.0 confirmed, three aggregations recommended, hemispheric filtering ruled out, eVolv2k/LMR decoupling flagged. (8) HYDE 3.4 per-epoch distributions — signal emergence characterized, 1000 BCE established as global land-use baseline, population density reliability caveat documented, BCE climate gap flagged (Band C is contemporary WorldClim, not paleoclimate).
+
+Key open design questions logged (F8.5, F8.6): (a) Band C is silently wrong for BCE queries — needs `climate_note` disclosure in API; (b) population density may not belong in an environmental signature; (c) HYDE habitability for BCE queries as qualified signal — both flagged for October 2026 expert meeting.
+
+Next: Task 9 (HYDE basin aggregation and s/u characterization), Task 10 (LMR structure), Task 11 (LMR period/volcanic fingerprints). **Do not** start correspondence testing until Tasks 9–11 complete.
 
 ## External Dependencies
 

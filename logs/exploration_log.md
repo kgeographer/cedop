@@ -495,3 +495,72 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding**: The current Band T implementation gates eVolv2k returns by the LMR date range (1–1998 CE), because both layers were introduced together. But eVolv2k's actual coverage extends to ~500 BCE — the full catalog contains 45 pre-CE events, including the 44 BCE Okmok eruption (a candidate forcing event for the fall of the Roman Republic) and other historically significant BCE eruptions. These are inaccessible to any current Band T query. LMR's 1 CE floor is a proxy-network limitation: paleoclimate reanalysis requires sufficient tree ring, ice core, and speleothem density, which thins rapidly before ~200 CE and is untenable before 1 CE globally. That constraint is specific to LMR and does not apply to eVolv2k.
 
 **Implication**: Decouple the two layers in the API. eVolv2k should be queryable for any window within its actual coverage (~500 BCE–1890 CE), returning events with a status indicating the volcanic record is available even when LMR is not. LMR should retain its 1–1998 CE gate with a note about proxy network thinning. A query for Babylon 600–400 BCE should return volcanic events (if any above threshold) alongside an explicit `lmr_status: out_of_range` — not silence. This is a design change to route and document before the API is finalized, not a characterization task. Flag for prospectus update.
+
+---
+
+## 2026-04-25 · Task 8 · HYDE 3.4 — per-epoch distributions and signal emergence
+
+**Method**: `notebooks/edop/explore/08_hyde_distributions.ipynb` · 5 NetCDF files (cropland, grazing_land, urban_area, population_density, total_rice) · 8 epochs (-8000, -4000, -1000, 0, 1000, 1500, 1900, 2000) · xarray lazy slicing, one time step loaded at a time
+
+**Dataset note**: Files are labeled HYDE 3.4 (created April 2025), not 3.5. Time axis uses `cftime.DatetimeNoLeap` with `has_year_zero=True` (astronomical year numbering). 128 time steps with variable resolution: millennial BCE, centennial 100–1700 CE, decadal 1710–1950, annual 1951–2025. Grid: 2160 × 4320 cells at 5-arcmin (~9km) resolution. Units: km² for area variables; capita/km² for population_density.
+
+---
+
+### F8.1 — Grazing land is the first and most spatially extensive anthropogenic signal; cropland follows
+
+**Finding**: At 4000 BCE, grazing land is already at ~80% zero cells (20% non-zero) while cropland is at ~94% zero (6% non-zero). By 1000 BCE grazing reaches 68% zero vs. cropland 83%. The gap persists through the full record — at 2000 CE grazing is 41% zero, cropland 56% zero. On the log-scale mean trajectory, grazing consistently exceeds cropland in absolute km² area at every epoch. Both variables follow roughly log-linear growth trajectories, implying consistent exponential expansion rates across the full period.
+
+**Implication**: For Band T queries in the BCE period, grazing land is the more informative land-use variable. The emergence of non-trivial cropland signal begins around 4000–1000 BCE, concentrated in the Fertile Crescent, Nile valley, Indus, and Yellow River regions. Grazing's earlier and broader signal reflects the archaeological reality that pastoralism preceded and spatially exceeded sedentary agriculture.
+
+---
+
+### F8.2 — Urban area and total rice are globally invisible at distribution scale; specialty variables only
+
+**Finding**: Urban area remains at ~99–100% zero cells through 1900 CE; the p99 value is 0.096 km² even at 1900 CE. Total rice is 100% zero at 8000 BCE and still 98.5% zero at 2000 CE. Both variables show signal only in very high percentiles, concentrated in a small number of cells. On the log-scale trajectory, urban area shows a hockey-stick inflection after 1900 CE reflecting intensification within already-occupied cells rather than spatial expansion.
+
+**Implication**: Urban area and total rice will return zero for the vast majority of Band T basin queries regardless of epoch. They are not useful as default Band T fields. Consider making them opt-in, or returning them only when non-zero. Their value is for specialist queries — urban area for pre-modern city studies, total rice for SE Asian agricultural history.
+
+---
+
+### F8.3 — Population density % zero is flat across 10,000 years; this is a model artifact, not an empirical finding
+
+**Finding**: Population density shows ~45% zero cells at 8000 BCE, declining only to ~40% at 2000 CE — a nearly flat trajectory. This is not an empirical finding about human settlement history. HYDE's deep-time population layer distributes a global population estimate (derived from secondary historical sources) across all land cells proportionally to a habitability potential score. Any cell with non-zero habitability receives a non-zero population density value, even if that value is 0.0003 cap/km² — statistically less than one person per square kilometer. The % zero metric is measuring the extent of HYDE's habitability model, not the presence of humans.
+
+**Implication**: This does not pass a basic smell test. The Out of Africa dispersal, the late peopling of the Americas (~15,000 BCE), the settlement of the Pacific — none of this spatial history is recoverable from a model that pre-populates every habitable cell from the start. HYDE's population layer is redundant with EDOP's own environmental suitability characterization (Bands A–E) in the deep BCE period, and less honest. Population density from HYDE is likely meaningful only from roughly 0–1000 CE onward, where global population estimates are anchored by documentary and archaeological evidence and spatial allocation has real data to constrain it. Pre-CE HYDE population values should either be excluded from Band T API responses or returned with a strong epistemic caveat. Do not use % zero as the signal-emergence metric for this variable — use a meaningful density threshold (e.g. ≥ 1 cap/km²) instead.
+
+---
+
+### F8.5 — EDOP's climate characterization (Band C) is silently wrong for BCE queries
+
+**Finding**: Band C (bioclimatic proxies: temperature, precipitation, aridity, biome, ecoregion) is sourced from WorldClim, a contemporary climatology representing approximately 1970–2000 CE. For any BCE query, EDOP returns contemporary climate values without qualification. A query for Çatalhöyük 7000 BCE returns present-day Anatolian climate, not Neolithic climate. LMR (the paleoclimate reconstruction in Band T) covers only 1–1998 CE and does not extend into the BCE period. There is currently no paleoclimate layer in EDOP that covers BCE conditions. Bands A (physiography), B (hydrology), and E (coastality) are geomorphological and topological — effectively timeless on human timescales — and remain valid for BCE queries. Band C is not.
+
+**Implication**: BCE queries in EDOP are implicitly geomorphological characterizations, not environmental ones in the full sense. This should be disclosed in the API response, not left for users to discover. A `climate_note` field — e.g. "Band C reflects contemporary baselines (WorldClim ~1970–2000 CE); no paleoclimate reconstruction is available for this query period" — should be injected when `to_year < 0` or when no LMR data is available. The HYDE habitability model (which may internally use Holocene paleoclimate reconstructions) is not a reliable substitute — its spatial allocation methodology is too indirect and its assumptions are opaque. The right fix is disclosure, not patching. Flag for API design and prospectus update.
+
+---
+
+### F8.4 — Population density mean shows a 20th-century hockey stick; land use variables do not
+
+**Finding**: On a linear scale, mean population density is essentially flat from 8000 BCE through 1500 CE, rises modestly to ~11 cap/km² by 1900 CE, then jumps to ~40 cap/km² at 2000 CE — more than 3× growth in a single century. The area variables (cropland, grazing) show no equivalent hockey stick on their log-scale trajectories; their growth rates are roughly constant across the full period. The industrial-era population explosion is a qualitatively different phenomenon from the steady long-run expansion of land use.
+
+**Implication**: For Band T queries spanning 1900–2000 CE, population density is the most dramatically changing variable. For pre-1900 queries, the intensity signal is modest on an absolute scale even if the spatial footprint (measured by % non-zero) is ancient. This has direct bearing on how Band T summarizes HYDE for historical period queries: the 20th-century values should be treated as a distinct regime, not just the continuation of a long trend.
+
+---
+
+### F8.7 — 1000 BCE is the defensible global baseline for land-use anomaly reporting
+
+**Finding**: Ratio of CE epoch mean to candidate baseline epochs for cropland and grazing land:
+- vs 8000 BCE: ratios of 1000x–9500x (cropland) and 400x–3500x (grazing) — denominator too near-zero to be analytically useful
+- vs 4000 BCE: ratios of 19x–157x (cropland) and 16x–129x (grazing) — large but more tractable
+- vs 1000 BCE: ratios of 2.8x–23x (cropland) and 3.9x–32x (grazing) — interpretable and historically meaningful
+
+At 1000 BCE, agriculture is established in all core civilizational regions (Fertile Crescent, Nile, Indus, Yellow River) but has not yet intensified globally. Cropland at 1000 CE is ~3x the 1000 BCE level; at 2000 CE ~23x. These are ratios a non-specialist user can interpret.
+
+**Implication**: Use 1000 BCE as the global pre-anthropogenic baseline for HYDE land-use anomaly fields in the Band T API response. Return both the raw epoch value and the ratio to 1000 BCE. Caveat in API guide: the baseline is global — in already-agricultural regions (Mesopotamia, Egypt, China) the 1000 BCE baseline is not "pre-agricultural," so local ratios will understate intensification relative to a truly pre-agricultural local condition. A future regional baseline refinement is possible but deferred.
+
+---
+
+### F8.6 — Open design questions deferred to October expert meeting
+
+**Question 1 — Does population density belong in an environmental signature?** Population is a human phenomenon, not an environmental one. EDOP's core claim is environmental characterization of place; including population density in Band T muddies that boundary. The land use variables (cropland, grazing) characterize human transformation of the landscape, which is defensibly environmental. Population density characterizes human presence, which is more ambiguously so. Whether Band T should include population density at all — or whether it belongs in a future CDOP layer — is a design question that warrants expert input.
+
+**Question 2 — Should HYDE habitability be surfaced for BCE queries as an explicit, qualified signal?** For BCE queries where Band C (contemporary climate) is not representative and LMR is out of range, HYDE's internal habitability model — whatever its limitations — may be the only available proxy for environmental conditions at the query epoch. Rather than discarding it, it could be returned as a clearly labeled, heavily caveated field: "HYDE-modeled habitability index at epoch X (reconstruction uncertainty high; treat as indicative only)." Whether this adds value or misleads users is a judgment call that benefits from domain expert review. Flag for the October 2026 Pitt presentation as an open question.
