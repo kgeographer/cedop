@@ -374,6 +374,14 @@ Each entry: **Date · Task · Method · Finding · Implication**
 
 ---
 
+### F5.7 — L6 clusters are geographically dispersed; L8 clusters are spatially coherent — a structural difference with implications for CDOP correspondence work
+
+**Finding**: k-means clustering on L6 basins (Task 5b) produces clusters with no geographic coherence — similar signatures appear scattered across all continents. The same clustering on L8 basins produces clusters with strong spatial unity: similar signatures tend to co-locate regionally. This difference holds even though geographic coordinates are not used in either clustering. At L8, the signature is locally specific enough that similar drainage, terrain, climate and hydrology co-occur in the same regions, produced by the same regional geology, orography and atmospheric circulation. At L6, large-basin averaging smooths out that local specificity: a big basin in temperate western Europe and one in temperate northeastern China can produce nearly identical L6 averages, because values are means over areas large enough that regional character dissolves into broad climate-zone statistics.
+
+**Implication**: L8 is the right scale for asking "what is the local environmental character of this specific place" — it has geographic discriminating power. L6 is the right scale for asking "what kinds of environments like this exist globally, and what human adaptations arise in them" — its geographic dispersion is what makes environment-culture correspondence testable rather than trivially geographic. For CDOP correspondence work (do similar environments produce similar cultural adaptations, wherever those environments occur?), L6's geographic non-clustering is a feature, not a defect: it decouples environmental similarity from regional proximity, allowing genuine environmental causation to be distinguished from cultural diffusion or shared history. The two levels are complementary instruments for different research questions, not one better than the other.
+
+---
+
 ## 2026-04-19 · Task 6 · Geographic coverage and sampling-bias characterization
 
 **Method**: `notebooks/edop/explore/06_coverage_sampling_bias.ipynb` · D-PLACE (6,408 societies with coordinates) and WH Cities (258) assigned to k-means clusters via PostGIS nearest-basin lookup (`basin08.geog` column + GIST index). Distribution comparison and log₂ representation ratios computed against global basin baseline (190,675 L8 basins). Outputs: `06_coverage_distribution.csv`, `06_dplace_cluster_assignments.csv`, `06_representation_ratios.png`, `06_coverage_map.png`.
@@ -417,6 +425,88 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding**: Clusters where both D-PLACE and WHC ratios are near zero (Arctic highland, cold boreal, subarctic wetlands, northern peatlands, cold karst highland) represent environments where no statistical correspondence testing is feasible with current datasets. These account for ~20% of global basin area. Clusters with strong signal in both datasets: tropical wet mountains, regulated rivers, warm humid karst. Clusters with signal in one only: hot wet tropics and tropical humid (D-PLACE only); cool temperate lowlands (WHC slightly).
 
 **Implication**: Power analysis should precede any correspondence test design. Do not report null results for cold/arid environments as evidence against environmental correspondence — absence of data is the explanation.
+
+---
+
+## 2026-04-26 · Task 9 · HYDE basin aggregation and s/u characterization
+
+**Method**: `notebooks/edop/explore/09_hyde_basin_aggregation.ipynb` · L8: 500-basin stratified sample (25/cluster × 20 clusters); L6: 500-basin stratified sample from Task 5b clusters · HYDE variables: cropland, grazing_land · Epochs: 1000 BCE, 0 CE, 1000 CE, 2000 CE · Aggregation: polygon-interior mean (shapely vectorized contains) for s values; centroid lookup + sub_area-weighted traversal for u values
+
+---
+
+### F9.1 — Polygon-interior and centroid agree for small basins; diverge meaningfully above ~100 km²
+
+**Finding**: Aggregation comparison at 2000 CE cropland (L8 sample, 500 basins): median absolute difference = 0.000 km², p95 = 8.7 km². Disagreement is essentially zero for basins under ~10 km² and grows with basin size, concentrated above ~100 km² sub_area. Median cells per basin = 8; p95 = 39. 39 of 500 basins (8%) had no HYDE cell center inside their polygon and required centroid fallback — these are the smallest, most rugged sub-basins. One notable outlier: a basin where centroid returned ~0 km² cropland but polygon-interior returned ~38 km², a case where the centroid cell landed on an unfarmed patch while the polygon interior was predominantly agricultural. The relative-diff p95 = 1.0 is a denominator artifact (near-zero poly_val), not evidence of systematic disagreement.
+
+**Implication**: Polygon-interior is the correct aggregation method and earns its computational cost for basins above ~100 km². For the smallest L8 sub-basins it is equivalent to centroid but not worse. The outlier case demonstrates the failure mode centroid is prone to and justifies the polygon-interior choice on principle. Centroid fallback for the 8% of tiny basins is acceptable.
+
+---
+
+### F9.2 — HYDE s values: global distribution confirms heavy zeros; grazing more extensive than cropland at all epochs
+
+**Finding**: L8 sample (500 basins), polygon-interior s values. At all epochs through 1000 CE, cropland median = 0 and 25th percentile = 0 — more than half the sample has no cropland signal. At 2000 CE, cropland median rises to only 0.008 km²/cell, 75th percentile = 8.0 km²/cell. Grazing land is consistently more spatially extensive: at 2000 CE grazing median = 1.52 km²/cell vs cropland median = 0.008 km²/cell. Mean growth from 1000 BCE to 2000 CE: cropland ~18×, grazing ~32×. The grazing expansion reflects colonial-era pastoral land transformation (Americas, Australia, sub-Saharan Africa) rather than industrialization; the land-area footprint of grazing far exceeds cropland globally.
+
+**Implication**: For Band T basin-level HYDE queries, zero returns will be the majority result for cropland at all pre-CE epochs and for most basins even at 2000 CE. Non-zero values are concentrated in a minority of agriculturally significant basins. Grazing land signal emerges earlier and covers more basins than cropland — it is the more globally representative land-use variable for historical queries. API responses should frame zero as an honest "no land use signal at this location/epoch," not a missing-data condition.
+
+---
+
+### F9.3 — L6 medians substantially higher than L8; larger polygons capture earlier and wider land-use signal
+
+**Finding**: L6 sample s values show consistently higher medians than L8 at the same epochs. At 1000 CE: L8 cropland median = 0.000, L6 = 0.022 km²/cell. At 2000 CE: L8 cropland median = 0.008, L6 = 1.055 km²/cell; L8 grazing median = 1.52, L6 = 7.27 km²/cell. Means are also slightly higher at L6 (cropland 2000 CE: L8 mean = 7.32, L6 = 8.46 km²/cell) but the median shift is the more telling statistic. A near-zero floating-point value (1.3×10⁻⁷) appears at L6 cropland 0 CE — a HYDE model artefact consistent with F8.3, not a real signal.
+
+**Implication**: L6 basins are more likely to contain at least some agricultural land within their larger polygon boundary even when the local sub-basin core is unfarmed — the larger polygon casts a wider net and captures more of the agricultural fringe. L6 signatures are inherently more land-use-signal-rich than L8 at the same epoch. This has design implications: a Band T HYDE query at L6 will return more non-zero values and apparent earlier signal emergence than the same query at L8, but the signal reflects a broader regional average rather than local conditions. The two levels are answering different questions, consistent with F5.7.
+
+---
+
+### F9.4 — HYDE s/u divergence is dramatically wider than climate divergence; effective N is small
+
+**Finding**: HYDE s/u divergence (log₂(upstream/local)) was computed for basins where both s and u exceeded 0.001 km². Effective N ranged from 42 (L8 cropland 1000 BCE) to 104 (L8 grazing 2000 CE) — 8–21% of the 500-basin sample. The rest are headwaters (no upstream), zero-land-use environments, or both. Tail extents are far wider than the climate divergences in Task 3: HYDE p95 reaches +5.52 log₂ (upstream 46× more cropland than local, L6 2000 CE) vs climate precipitation p95 of +0.39 log₂. Cropland medians are consistently negative (local > upstream, range −0.91 to −0.07), meaning for most historically active basins the local site IS the agricultural concentration. Grazing medians are near zero at all epochs. A positive right tail persists at every epoch in both variables — the minority of Ur-type configurations where an unfarmed or less-farmed local basin sits downstream of an agricultural heartland.
+
+**Implication**: HYDE s/u divergence is a stronger and more structurally interesting signal than climate divergence when it fires, but fires in a smaller fraction of basins. The negative cropland median (local > upstream) and the persistent positive tail (upstream > local) are both analytically meaningful and point in opposite cultural-historical directions: the first describes a settlement at the agricultural core; the second describes a downstream receiver of upstream agricultural surplus or runoff. Both configurations are real and historically attested.
+
+---
+
+### F9.5 — s/u divergence collapses toward zero by 2000 CE; the most analytically useful window is 0–1000 CE
+
+**Finding**: Divergence distributions shift markedly between 1000 BCE and 2000 CE. At 1000 BCE, distributions are flat and wide — sparse, patchy land use produces large and variable local/upstream contrasts in either direction. By 2000 CE, both cropland and grazing distributions tighten sharply around zero and converge with each other. This reflects land use expanding broadly enough that most basins and their upstream catchments have comparable amounts — the contrast collapses. The convergence is consistent with agricultural and pastoral expansion filling in the landscape relatively uniformly across both local and upstream positions, rather than remaining concentrated in a few hotspots. The positive and negative tails persist but the bulk of the distribution loses its divergence signal.
+
+**Implication**: For CDOP correspondence work, HYDE s/u divergence is most analytically productive in the middle epochs (roughly 0–1000 CE), where land use is established enough for divergence to be computable but not yet so globally widespread that the local/upstream contrast has washed out. Queries at 2000 CE will return near-zero divergence for most basins — not because land use is absent but because it is now too uniform to discriminate. This has direct implications for Band T API design: the divergence field is most informative for pre-industrial historical queries and should be interpreted cautiously for modern-era baselines. Open question for expert review: whether the convergence is genuinely "expansion in place" (uniform spread) or partly a large-basin averaging artefact at L6 — the L8 and L6 distributions show the same pattern, suggesting the former, but not conclusively.
+
+---
+
+### F9.6 — BasinATLAS (EarthStat) and HYDE 2000 CE cropland agree globally but diverge spatially at sub-basin scale; Band D is not a proxy for historical land use
+
+**Finding**: BasinATLAS `crp_pc_sse` is sourced from EarthStat circa 2000 — a hybrid product combining agricultural inventory data with MODIS/GLC2000 satellite classification. HYDE 3.4 at 2000 CE uses the same inventory data (FAO statistics) allocated spatially via population density and suitability models. Globally their totals agree closely (~15M km² cropland each). Divergence is therefore a **spatial allocation** problem, not a definitional one.
+
+At three reference sites, HYDE 2000 CE (as % of basin area) vs static EarthStat:
+
+| Site | EarthStat (static) | HYDE 1000 BCE | HYDE 1 CE | HYDE 1000 CE | HYDE 2000 CE |
+|---|---|---|---|---|---|
+| Timbuktu | 0% | 0.0% | 0.02% | 0.08% | 1.3% |
+| Ur | 60% | 4.0% | 2.9% | 4.9% | 18.1% |
+| Kaifeng | 71% | 16.6% | 65.4% | 37.7% | 59.7% |
+
+Kaifeng is coherent across the two sources (59.7% vs 71% at 2000 CE; the HYDE 1 CE peak at 65% reflects Han dynasty intensification). Timbuktu is consistent (both near zero). Ur is the outlier: EarthStat assigns 60% to the sub-basin while HYDE allocates only 18% at 2000 CE — a ~3× gap despite agreeing globally. Small L8 basins in high-intensity, irrigation-dominated agricultural regions (Mesopotamian plain) are most exposed to this kind of spatial allocation disagreement.
+
+**Implication**: The divergence is not a HYDE calibration failure — it reflects genuine uncertainty in *where* cropland sits within a region at fine spatial resolution, which both products resolve differently. HYDE's historical time series is internally consistent and should be interpreted as trajectories and anomalies, not absolute ground truth per sub-basin. For small L8 basins in agricultural hotspots, the EarthStat static value and HYDE temporal query are not interchangeable. Band D (EarthStat) and Band T (HYDE) measure related but distinct things; researchers should not use Band D as a proxy for historical land use. This divergence is flagged for expert review alongside F8.5 and F8.6 (October 2026 meeting).
+
+---
+
+### F9.7 — Reference site HYDE trajectories are historically legible; Kaifeng shows Han dynasty peak, Ur shows ancient agriculture, Timbuktu is near-zero throughout
+
+**Finding**: Polygon-interior HYDE cropland (km², local basin) at three reference sites across four epochs:
+
+| Site | 1000 BCE | 1 CE | 1000 CE | 2000 CE |
+|---|---|---|---|---|
+| Timbuktu | 0.00 | 0.02 | 0.08 | 1.30 |
+| Ur | 10.79 | 10.06 | 17.55 | 72.03 |
+| Kaifeng | 28.81 | 174.72 | 100.78 | 159.47 |
+
+(Values are total km² of cropland within the L8 sub-basin polygon, computed as polygon-interior mean × n_cells.)
+
+Kaifeng's 1 CE peak at ~175 km² — the highest value across all epochs and sites — corresponds to Han dynasty agricultural intensification in the Yellow River basin, one of the most productive agricultural regions in the ancient world. The drop to ~101 km² at 1000 CE and recovery to ~160 km² at 2000 CE traces the contraction and re-expansion of farming across the Song–Ming–Qing periods. Ur shows a modest but consistent ancient signal (10–18 km²) across all pre-modern epochs, consistent with Mesopotamian irrigated agriculture predating the HYDE window; the 2000 CE jump to 72 km² reflects modern Iraqi irrigation expansion. Timbuktu is effectively zero throughout — the Saharan fringe location produces no land-use signal at sub-basin scale.
+
+**Implication**: HYDE trajectories at individual reference sites are historically interpretable and align with known cultural-historical patterns. The signal is real and discriminating, not noise. This validates the Band T HYDE component as a meaningful input for CDOP correspondence work, particularly for the 0–1000 CE window identified in F9.5 as the most analytically productive epoch range.
 
 ---
 
