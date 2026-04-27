@@ -56,6 +56,14 @@ Important finding that emerged from the Kaifeng/Europe comparison: LMR proxy cov
 - LMR geographic bias disclosure for API documentation
 - Whether additional eruptions in 1258–1264 compound the Samalas signal at Kaifeng (eVolv2k cross-check not yet done)
 
-## Up next — Task 12
+## Exploration phase close-out
 
-**Task 12**: Anthromes categorical typology over time (`notebooks/edop/explore/12_anthromes.ipynb`) — design specifics TBD before notebook implementation. See `docs/edop/exploration_bandT.md` Task 12 section.
+Task 12 (Anthromes) superseded and exploration phase formally closed.
+
+**Anthromes decision**: After analysis and consultation (Opus), Anthromes rejected as a Band T signature field. Reasons: informationally redundant with continuous HYDE fields already in Band T; structurally brittle at class boundaries under HYDE reconstruction uncertainty; temporally coarse (6 time steps, vs. HYDE's annual/decadal resolution); conceptually in tension with EDOPS's process-aware framing. Anthromes may be included as a reference annotation for cross-study interoperability, but not as a primary signature field.
+
+**What replaces it**: `docs/edop/classification_plan.md` — a data-driven per-band typology (Tasks 12–22) native to EDOPS, producing named cluster types from the signature's own variables. Builds directly on Task 5 k-means infrastructure. Band T analogue (Task 22) deferred until static-band typology methodology is stable.
+
+**Working bibliography**: `bibliography/data_sources.md` created — primary papers and known qualifications for LMR, HYDE, BasinATLAS, eVolv2k, and Anthromes/Ellis et al., with explicit confidence flags and epistemic framing.
+
+**Phase boundary**: Tasks 1–11 complete. Classification typology (Tasks 12–22) is a separate phase; timing TBD.

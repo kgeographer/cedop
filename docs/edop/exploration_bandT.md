@@ -1,4 +1,4 @@
-# EDOPS Band T Characterization Plan
+    # EDOPS Band T Characterization Plan
 
 *Draft — April 2026 (rev. 25 April 2026)*
 *Companion to `data_exploration.md`; covers the period-queryable layers: eVolv2k v4, HYDE 3.5, LMR v2.1.*
@@ -139,17 +139,15 @@ For users running historical-period queries, what's the recommended baseline win
 
 ---
 
-### Anthromes (deferred)
+### Anthromes (superseded)
 
-#### Task 12 — Anthromes categorical typology over time *(specifics TBD)*
+#### Task 12 — ~~Anthromes categorical typology over time~~ *Superseded — see `docs/edop/classification_plan.md`*
 
-HYDE's Anthromes layer (Ellis et al. classification, 21 classes) is conceptually and structurally distinct from the gridded continuous variables in Task 8. It's a categorical layer parallel to how `pnv_majority` works in the static signature — at each (cell, time slice), it returns one of 21 classes (urban, dense settlement, village types, cropland types, rangeland types, semi-natural, wild). For a basin at a query date, it returns the dominant class or a class distribution.
+The case for incorporating the Anthromes (Ellis et al.) classification as a Band T field was considered and rejected after analysis. Anthromes is informationally redundant with the continuous HYDE fields already in Band T, structurally brittle at class boundaries under HYDE's reconstruction uncertainty, temporally coarse (six time slices only in the DGG version), and conceptually in tension with EDOPS's process-aware framing.
 
-This is potentially a substantial addition to the signature in its own right — a single field that summarizes "what kind of human landscape was this at time T" — but it raises its own design questions (basin-level dominant class vs. distribution; how to handle epochs where most cells are class 70 "no definition"; whether to return the trajectory of class membership over a window, since transitions between classes are themselves historically informative).
+In its place, `docs/edop/classification_plan.md` defines a data-driven per-band typology (Tasks 12–22) native to EDOPS, producing named cluster types from the signature's own variables rather than importing an external categorical scheme. The Band T analogue (Task 22, deferred) will use HYDE fields to produce an epoch-conditioned anthropogenic typology once the static-band typology methodology is stable.
 
-**Specifics to be designed before notebook implementation.** Likely shape: per-epoch class distribution at the sample basins, transition-matrix analysis between adjacent epochs, and a representational decision about how to expose Anthromes in the signature schema.
-
-**Artifact target**: `notebooks/edop/explore/12_anthromes.ipynb` (specifics pending design).
+No notebook artifact for this task.
 
 ---
 
@@ -218,7 +216,7 @@ notebooks/edop/explore/
   09_hyde_basin_aggregation.ipynb
   10_lmr_structure.ipynb
   11_lmr_periods_volcanics.ipynb
-  12_anthromes.ipynb              (deferred, specifics TBD)
+  12_anthromes.ipynb              (superseded — see docs/edop/classification_plan.md)
 
 output/edop/explore/
   07_*.csv  07_*.png
@@ -232,3 +230,5 @@ Each task entry in the log follows the existing convention: Date · Task · Meth
 ---
 
 *Decisions taken in the 25 April revision: Band F → Band T; sequencing eVolv2k → HYDE → LMR; LMR signatures will expose ensemble mean + standard deviation per variable, with full-ensemble access available via opt-in parameter for advanced users; Anthromes added as deferred Task 12 with specifics TBD. Sample size of 500 geographic basins retained as working assumption pending review against actual notebook runtimes.*
+
+*27 April revision: Task 12 (Anthromes) superseded. Anthromes rejected as informationally redundant with HYDE fields, temporally coarse (6 time steps), and brittle under reconstruction uncertainty. Replaced by data-driven per-band classification typology; see `docs/edop/classification_plan.md` (Tasks 12–22). Exploration phase (Tasks 1–11) closed.*
