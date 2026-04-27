@@ -42,11 +42,35 @@ High-level results:
 - F8.6: population density may not belong in an environmental signature
 - F9.6: EarthStat/HYDE spatial divergence at agricultural hotspot sub-basins
 
-## Up next — Task 10 (start of next session)
+## Task 10 — LMR v2.1 temporal/spatial structure and grid behaviour
+
+Notebook: `notebooks/edop/explore/10_lmr_structure.ipynb`
+Detailed findings: `logs/exploration_log.md` F10.1–F10.5
+Outputs: `output/edop/explore/10_*.csv` + `10_*.png` (7 files)
+
+Downloaded spread files + nhmt/gmt before starting. Key structural discoveries:
+
+- **File structure**: `(time=2001, MCrun=20, lat=91, lon=180)` — mean files retain full MCrun dimension; "ensemble mean" requires averaging over axis=1. Values are anomalies from model prior, not absolute values. Coverage 0–1998 CE.
+- **Grid**: 16,380 cells at 2°×2°, values at all cells including ocean. Lon runs 0–358 (not −180/180) — convert for DB queries.
+- **Funnel effect**: all variables show compressed variance in early centuries (0–500 CE), expanding through the record — regression to prior when proxies are sparse. Not a climate signal; a data-quality signature. Reconstruction most reliable ~700–1900 CE (F10.1)
+- **Variance decomposition**: temporal variance dominates geographic for all three variables — PDSI 76% temporal, temperature 68%, precipitation 93%. LMR is genuinely time-dependent; Band C and Band T are non-redundant (F10.2)
+- **Uncertainty**: within-run spread dominates across-run std by ~4.6×. Spread only 1.13× higher in early vs late period — spread alone won't flag sparse-proxy epochs; explicit caveat needed (F10.3)
+- **Band C coherence**: Spearman r ≈ 0 for both temperature and precipitation — the two datasets are orthogonal, as expected. 1850–1900 window is slightly LIA-cool relative to 2000-yr mean (median −0.05 K) (F10.4)
+- **L8→LMR mapping**: 190,675 basins → 4,999 cells; median 39 basins per cell, p95 74, max 109. Spatial precision ceiling ~200 km — LMR is a regional signal, not local (F10.5)
+
+## Key design decisions from Task 10
+
+- LMR API fields: grand mean (mean over 20 MCruns) + within-run spread as uncertainty
+- All LMR variables are anomalies — label clearly in API, never imply absolute values
+- Epoch caveat threshold: flag pre-~700 CE as "reduced reconstruction fidelity"
+- 2°×2° resolution note required in API docs
+
+## Up next — Task 11 (start of next session)
 
 **Branch**: `explore02`
 
-**Task 10**: LMR v2.1 structure and coverage (`notebooks/edop/explore/10_lmr_structure.ipynb`)
-- Characterize the LMR v2.1 reconstruction: variables (PDSI, Tmean, Pmean), spatial grid, temporal coverage (0–1998 CE), ensemble structure
-- Establish what the API actually delivers vs what the NetCDF contains
-- Key question: does LMR spatial resolution cause meaningful location-sensitivity for sub-basin queries, and how does the 0 CE start interact with HYDE's earlier coverage?
+**Task 11**: LMR period and event fingerprints (`notebooks/edop/explore/11_lmr_periods_volcanics.ipynb`)
+- Test whether MCA (~950–1250 CE) and LIA (~1300–1850 CE) appear as detectable anomalies at appropriate NH locations
+- Volcanic response: extract LMR temperature at lag 0–3 years post-eruption for largest eVolv2k events
+- Establish baseline-window convention for Band T anomaly reporting
+- nhmt/gmt full-ensemble files available for hemisphere-level response curves

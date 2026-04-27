@@ -428,6 +428,74 @@ Each entry: **Date · Task · Method · Finding · Implication**
 
 ---
 
+## 2026-04-26 · Task 10 · LMR v2.1 temporal/spatial structure and grid behaviour
+
+**Method**: `notebooks/edop/explore/10_lmr_structure.ipynb` · Variables: PDSI, air temperature (anomaly), precipitation rate (anomaly) · Grid: 2°×2°, 16,380 cells globally (values at all cells including ocean) · Temporal: 0–1998 CE, 2001 annual steps · Ensemble: 20 MCruns × (mean + spread) files
+
+---
+
+### F10.1 — LMR time series show an expanding-funnel shape: an artifact of proxy density, not a climate signal
+
+**Finding**: All three variables (PDSI, temperature, precipitation) show compressed year-to-year variance in the early period (0–500 CE) that expands progressively through the record. In the early centuries each line in the time series gallery hugs close to zero with small oscillations; from ~1200 CE onward the same lines swing widely. This pattern is uniform across all latitude bands and locations.
+
+This is the LMR "regression to prior" effect. When proxy records are sparse (early centuries), all 20 MCruns produce cautious reconstructions constrained by the model's long-run climatology prior — their grand mean stays near zero. As proxy density increases in later centuries, each MCrun is pulled by real proxy data toward a genuine signal; the grand mean inherits that signal's variability. The funnel shape is a data-quality signature, not a climate signature: pre-500 CE reconstruction amplitude is systematically suppressed relative to the actual historical climate variability at those locations.
+
+**Implication**: LMR is not equally reliable across its full 0–1998 CE window. The early period (roughly 0–700 CE) is the least trustworthy — not because the data is wrong, but because the reconstruction has low power to detect anomalies when proxies are sparse. Band T queries in this window should carry a caveat about reduced reconstruction fidelity. The most analytically productive window is approximately 700–1900 CE, where proxy networks are dense enough to constrain the reconstruction meaningfully. This interacts with the HYDE finding (F9.5) that s/u divergence is most useful at 0–1000 CE — the overlap of reliable LMR and meaningful HYDE divergence is roughly 700–1000 CE.
+
+---
+
+### F10.2 — Temporal variance dominates geographic variance for all three LMR variables; Band T is genuinely non-redundant with Band C
+
+**Finding**: Variance decomposition across 34 sample locations × 2001 years:
+
+| Variable | Geographic % | Temporal % | Dominant |
+|---|---|---|---|
+| PDSI | 23.7% | 76.3% | Temporal |
+| Air temperature | 31.6% | 68.4% | Temporal |
+| Precipitation rate | 7.3% | 92.7% | Temporal |
+
+Geographic variance measures how much the 2000-year mean anomaly differs between locations; temporal variance measures how much a single location's value swings from year to year. Since LMR stores anomalies from the model climatology prior (not absolute values), all locations have long-run means near zero — geographic differences nearly vanish. Temporal fluctuations driven by proxy data are the dominant source of variance.
+
+**Implication**: The result is the opposite of what was anticipated for temperature (expected geographic dominance). Because LMR variables are anomaly fields, knowing *when* a query is placed matters more than knowing *where* for all three variables. This validates Band T as genuinely non-redundant with Band C: Band C provides absolute climatology (what temperature/precipitation is typical here); LMR provides the departure from that norm at a given epoch (how anomalous was this period). A long-window LMR mean would converge toward zero and add little — the value is in the temporal structure. Precipitation is the most temporally dominated (92.7%), consistent with high interannual variability and near-zero long-run anomaly means.
+
+---
+
+### F10.3 — Within-run spread dominates across-run std by ~4.6×; spread is stable across the record and a usable uncertainty field
+
+**Finding**: Median uncertainty magnitudes across sample locations and all years:
+
+| Variable | Within-run spread | Across-run std | Ratio |
+|---|---|---|---|
+| PDSI | 1.51 | 0.33 | 4.63× |
+| Air temperature | 0.48 K | 0.11 K | 4.32× |
+| Precipitation rate | ~0 (display precision) | ~0 | ~4.9× |
+
+Within-run spread (std across ~100 particles within each MCrun) is ~4.6× larger than across-run std (disagreement between the 20 MCruns). The 20 MCruns — each using a different random proxy subset — produce consistent grand means. The dominant uncertainty is particle dispersion within each MCrun: the range of plausible climate states the model's dynamics and proxy assimilation admit at each time step.
+
+PDSI spread early (0–500 CE) vs late (1500–1998 CE): 1.55 vs 1.36, ratio 1.13×. Spread is only modestly elevated in the early period despite the dramatic funnel visible in the grand mean. This is because spread captures model intrinsic uncertainty (which sets a floor even without proxies), while the funnel reflects suppression of the *mean signal* by regression to the prior. Proxies constrain the mean but don't eliminate particle dispersion.
+
+**Implication**: The within-run spread is the appropriate uncertainty field to expose in the Band T API — it is the larger, more meaningful source, and it is reasonably stable across the record (~13% elevation in early centuries vs late). It cannot serve as a standalone proxy for the funnel-effect (F10.1): spread alone will not strongly flag early-period reconstructions as less reliable. An explicit epoch-based caveat (e.g. "reconstruction fidelity reduced before ~700 CE due to sparse proxy networks") is necessary in addition to returning the spread value.
+
+---
+
+### F10.4 — Band C and LMR are statistically orthogonal; 1850–1900 window sits within LIA cooling
+
+**Finding**: Spearman correlation between Band C absolute climatology and LMR 1850–1900 anomaly (relative to full 2000-year mean): temperature r = −0.055 (p = 0.759), precipitation r = −0.112 (p = 0.527). Both near zero and non-significant across 34 sample locations. LMR 1850–1900 temperature anomaly stats: mean = −0.065 K, median = −0.053 K, std = 0.075 K, range −0.221 to +0.061 K. The 75th percentile is −0.010 K — most locations are slightly below the 2000-year mean in this window. Only a few locations (high Subtropical NH) show positive anomalies.
+
+The negative mean anomaly reflects the LIA signal: 1850–1900 sits at the end of the Little Ice Age cooling period relative to the 2000-year mean. The Medieval Climate Anomaly (950–1250 CE) raised the 2000-year mean for NH locations, making 1850–1900 appear cool in comparison. The industrial warming that dominates post-1900 is largely outside LMR's effective window for aggregate comparison.
+
+**Implication**: Band C (absolute climatology, WorldClim) and LMR (temporal anomaly, paleoclimate reanalysis) contain statistically independent information and are genuinely non-redundant in the signature. A researcher using both receives orthogonal characterisations: what is the typical climate here (Band C), and how much did climate at this location depart from its long-run norm at a given epoch (Band T/LMR). There is no risk of double-counting. This also means there is no useful "sanity check" between the two in the traditional sense — agreement is not expected and near-zero correlation is the correct outcome.
+
+---
+
+### F10.5 — LMR 2°×2° grid is ~38× coarser than L8 basin resolution; spatial precision ceiling is ~200 km
+
+**Finding**: 190,675 L8 basins map to 4,999 unique LMR 2°×2° cells — a 38:1 compression ratio. Basins-per-cell distribution: median 39, p75 56, p95 74, max 109. LMR provides values at all 16,380 grid cells globally (land and ocean); 4,999 of those cells (30%) contain at least one L8 basin, covering the land areas with HydroSHEDS river basin coverage. The remaining 11,381 cells are ocean, polar regions, or endorheic areas outside HydroSHEDS. The highest basin densities (approaching 110 per cell) occur in mountain zones — Alps, Himalayas, Rockies — where many small headwater sub-basins pack into a single 2° square.
+
+**Implication**: A Band T LMR query for any given L8 basin returns the same value as ~39 neighboring basins on average. The spatial precision of the LMR component is approximately one 2°×2° cell (~200 km at mid-latitudes), regardless of basin size. Fine-grained local climate anomaly characterisation is not possible with LMR at L8 resolution — the reconstruction is inherently regional. This should be disclosed in API documentation: "LMR climate anomaly values are resolved at 2° spatial resolution (~200 km); multiple adjacent basins will return identical values." For CDOP correspondence work, LMR anomalies can distinguish broad regional climate periods but not local micro-climate differences between neighboring basins.
+
+---
+
 ## 2026-04-26 · Task 9 · HYDE basin aggregation and s/u characterization
 
 **Method**: `notebooks/edop/explore/09_hyde_basin_aggregation.ipynb` · L8: 500-basin stratified sample (25/cluster × 20 clusters); L6: 500-basin stratified sample from Task 5b clusters · HYDE variables: cropland, grazing_land · Epochs: 1000 BCE, 0 CE, 1000 CE, 2000 CE · Aggregation: polygon-interior mean (shapely vectorized contains) for s values; centroid lookup + sub_area-weighted traversal for u values
