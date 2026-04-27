@@ -428,6 +428,91 @@ Each entry: **Date · Task · Method · Finding · Implication**
 
 ---
 
+## 2026-04-27 · Task 11 · LMR period and event fingerprints
+
+**Method**: `notebooks/edop/explore/11_lmr_periods_volcanics.ipynb` · Reuses 34-cell L8-anchored sample from Task 10 · Period anomalies: PDSI and air temperature for Late Antique (500–700 CE), MCA (950–1250 CE), LIA (1300–1850 CE) relative to three reference windows · Volcanic composite: 5 events ≥20 Tg in reliable window (700–1900 CE), lag-response at individual cells and nhmt/gmt hemisphere means · Location-specific validation: Kaifeng (~35°N, 114°E) and Central Europe (~48°N, 10°E) across the full Song dynasty (960–1280 CE) with Samalas (1257, 59 Tg) close-up
+
+---
+
+### F11.1 — MCA and LIA temperature signals are near the noise floor at global scale; reference choice matters qualitatively
+
+**Finding**: Median air temperature anomaly across the 34-cell global sample:
+
+| Period | vs full record (0–1998) | vs reliable pre-ind (1000–1850) |
+|---|---|---|
+| MCA (950–1250 CE) | −0.041 K (IQR 0.041) | +0.011 K (IQR 0.054) |
+| LIA (1300–1850 CE) | −0.041 K (IQR 0.041) | −0.003 K (IQR 0.017) |
+
+Using the full-record reference, MCA and LIA are statistically indistinguishable — both appear as pre-industrial cooling because the 20th-century industrial warming shifts the 2000-year mean upward, making every pre-1900 period look cool relative to it. Switching to the reliable pre-industrial reference (1000–1850 CE) recovers the correct sign: MCA positive, LIA negative. However, the absolute magnitudes remain marginal — MCA warming of +0.011 K against an IQR of 0.054 K is a direction, not a confident detection.
+
+PDSI shows the expected pattern (MCA slightly wetter, LIA slightly drier) but with similar signal-to-noise limitations globally. The Late Antique period (500–700 CE) shows an artificial positive air temperature anomaly (~+0.016 K, 73% of cells positive) — this is the funnel/regression-to-prior effect (F10.1), not a climate signal.
+
+**Important caveat**: Global-sample analysis systematically understates LMR's utility for the actual API use case. These are median anomalies across tropical, SH, and NH cells combined. MCA and LIA are NH-biased phenomena; averaging over cells where neither anomaly was expressed drives the global median toward zero. Location-specific queries — the API's primary mode — will show stronger regional signals (see F11.5).
+
+**Implication**: Do not report global-sample period anomalies as characterising what a researcher will see at their query location. The global characterisation establishes the noise floor and the reference-choice sensitivity; location-specific queries in the relevant latitude band will yield larger, more interpretable anomalies.
+
+---
+
+### F11.2 — Reliable pre-industrial (1000–1850 CE) is the recommended baseline convention for Band T anomaly reporting
+
+**Finding**: Three reference windows compared for MCA and LIA anomalies at 34 cells:
+
+- **Full record (0–1998 CE)**: Contaminated by 20th-century industrial warming. Reverses MCA temperature sign (negative instead of positive). Inappropriate for pre-industrial period queries.
+- **Reliable pre-industrial (1000–1850 CE)**: Recovers correct sign for both MCA (warm) and LIA (cool). Excludes industrial era and funnel zone. Consistent IQR and predictable behaviour across variables.
+- **Surrounding 200yr window**: Self-defeating for MCA (reference overlaps period; anomaly collapses to ~0). Marginally useful for LIA but produces inconsistent PDSI sign (LIA PDSI flips from −0.009 to +0.010 depending on which reference is used), revealing that the global PDSI signal is near zero and heterogeneous regardless.
+
+**Implication**: Reliable pre-industrial (1000–1850 CE) is the standard Band T reference window. This should be documented in the API and applied consistently when reporting period anomalies. Queries in the 0–700 CE window carry the additional funnel caveat (F10.1); the reference window does not resolve that issue.
+
+---
+
+### F11.3 — LMR volcanic composite is underpowered; Samalas-class events detectable at individual cells but not in hemisphere mean
+
+**Finding**: Composite of 5 events ≥20 Tg in the reliable window (700–1900 CE):
+
+- **nhmt hemisphere mean at lag 0** (eruption year): −0.013 K — within the pre-eruption noise floor of ±0.05 K. No detectable cooling signal.
+- **Lag +1**: +0.098 K — warming, not cooling. Consistent with documented dynamic warming response (stratospheric aerosol heating can strengthen winter circulation patterns in the year following large NH eruptions), but with only 5 events the composite is underpowered and this could equally be noise.
+- **Individual cells, pooled across 5 events**: median −0.051 K at lag 0 (64% of cells cooler). Modest but directionally correct.
+- **Per-event cell plots**: Samalas (59 Tg) shows a clear negative median at lag 0 (~−0.15 K, IQR below zero). Kuwae (33 Tg) shows cooling at lag 0 but a strong lag+1 rebound. Events at 21–24 Tg show no consistent signal.
+
+The apparent detection threshold for individual-basin LMR values is approximately 50+ Tg; below that, inter-annual noise (~±0.3 K per cell) swamps the forced response.
+
+**Implication**: LMR cannot reliably quantify volcanic forcing for the events that make up the bulk of the eVolv2k catalog. The volcanic signal in Band T must come from eVolv2k directly (event count, VSSI, years-since-last-major), not from LMR temperature. These two components are genuinely complementary and non-substitutable: eVolv2k provides the event record; LMR provides the climate-state reconstruction. Users should not expect LMR temperature to confirm what eVolv2k reports. See F11.4 for API design implications.
+
+---
+
+### F11.4 — eVolv2k and LMR must remain decoupled; Pinatubo scaling is the bridge for non-specialist users
+
+**Finding**: The weak LMR volcanic response reflects known reconstruction limitations, not a scientific misunderstanding of volcanic climate effects. Modern observational evidence is unambiguous: Pinatubo (1991, ~20 Tg) caused ~0.5°C global mean cooling over 1–2 years, measured directly by satellites and surface networks. El Chichón (1982) caused ~0.3°C. By Pinatubo scaling, Tambora (~28 Tg) ≈ 0.7°C and Samalas (~59 Tg) ≈ 1.5°C — effects that were almost certainly catastrophic at the regional scale. LMR attenuates these signals for several compounding reasons: the model prior has no volcanic forcing; tree rings (the dominant proxy type) record growing-season not annual-mean temperature; ensemble mean averaging dampens single-year spikes; and early-medieval proxy networks are sparse in the regions most affected by tropical eruptions.
+
+**Implication**: API design should expose eVolv2k as a standalone catalog component. The narrative layer (LLM prompt) should carry a fixed Pinatubo calibration reference: "Pinatubo (1991) = ~20 Tg → ~0.5°C global cooling over 1–2 years; scale accordingly." This bridges the interpretive gap for non-specialist users who cannot be assumed to have domain knowledge of volcanic climate forcing. Do not imply that LMR temperature values confirm or deny the volcanic signal — state explicitly that they are independent and that LMR's attenuation is a known reconstruction property.
+
+---
+
+### F11.5 — At specific NH locations, LMR resolves Samalas cooling and MCA/LIA structure; global-sample findings understate location-specific utility
+
+**Finding**: Kaifeng (~35°N, 114°E) and Central Europe (~48°N, 10°E) cells extracted for the full Song dynasty (960–1280 CE) and the Samalas close-up (1247–1272 CE):
+
+**Samalas response** (relative to 1252–1256 baseline):
+- Central Europe 1257: −0.432 K — approximately 4× the pre-eruption inter-annual noise amplitude. A convincing, clearly detectable signal.
+- Kaifeng 1257: −0.132 K — within the noise range for that cell (~±0.27 K). However, Kaifeng shows sustained predominantly-negative values from 1260–1264 (−0.241, −0.158, −0.090 K), suggesting a real but delayed and attenuated response. Whether the delay reflects physical differences in regional climate response or sparser East Asian proxy coverage in LMR is not determinable from this test alone.
+- Both cells show predominantly negative temperatures from 1257 through at least 1264 — 7+ years of persistent cooling consistent with a Samalas-magnitude event.
+
+**Song dynasty overview**: The Kaifeng cell shows a cooler-than-baseline Northern Song (960–1127), a warm pulse in the mid-Southern Song (~1170–1220 CE) consistent with the MCA, and a cooling trend from ~1230 onward into which Samalas lands. These are features invisible in the 34-cell global median but detectable at specific locations. The two cells diverge throughout the dynasty — they represent genuinely different regional climate trajectories that converge on the post-Samalas cooling. This confirms: location-specific queries are more informative than global-sample characterisation for the actual API use case.
+
+**Implication**: The global-sample noise floor established in F11.1 should not be read as the typical user experience. A researcher querying a NH Temperate location for MCA or LIA will see a directional signal. A researcher querying for the period immediately following Samalas will see cooling at Central European locations; Kaifeng shows a more attenuated and delayed signal. Both cases provide historically meaningful information. The caveat is about magnitude precision, not about whether any signal exists.
+
+---
+
+### F11.6 — LMR proxy network has a systematic geographic bias that disadvantages East Asian and SH researchers
+
+**Finding**: The stronger and better-timed Samalas signal at Central Europe (−0.432 K in 1257) vs Kaifeng (−0.132 K, delayed) is most parsimoniously explained by proxy network density, not by physical climate differences alone. European paleoclimate proxy networks — dominated by tree rings, ice cores, and documentary records — are far denser than East Asian networks in LMR's assimilation. A well-constrained cell will produce a cleaner, more temporally precise reconstruction of the same forcing. A poorly-constrained cell regresses more toward the prior between proxy constraint points, producing a noisier signal with less precise event timing.
+
+This is not a property unique to LMR — it characterises virtually all multi-proxy paleoclimate reconstructions currently available. The bias is geographic and reflects the history of paleoclimate data collection, which has been concentrated in Europe, North America, and parts of the Pacific. Researchers working on East Asia, South Asia, Africa, and most of the Southern Hemisphere receive a systematically less well-constrained LMR reconstruction than their European counterparts — not because those regions experienced less climate variability, but because fewer proxies from those regions have been incorporated.
+
+**Implication**: This limitation must be explicitly stated in Band T API documentation, not buried in technical notes. A Song dynasty historian using EDOP to query climate at Kaifeng should know that the LMR values there are less precisely constrained than equivalent values for a medieval European site. The within-run spread field (F10.3) does not adequately capture this geographic bias — spread is driven by model dynamics and does not scale with proxy density in a way users can easily interpret. A qualitative disclosure is needed: "LMR reconstruction quality varies by region; coverage is strongest in Europe and North America and weaker in East Asia, South Asia, and the Southern Hemisphere."
+
+---
+
 ## 2026-04-26 · Task 10 · LMR v2.1 temporal/spatial structure and grid behaviour
 
 **Method**: `notebooks/edop/explore/10_lmr_structure.ipynb` · Variables: PDSI, air temperature (anomaly), precipitation rate (anomaly) · Grid: 2°×2°, 16,380 cells globally (values at all cells including ocean) · Temporal: 0–1998 CE, 2001 annual steps · Ensemble: 20 MCruns × (mean + spread) files
