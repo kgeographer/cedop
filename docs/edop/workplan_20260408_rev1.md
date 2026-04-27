@@ -1,5 +1,5 @@
 # EDOPS Work Plan
-*Draft — 5 April 2026; revised 8 April 2026*
+*Draft — 8 April 2026; revised 27 April 2026*
 *Karl Grossner / ISHI, University of Pittsburgh (Ruth Mostern, Director)*
 
 ---
@@ -28,6 +28,7 @@ Complete the EDOPS environmental signature to the current design specification:
 - Downstream connectivity and coastality fields: flow distance to marine outlet, outlet type (exorheic/endorheic), topological network depth
 - Rationalize variable selection; document dimension choices and persistence band assignments
 - Integrate temporal enrichment layer: Last Millennium Reanalysis v2.1 (LMR; Tardif et al. 2019) for continuous historical climate (1–2000 CE) and eVolv2k v4 (Sigl & Toohey 2024) for volcanic event annotation (500 BCE–1900 CE), queryable by time period
+{* add HYDE for land use (look at other HYDE variables}
 - Evaluate and selectively load additional LMR v2.1 variables beyond PDSI: temperature (`air`), precipitation rate (`prate`), sea surface temperature (`sst`), sea level pressure (`prmsl`), and others as relevant to EDOPS use cases; see `data/lmr_v2.1/lmr_inventory.md` for full file inventory and load status
 
 ### Signature correspondence testing
@@ -43,17 +44,17 @@ Correspondence testing runs in parallel with each signature increment:
 
 API parameters are shaped by what the iterative development reveals, not specified in advance:
 
-- Band selection (A/B/C/D, individually or in combination)
+- Band selection (A/B/C/D/E/T, individually or in combination)
 - Upstream/downstream toggle
 - Neighborhood type (single basin, upstream catchment, buffer)
-- Temporal window (year range for LMR and eVolv2k context)
+- Temporal window (year range for Band T context)
 - Summary/narrative toggle (LLM call)
-- Design harness for future additions (coastality enrichment, polygon input)
+- Design harness for future additions (coastality enrichment (Band E), polygon input)
 
 ### Demo page and LLM narrative
 
-- Live demo/tester page at `edops.kgeographer.org` (or `cedop.kgeographer.org/edops`): queryable signature with parameter controls, results display
-- Wire optional LLM narrative call (Claude API): contextual natural language summary of signature for non-specialist users
+- Live sandbox page at `https://edops.kgeographer.org/sandbox`): queryable signature with parameter controls, results display
+- Wire optional LLM narrative call (Claude API): contextual natural language summary of signature for range of user types
 - Temporal enrichment illustrated in narrative (e.g. Kaifeng 950–1000 CE, Ur 0–100 CE)
 
 ### Research notebooks *(tentative)*
