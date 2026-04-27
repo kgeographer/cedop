@@ -1,0 +1,118 @@
+# EDOPS Work Plan
+*Draft — 8 April 2026; revised 27 April 2026*
+*Karl Grossner / ISHI, University of Pittsburgh (Ruth Mostern, Director)*
+
+---
+
+## Overview
+
+The Environmental Dimensions of Place Service (EDOPS) is a computational service for generating standardized, reproducible environmental signatures for geographic locations. A working prototype exists at [cedop.kgeographer.org](https://cedop.kgeographer.org/edop). This work plan covers one year of development beginning May 2026, structured around a public presentation milestone at Pitt on approximately 1 October 2026, at which EDOPS will be demonstrated to team members of the Institute for Spatial History Innovation ISHI) team, University of Pittsburgh scientists and potential collaborators.
+
+Development follows an iterative research model: signature capability and correspondence testing proceed in tandem. Each increment of the signature is examined against independently documented cultural settings — settlement hearths, ethnographic societies, historical polities — to establish that signatures capture real environmental structure and surface meaningful similarities and differences. Findings inform subsequent development priorities but do not constitute an optimization loop; EDOP is a research instrument, not a predictive classifier. Specific tasks in Phase 2 are subject to re-prioritization based on Phase 1 findings and feedback received at the October presentation.
+
+---
+
+## Phase 1: May – September 2026
+
+### Infrastructure (early, prerequisite)
+
+- Configure Hetzner Linux VM as production hosting environment for EDOPS, replacing current development server *(complete as of April 2026)*
+- Provision with appropriate web server (Apache), database (PostgreSQL/PostGIS), and application stack (FastAPI/Gunicorn) *(complete)*
+- Design configuration for eventual transfer to Pitt/ISHI infrastructure
+
+### Signature development
+
+Complete the EDOPS environmental signature to the current design specification:
+
+- Full BasinATLAS variable set: upstream catchment values (`u`) for all applicable variables, alongside local (`s`) values already implemented
+- Downstream connectivity and coastality fields: flow distance to marine outlet, outlet type (exorheic/endorheic), topological network depth
+- Rationalize variable selection; document dimension choices and persistence band assignments
+- Integrate temporal enrichment layer: Last Millennium Reanalysis v2.1 (LMR; Tardif et al. 2019) for continuous historical climate (1–2000 CE) and eVolv2k v4 (Sigl & Toohey 2024) for volcanic event annotation (500 BCE–1900 CE), queryable by time period
+{* add HYDE for land use (look at other HYDE variables}
+- Evaluate and selectively load additional LMR v2.1 variables beyond PDSI: temperature (`air`), precipitation rate (`prate`), sea surface temperature (`sst`), sea level pressure (`prmsl`), and others as relevant to EDOPS use cases; see `data/lmr_v2.1/lmr_inventory.md` for full file inventory and load status
+
+### Signature correspondence testing
+
+Correspondence testing runs in parallel with each signature increment:
+
+1. **Baseline correspondence**: Generate single-basin signatures (Level 08) for a set of well-documented historical settlements (Reba et al. urban hearths; WHG/WHC cities) — inland settlements prioritized initially. Establish that signature space separates these sites from globally random basins — an existence proof of environmental sensitivity, not a prediction score.
+2. **D-PLACE correspondence experiment**: Generate signatures at basin levels 06, 08, 09, and 10 for a global sample (~30 D-PLACE societies), using band combinations A, B, C, and composites. Compare pairwise environmental similarity to pairwise subsistence similarity (Mantel test against permutation null). Identifies which band and level combinations capture culturally relevant environmental structure, and surfaces productive anomalies — environmentally similar societies with dissimilar subsistence, or vice versa. *Temporal matching required*: signatures extracted for the documented period of occupation, using LMR v2.1 for societies within 1–2000 CE.
+3. **Scale sensitivity**: Document how signatures and correspondence strength vary across basin levels; identify scale-dependence by region and geographic type.
+4. **Coastal anomaly structure**: Identify settlements where terrestrial signatures diverge from known occupation patterns; attribute to marine affordance; test whether adding coastality fields resolves the anomaly; full resolution deferred to Phase 2.
+
+### API design and implementation
+
+API parameters are shaped by what the iterative development reveals, not specified in advance:
+
+- Band selection (A/B/C/D/E/T, individually or in combination)
+- Upstream/downstream toggle
+- Neighborhood type (single basin, upstream catchment, buffer)
+- Temporal window (year range for Band T context)
+- Summary/narrative toggle (LLM call)
+- Design harness for future additions (coastality enrichment (Band E), polygon input)
+
+### Demo page and LLM narrative
+
+- Live sandbox page at `https://edops.kgeographer.org/sandbox`): queryable signature with parameter controls, results display
+- Wire optional LLM narrative call (Claude API): contextual natural language summary of signature for range of user types
+- Temporal enrichment illustrated in narrative (e.g. Kaifeng 950–1000 CE, Ur 0–100 CE)
+
+### Research notebooks *(tentative)*
+
+- One or two Python notebooks documenting the signature construction and analysis pipeline in a linear, inspectable form — intended for scholarly communication and transparency rather than operational use ("defactoring" in the DH sense)
+- Notebook 1: signature construction — DB query, JSON structuring, s/u duality illustrated with worked examples
+- Notebook 2: correspondence analysis — distance matrix, divergence profiles, D-PLACE experiment walkthrough
+- A small bundled sample of signature JSONs committed to the repo to make notebooks runnable without a live DB connection
+- Timing: late Phase 1, once signature design is stable; potential leave-behind for October presentation
+
+### October 1 presentation deliverable state
+
+By the October meeting at Pitt, the following will be in place:
+
+- Live, queryable EDOPS API with implemented parameters
+- Demo page with parameter selection, showing signature output and LLM summaries
+- Documented rubric for parameter selection by use-case type
+- First correspondence results: signature-to-setting characterization for settlement hearth and D-PLACE samples; scale sensitivity findings across basin levels; coastal anomaly structure
+- WHG portal payload: co-designed with ISHI team; API endpoint specified (implementation by WHG developer)
+
+---
+
+## Phase 2: October 2026 – April/May 2027
+
+Phase 2 priorities are informed by Phase 1 findings and feedback from the October presentation. The following are anticipated areas of work, subject to re-prioritization:
+
+### Coastal enrichment
+
+- Integrate Phase 2 coastal datasets: ICOADS marine climate (NCEI/NCAR, 2°×2°, back to 1800) and seafloor topography (continental shelf vs. deep water)
+- Revisit coastal anomalies identified in Phase 1 validation; test coastality against known maritime societies
+
+### Polygon signatures
+
+- Implement areal interpolation for polygon inputs (historical polities, study regions)
+- Return signature distribution over intersecting basins, not only a mean vector
+- Explore with Cliopatria/Seshat polity dataset (a priority for ISHI team)
+- Temporal sequence of polygon signatures (territorial expansion/contraction)
+
+### API expansion
+
+- Custom variable group selection (e.g. aridity-focused queries)
+- Extended neighborhood models (buffer, composite three-tier)
+- Parameter documentation and usage guide for external developers
+
+### WHG place portal pages
+
+- Finalize payload specification with ISHI team and WHG developer (Stephen Gadd)
+- Implement and test API endpoint for WHG place portal integration
+
+### Infrastructure handoff
+
+- Coordinate transfer of EDOPS deployment to Pitt/ISHI infrastructure
+- Document VM configuration, deployment procedures, and database management for Pitt systems staff
+
+### Travel
+
+- One trip to Pittsburgh (approximately 3 nights) for in-person presentation, team design sessions, and ISHI planning meetings
+
+---
+
+*Revision 8 April 2026: validation framing updated to reflect conceptual clarifications in prospectus_20260407 — "settlement prediction" reframed as "signature correspondence"; D-PLACE correspondence experiment added; instrument framing (not predictive classifier) added to overview; infrastructure status noted as complete.*

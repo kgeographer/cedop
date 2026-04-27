@@ -62,7 +62,7 @@ PhD in Classical Literature + BSc in Software Engineering. Builds AI- and knowle
 - **Band B — upstream `u` values**: the Niger headwaters drain the Fouta Djallon highlands in Guinea, where annual rainfall exceeds 1,500mm. The `s/u` divergence on precipitation is large — Timbuktu sits on a river fed by distant highlands, not its local catchment
 - **Band C (Bioclimatic)**: local biome is Sahel/desert edge; upstream biome profile includes Guinea highland forest/savanna — the divergence is visible in vegetation productivity measures too
 - **Band E (Coastality)**: not coastal in the marine sense, but `dist_sink` captures proximity to the river mouth system; the Niger Inland Delta immediately upstream creates an enormous productive floodplain — this is the ecological anchor
-- **Band F (Temporal, 1350–1600)**: LMR PDSI for the period shows conditions broadly comparable to the modern mean in the Sahel; no catastrophic drought forcing during the empire peak; eVolv2k shows some volcanic events but no sustained forcing
+- **Band T (Temporal, 1350–1600)**: LMR PDSI for the period shows conditions broadly comparable to the modern mean in the Sahel; no catastrophic drought forcing during the empire peak; eVolv2k shows some volcanic events but no sustained forcing
 
 **Payoff**: The signature resolves the paradox via allochthonous water. The Niger brings rainfall from Guinea highlands 1,500 km upstream, sustaining agriculture and the Niger Inland Delta fisheries that fed the city. The `s/u` divergence is the structural explanation. Timbuktu's genius loci is not its local environment but its position as the hinge between river-borne surplus (south) and trans-Saharan caravan trade (north) — the signature provides the physical half of that argument; the cultural-geographic half belongs to CDOP.
 
@@ -86,7 +86,7 @@ PhD in Classical Literature + BSc in Software Engineering. Builds AI- and knowle
 
 1. User types "Ur" in the place lookup. WHG returns no match. → **Fail state 1**: sandbox offers: enter lat/lon directly | search Geonames | LLM-assisted lookup. User enters coordinates (~30.96°N, 46.10°E) and proceeds.
 2. User checks bands A, B, C, E and F (temporal), enters `−2100` to `−1800` (Ur III period).
-3. Clicks "Get signature" → bands A–E load; Band F triggers **Fail state 2**: date range is prior to LMR coverage (floor ~0 CE). Sandbox notifies the user: "Temporal climate data is not available before approximately 0 CE. Ur III period climate is outside current EDOPS scope. Proceeding with physical signature only." Bands A–E render normally.
+3. Clicks "Get signature" → bands A–E load; Band T triggers **Fail state 2**: date range is prior to LMR coverage (floor ~0 CE). Sandbox notifies the user: "Temporal climate data is not available before approximately 0 CE. Ur III period climate is outside current EDOPS scope. Proceeding with physical signature only." Bands A–E render normally.
 
 **What the signature shows (A–E)**:
 
@@ -115,7 +115,7 @@ PhD in Classical Literature + BSc in Software Engineering. Builds AI- and knowle
 
 **The two design questions Federico raised directly**:
 
-1. **Chronological gap**: His corpus is pre-Common Era (e.g. Roman hydraulic engineering, Mesopotamian irrigation). Band F (LMR) has a floor of ~0 CE. For his core use cases, temporal enrichment is unavailable within current EDOPS scope. This is the same fail state as scenario 02, but it is not a rare edge case for Federico — it is his entire domain. *Implication*: the API response for out-of-range temporal queries must clearly document what is and is not available, and the signature JSON should be complete and useful for bands A–E even when F is absent.
+1. **Chronological gap**: His corpus is pre-Common Era (e.g. Roman hydraulic engineering, Mesopotamian irrigation). Band T (LMR) has a floor of ~0 CE. For his core use cases, temporal enrichment is unavailable within current EDOPS scope. This is the same fail state as scenario 02, but it is not a rare edge case for Federico — it is his entire domain. *Implication*: the API response for out-of-range temporal queries must clearly document what is and is not available, and the signature JSON should be complete and useful for bands A–E even when F is absent.
 
 2. **Spatial unit for river-valley settings**: Canals, aqueducts, and irrigation systems are engineered water — they cross basin boundaries by design. Point containment at Level 08 will regularly assign these sites to the wrong hydrological context. Federico's use case puts maximum pressure on the neighborhood selection problem. *Implication*: the API must expose neighborhood type as an explicit parameter (`basin`, `buffer`, `upstream`, `threeTier`), not hide it as a default. For his use, `upstream` or `threeTier` is likely the appropriate choice; `basin` (current default) may be systematically misleading.
 
@@ -123,7 +123,7 @@ PhD in Classical Literature + BSc in Software Engineering. Builds AI- and knowle
 ```
 GET /api/signature?lat=30.96&lon=46.10&level=08&neighborhood=upstream&bands=A,B,C,E
 ```
-Bands A–E, upstream neighborhood, no Band F (outside temporal coverage). Response: self-describing JSON ready for Neo4j node enrichment.
+Bands A–E, upstream neighborhood, no Band T (outside temporal coverage). Response: self-describing JSON ready for Neo4j node enrichment.
 
 **API lens concept**: Federico's use case suggests a named lens — e.g. `lens=ancient_riverine` — that pre-configures neighborhood=upstream, bands=A–E, temporal=none, with appropriate caveats in the response metadata. Other researchers with similar profiles would benefit from the same defaults without having to reconstruct them.
 

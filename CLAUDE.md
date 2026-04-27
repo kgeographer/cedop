@@ -87,16 +87,16 @@ metadata/*.tsv           # Lookup tables for categorical fields
 
 - WHG place lookup (reconcile+extend, zoom ≥ 4) → candidate markers → basin assignment → neighborhood map
 - Level 08/06 toggle: switching always lands on Map tab; re-fetches preview + sig if sig exists
-- Band A–F signature accordion; Signature/Analysis tabs disabled until sig fetched
+- Band A–T signature accordion; Signature/Analysis tabs disabled until sig fetched
 - Analysis α tab: water provenance, s/u divergence table, scale mismatch alert
-- Band F temporal: PDSI / Temperature / Precipitation SVG charts + volcanic events
+- Band T temporal: PDSI / Temperature / Precipitation SVG charts + volcanic events
 - Ecoregion → Wikipedia modal; LLM narrative button
 - Example selector: Timbuktu (1100–1200), Rome (0–300), Kaifeng (1000–1100) at L8/L6
 - API Guide modal in header
 
 ### Workbench (`/workbench`) — Experimental Demonstrators
 
-- **Main**: Place lookup → signature (Bands A–F)
+- **Main**: Place lookup → signature (Bands A–T)
 - **Basins**: 20 PCA-derived environmental clusters of 190k sub-basins + WH cities
 - **Ecoregions**: OneEarth hierarchy browser (Realms → Ecoregions)
 - **Societies**: 1,291 D-PLACE societies with subsistence/religion filters
@@ -106,13 +106,13 @@ metadata/*.tsv           # Lookup tables for categorical fields
 ### Key Endpoints
 
 ```
-/api/signature?lat=X&lon=Y[&bands=ABCDEF&from_year=N&to_year=N&level=6|8]
+/api/signature?lat=X&lon=Y[&bands=ABCDET&from_year=N&to_year=N&level=6|8]
                               Environmental signature. Single call handles all bands including F.
-                              Response: meta (version, timestamp, query, data_sources) + profile_groups A–F.
-                              Band F requires from_year+to_year (0–1998 CE); stored at profile_groups["F"].
+                              Response: meta (version, timestamp, query, data_sources) + profile_groups A–T.
+                              Band T requires from_year+to_year (0–1998 CE); stored at profile_groups["T"].
                               Flat basin fields excluded by default; profile_groups is canonical.
 /api/temporal?lat=X&lon=Y&year_start=N&year_end=N
-                              LMR v2.1 PDSI + eVolv2k volcanic events (legacy; prefer /api/signature?bands=F)
+                              LMR v2.1 PDSI + eVolv2k volcanic events (legacy; prefer /api/signature?bands=T)
 /api/basin-preview?lat=X&lon=Y
                               Containing basin + adjacent basins + river lines for neighborhood map
 /api/basin-preview?lat=X&lon=Y[&level=6|8]
@@ -158,9 +158,9 @@ curl "http://localhost:8000/api/signature?lat=16.76618535&lon=-3.00777252"  # Ti
 `/sandbox` is the primary design and demonstration interface (`app/templates/sandbox.html`). Current capabilities:
 - WHG place lookup (reconcile+extend pipeline, zoom ≥ 4, viewport bounds) → candidate markers → basin assignment → neighborhood preview map
 - Level 08/06 toggle (`#sb-level`): switching re-fetches neighborhood always, sig only if one exists; no tab jumping
-- Band A–F signature with schema_key labels; sig heading shows place name + active level
+- Band A–T signature with schema_key labels; sig heading shows place name + active level
 - Analysis α tab: water provenance classification, s/u divergence table, scale mismatch alert
-- Band F temporal: PDSI / Temperature / Precipitation tabs with SVG bar charts + volcanic events
+- Band T temporal: PDSI / Temperature / Precipitation tabs with SVG bar charts + volcanic events
 - Ecoregion clickable in summary panel → Wikipedia modal (pre-summarized, 97% coverage)
 - LLM narrative interpretation button
 
@@ -178,7 +178,7 @@ Key design docs:
 
 ## Data Exploration Phase
 
-The next major work phase is systematic characterization of the EDOPS signature dataset before any correspondence testing, PCA, or rubric design. See **`docs/edop/data_exploration.md`** for the full task list, conventions, and guardrails.
+The next major work phase is systematic characterization of the EDOPS signature dataset before any correspondence testing, PCA, or rubric design. See **`docs/edop/exploration_*.md`** for the full task lists, conventions, and guardrails.
 
 Key locations:
 - **Scripts**: `scripts/edop/explore/` — numbered exploration scripts
@@ -188,9 +188,15 @@ Key locations:
 
 Tasks 1–6 complete (2026-04-19). Findings in `logs/exploration_log.md` (F1.1–F6.5).
 
-Completed: (1) marginal distributions, (2) missing-data patterns, (3) local/upstream divergence + reference site percentiles, (4) full Spearman correlation matrix, (5) geographic pre-clustering (k-means k=20, committed as working typology), (6) coverage/sampling-bias characterization (D-PLACE + WH Cities vs. global basin distribution).
+Tasks 1–6 complete (static bands A–E). Tasks 7–11 complete (Band T, 2026-04-25/27, branch explore02).
 
-Next exploration work: Band F temporal characterization (LMR PDSI, temperature, precipitation distributions across basins). **Do not** start correspondence testing (D-PLACE, settlement patterns) until that phase is also documented.
+Completed static (Tasks 1–6): (1) marginal distributions, (2) missing-data patterns, (3) local/upstream divergence + reference site percentiles, (4) full Spearman correlation matrix, (5) geographic pre-clustering (k-means k=20, committed as working typology), (6) coverage/sampling-bias characterization (D-PLACE + WH Cities vs. global basin distribution).
+
+Completed Band T (Tasks 7–11): (7) eVolv2k v4 distribution and aggregation design — vssi_min=5.0 confirmed, three aggregations recommended, hemispheric filtering ruled out, eVolv2k/LMR decoupling flagged. (8) HYDE 3.4 per-epoch distributions — signal emergence characterized, 1000 BCE established as global land-use baseline, population density reliability caveat documented, BCE climate gap flagged. (9) HYDE basin aggregation and s/u characterization — polygon-interior confirmed, cropland/grazing s/u divergence characterized, EarthStat vs HYDE spatial allocation divergence documented, reference site trajectories validated. (10) LMR v2.1 structure — file layout (time=2001, MCrun=20, lat=91, lon=180), anomaly-not-absolute framing confirmed, funnel effect characterised (reliable window ~700–1900 CE), temporal variance dominates geographic (PDSI 76%, air 68%, prate 93%), within-run spread 4.6× across-run std, Band C orthogonal to LMR (r≈0), L8→LMR mapping 190,675 basins → 4,999 cells. (11) LMR period/volcanic fingerprints — MCA/LIA temperature signals marginal at global scale but directionally present at NH locations; reliable pre-industrial (1000–1850 CE) confirmed as baseline convention; LMR cannot quantify volcanic forcing below ~50 Tg (eVolv2k/LMR decoupling confirmed); Samalas 1257 detectable at Central Europe (−0.43 K) and Kaifeng (attenuated, delayed); LMR proxy network geographic bias documented as first-class API limitation.
+
+Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is silently wrong for BCE queries — needs `climate_note` disclosure; (b) population density may not belong in an environmental signature; (c) EarthStat/HYDE spatial divergence at agricultural hotspot sub-basins; (d) Pinatubo calibration text for narrative layer prompt; (e) LMR geographic proxy bias disclosure for API docs — all flagged for October 2026 expert meeting or pre-release documentation.
+
+Next: Task 12 (Anthromes categorical typology — design specifics TBD before notebook). **Do not** start correspondence testing until Task 12 scoped.
 
 ## External Dependencies
 
