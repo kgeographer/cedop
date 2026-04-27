@@ -126,6 +126,41 @@ A rough framework for how much interpretive weight to place on different compone
 
 ---
 
+## Anthromes — Anthropogenic Biomes (Ellis et al.)
+
+The Anthromes layer in HYDE is the Ellis et al. classification applied to HYDE's gridded land use and population data. The lineage has three papers covering progressively longer temporal spans.
+
+### Primary papers
+
+**Ellis, E.C. and Ramankutty, N. (2008)**
+"Putting people in the map: anthropogenic biomes of the world."
+*Frontiers in Ecology and the Environment*, 6(8), 439–447.
+→ **Confidence: high.** Original Anthromes concept paper. Introduces the 21-class scheme and the theoretical framing of "anthromes" as the anthropogenic counterpart to natural biomes. Read for the classification logic and what the classes are meant to represent.
+
+**Ellis, E.C., Klein Goldewijk, K., Siebert, S., Lightman, D., and Ramankutty, N. (2010)**
+"Anthropogenic transformation of the biomes, 1700 to 2000."
+*Global Ecology and Biogeography*, 19(5), 589–606.
+→ **Confidence: high on content, moderate on exact volume/page.** The most directly relevant paper for EDOPS — explicitly applies the Anthromes classification using HYDE data for 1700–2000. Klein Goldewijk's co-authorship is the direct HYDE connection. This is the paper to read for how class assignment works from HYDE inputs and what the class boundaries mean in terms of land use intensity.
+
+**Ellis, E.C., Gauthier, N., Klein Goldewijk, K., Bliege Bird, R., Boivin, N., Díaz, S., Fuller, D.Q., Gill, J.L., Kaplan, J.O., Kingston, N., Locke, H., McMichael, C.N.H., Ranco, D., Rick, T.C., Shaw, M.R., Stephens, L., Svenning, J.-C., and Watson, J.E.M. (2021)**
+"People have shaped most of terrestrial nature for at least 10,000 years."
+*PNAS*, 118(17), e2023483118.
+→ **Confidence: moderate on exact details.** Anthromes 12k — extends coverage to 10,000+ years before present, also using HYDE as the primary land use input. If the HYDE Anthromes layer includes pre-CE epochs, this is the likely methodological source. The paper also makes a broader argument about human influence on biomes that is relevant to how Anthromes values should be interpreted.
+
+### Version and data file note
+
+The HYDE download may include Anthromes as a separate bundled layer with its own readme. The class numbering (including the "class 70 = no definition" mentioned in the exploration plan) and exact class count (21 in v2; may differ in 12k) should be verified against the actual data files before notebook design. The readme or metadata file is the authoritative source for the version-specific class scheme and citation.
+
+### Known qualifications
+
+- **Anthromes are a classification, not a measurement.** Each cell is assigned a class based on thresholds applied to HYDE population density and land use fractions. The class boundaries are argued choices, not natural discontinuities.
+- **Class assignment inherits HYDE's uncertainty.** All of HYDE's reconstruction limitations (F8.x) propagate directly into the Anthromes classification. A cell classified as "cropland" in 500 CE is only as reliable as HYDE's cropland estimate at that location and epoch.
+- **Class 70 / "no definition" epochs**: in earlier epochs where HYDE has insufficient data to assign a class, cells return a null/undefined class. The fraction of undefined cells rises sharply pre-CE. Any analysis must account for this explicitly.
+- **The 21-class scheme collapses to far fewer meaningful classes** for most historical queries. Village, rangeland, and wild/semi-natural dominate the pre-industrial world; urban and dense-settlement classes are rare outside a handful of sites. The effective information content per query may be low.
+- **Transitions between classes are potentially more informative than the classes themselves** — a cell moving from semi-natural to cropland between epochs is a historically meaningful event. Whether the API exposes trajectories or just snapshots is a design decision.
+
+---
+
 ## Reading notes
 
 These papers will reward careful reading beyond the abstract. Specific sections to prioritise:
@@ -134,3 +169,4 @@ These papers will reward careful reading beyond the abstract. Specific sections 
 - **HYDE**: Klein Goldewijk et al. (2017) §3–4 (methodology) and §6 (uncertainty). The reconstruction is anchored by population estimates which themselves carry substantial uncertainty; understanding the uncertainty cascade is important.
 - **BasinATLAS**: Linke et al. (2019) supplementary technical documentation more than the paper itself. Each variable group has its own provenance and limitations.
 - **eVolv2k**: Toohey & Sigl (2017) §3 (VSSI estimation) and §5 (uncertainty and limitations). The distinction between ice-core sulfate signal and VSSI (stratospheric injection) involves a scaling that introduces its own uncertainty.
+- **Anthromes**: Ellis & Ramankutty (2008) for the classification logic; Ellis et al. (2010) for the HYDE-linked temporal version. Focus on how class thresholds are defined and what HYDE inputs drive class assignment — that's where the uncertainty enters.
