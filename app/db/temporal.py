@@ -190,4 +190,15 @@ def get_temporal_context(
             "events after 1890 (e.g. Pinatubo, Agung, El Chichón) are not in the record."
             if year_end > EVOLV2K_MAX else None
         ),
+        "lmr_fidelity_note": (
+            "Climate reconstructions before 700 CE carry greater uncertainty "
+            "due to sparser proxy records for this period; treat values as indicative."
+            if lmr_available and year_start < 700 else None
+        ),
+        "lmr_proxy_bias_note": (
+            "LMR reconstruction quality is strongest for Europe and North America, "
+            "where proxy records are densest; results for East Asia, South Asia, "
+            "and the Southern Hemisphere carry greater uncertainty."
+            if lmr_available else None
+        ),
     }

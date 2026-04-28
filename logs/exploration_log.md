@@ -711,6 +711,8 @@ PDSI spread early (0–500 CE) vs late (1500–1998 CE): 1.55 vs 1.36, ratio 1.1
 
 **Implication**: The within-run spread is the appropriate uncertainty field to expose in the Band T API — it is the larger, more meaningful source, and it is reasonably stable across the record (~13% elevation in early centuries vs late). It cannot serve as a standalone proxy for the funnel-effect (F10.1): spread alone will not strongly flag early-period reconstructions as less reliable. An explicit epoch-based caveat (e.g. "reconstruction fidelity reduced before ~700 CE due to sparse proxy networks") is necessary in addition to returning the spread value.
 
+**Action**: 2026-04-28 — Added `lmr_fidelity_note` to `get_temporal_context()` return dict, firing when `lmr_available and year_start < 700`. Text: "Climate reconstructions before 700 CE carry greater uncertainty due to sparser proxy records for this period; treat values as indicative." Rendered as yellow alert at top of Band T accordion body in sandbox.
+
 ---
 
 ### F10.4 — Band C and LMR are statistically orthogonal; 1850–1900 window sits within LIA cooling
@@ -771,6 +773,8 @@ PDSI shows the expected pattern (MCA slightly wetter, LIA slightly drier) but wi
 
 **Implication**: Reliable pre-industrial (1000–1850 CE) is the standard Band T reference window. This should be documented in the API and applied consistently when reporting period anomalies. Queries in the 0–700 CE window carry the additional funnel caveat (F10.1); the reference window does not resolve that issue.
 
+**Action**: 2026-04-28 — Baseline convention documented via `lmr_fidelity_note` (see F10.1 action). 1000–1850 CE as reliable pre-industrial window noted in API docs / prospectus update (flagged for follow-on task).
+
 ---
 
 ### F11.3 — LMR volcanic composite is underpowered; Samalas-class events detectable at individual cells but not in hemisphere mean
@@ -818,5 +822,7 @@ The apparent detection threshold for individual-basin LMR values is approximatel
 This is not a property unique to LMR — it characterises virtually all multi-proxy paleoclimate reconstructions currently available. The bias is geographic and reflects the history of paleoclimate data collection, which has been concentrated in Europe, North America, and parts of the Pacific. Researchers working on East Asia, South Asia, Africa, and most of the Southern Hemisphere receive a systematically less well-constrained LMR reconstruction than their European counterparts — not because those regions experienced less climate variability, but because fewer proxies from those regions have been incorporated.
 
 **Implication**: This limitation must be explicitly stated in Band T API documentation, not buried in technical notes. A Song dynasty historian using EDOP to query climate at Kaifeng should know that the LMR values there are less precisely constrained than equivalent values for a medieval European site. The within-run spread field (F10.3) does not adequately capture this geographic bias — spread is driven by model dynamics and does not scale with proxy density in a way users can easily interpret. A qualitative disclosure is needed: "LMR reconstruction quality varies by region; coverage is strongest in Europe and North America and weaker in East Asia, South Asia, and the Southern Hemisphere."
+
+**Action**: 2026-04-28 — Added `lmr_proxy_bias_note` to `get_temporal_context()` return dict, present whenever `lmr_available`. Text: "LMR reconstruction quality is strongest for Europe and North America, where proxy records are densest; results for East Asia, South Asia, and the Southern Hemisphere carry greater uncertainty." Rendered as yellow alert in Band T accordion body alongside `lmr_fidelity_note`. `_note` on bands A–E upgraded to list to support multiple notes per band going forward.
 
 ---

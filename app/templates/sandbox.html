@@ -670,10 +670,14 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
 
     // --- Header row ---
     const gcStr = gc ? `${gc.lat}°N, ${gc.lon}°E` : 'n/a (LMR out of range)';
+    const tNotes = [data.lmr_fidelity_note, data.lmr_proxy_bias_note].filter(Boolean);
+    const tNoteAlerts = tNotes.map(n =>
+      `<div class="alert alert-warning py-1 px-2 mb-2" style="font-size:0.78rem">${escapeHtml(n)}</div>`
+    ).join('');
     let html = `<div class="small mb-2 text-muted">
       <strong>Grid cell</strong>: ${gcStr} &nbsp;|&nbsp;
       <strong>Period</strong>: ${data.year_start}–${data.year_end} CE
-    </div>`;
+    </div>${tNoteAlerts}`;
 
     // --- PDSI tab content ---
     const pdsiSeries = data.pdsi_series || [];
@@ -846,17 +850,18 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
       const groups = sig.profile_groups || {};
       ['A','B','C','D','E'].filter(c => groups[c]).forEach(code => {
         const g = groups[code];
-        const noteAlert = g._note
-          ? `<div class="alert alert-warning py-1 px-2 mb-2" style="font-size:0.78rem">${escapeHtml(g._note)}</div>`
-          : '';
+        const notes = Array.isArray(g._note) ? g._note : (g._note ? [g._note] : []);
+        const noteAlerts = notes.map(n =>
+          `<div class="alert alert-warning py-1 px-2 mb-2" style="font-size:0.78rem">${escapeHtml(n)}</div>`
+        ).join('');
         const rows = (g.items || []).map(it =>
           `<div class="d-flex justify-content-between gap-2 py-1 border-bottom">
              <div class="text-muted">${escapeHtml(it.label || humanizeKey(it.key || ''))}</div>
              <div class="text-end">${escapeHtml(formatValue(it.value))}</div>
            </div>`,
         ).join('') || '<div class="text-muted">(no fields)</div>';
-        const body = noteAlert + rows;
-        panels += buildAccordionPanel(code, g.label || code, body, first, accId, g._note || null);
+        const body = noteAlerts + rows;
+        panels += buildAccordionPanel(code, g.label || code, body, first, accId, notes[0] || null);
         first = false;
       });
       if (temporalData && temporalData._status === 'ok') {
