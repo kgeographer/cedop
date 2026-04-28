@@ -198,6 +198,16 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Next: Task 12 (Anthromes categorical typology — design specifics TBD before notebook). **Do not** start correspondence testing until Task 12 scoped.
 
+## Current Work — sigrefine01 branch (as of 2026-04-28)
+
+Signature refinement phase. All exploration findings annotated. Three implementation commits done (sentinel fix, BCE decoupling, LMR notes). **Paused mid-session** adding HYDE land use variables to Band T.
+
+**HYDE variables decided**: `cropland`, `grazing_land`, `pasture`, `rangeland` (all HYDE 3.4 NetCDF, on disk at `data/hyde/NetCDF/`). HYDE is NOT yet in the database — full pipeline required.
+
+**Outstanding question before implementing**: how to represent HYDE epochs in the API response for a window query — return all epochs within window (Option A, preferred) or single nearest epoch (Option B). Decide at session start.
+
+**Also pending on this branch**: Band C add `land_cover_id/name` (GLC2000); Band D add `pasture_extent` (EarthStat); prospectus update; server deploy. See `logs/session_log_20260428.md` for full detail.
+
 ## External Dependencies
 
 - **WHG** (World Historical Gazetteer): Place resolution
