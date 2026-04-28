@@ -423,18 +423,10 @@ def signature(
 
     # Band T: temporal enrichment — stored in profile_groups["T"]
     if "T" in requested:
-        LMR_MIN, LMR_MAX = 0, 1998
         if from_year is None or to_year is None:
             band_t = {
                 "_status": "not_requested",
-                "_note": "Include from_year and to_year (CE integers) to retrieve Band T temporal data.",
-            }
-        elif from_year < LMR_MIN or to_year > LMR_MAX:
-            band_t = {
-                "_status": "out_of_range",
-                "_note": f"LMR v2.1 coverage is {LMR_MIN}–{LMR_MAX} CE. Requested {from_year}–{to_year} is outside this range. Bands A–E are unaffected.",
-                "coverage_ce": [LMR_MIN, LMR_MAX],
-                "requested_ce": [from_year, to_year],
+                "_note": "Include from_year and to_year to retrieve Band T temporal data.",
             }
         else:
             temporal = get_temporal_context(lat=lat, lon=lon, year_start=from_year, year_end=to_year)

@@ -35,7 +35,7 @@ reservoir_vol	water_management	D		rev_mc_usu	Reservoir volume upstream	float		u	
 degree_of_regulation	water_management	B	dor_pc_pva		Degree of regulation by dams	float	%	s	planned	H07	Not currently in signature		
 pct_clay	soils	B	cly_pc_sav	cly_pc_uav	Clay content	float	%	s+u	implemented	S01	s+u both in signature	pct_clay	pct_clay_upstream
 pct_silt	soils	B	slt_pc_sav	slt_pc_uav	Silt content	float	%	s+u	implemented	S02	s+u both in signature	pct_silt	pct_silt_upstream
-pct_sand	soils	B	snd_pc_sav	snd_pc_uav	Sand content	float	%	s+u	implemented	S03	s+u both in signature	pct_sand	pct_sand_upstream
+pct_sand	soils	B	snd_pc_sav	snd_pc_uav	Sand content	float	%	s+u	implemented	S03	s+u both in signature; clay+silt+sand≈100 (compositional): drop pct_sand from classification feature matrices to avoid spurious linear dependency	pct_sand	pct_sand_upstream
 soil_organic_carbon	soils	B	soc_th_sav	soc_th_uav	Soil organic carbon	float	t/ha	s+u	planned	S04	Not currently in signature; good agricultural fertility proxy		
 climate_zone_id	climate_type	C	clz_cl_smj		Climate zone ID	integer		s	implemented		Lookup: lu_clz; raw ID not in API output (resolved name at zone_name)
 climate_zone_name	climate_type	C	clz_cl_smj		Climate zone name	string		s	implemented		Resolved via lu_clz	zone_name	
@@ -89,4 +89,7 @@ lmr_slp	temporal_climate	T			Sea-level pressure (LMR v2.1)	float	hPa	point	plann
 evolv2k_events	volcanic_forcing	T			Volcanic events in period (eVolv2k v4)	list		event	implemented		List of {year_ad, month, vssi_tg, vssi_1sig, asymmetry, location, tephra}; default vssi_min=5.0 Tg	volcanic_events
 evolv2k_vssi_per_event	volcanic_forcing	T			VSSI per event (eVolv2k v4)	float	Tg	event	implemented		vssi_tg field within each volcanic_events object
 evolv2k_asymmetry	volcanic_forcing	T			Hemispheric asymmetry per event	float	0–1	event	implemented		asymmetry field within each volcanic_events object; 0=SH, 1=NH, intermediate=bilateral
+evolv2k_event_count	volcanic_forcing	T			Volcanic event count in period	integer		derived	implemented		Count of events ≥ vssi_min (default 5 Tg) in the query window	volcanic_event_count
+evolv2k_vssi_sum	volcanic_forcing	T			Total VSSI in period	float	Tg	derived	implemented		Sum of vssi_tg for all events ≥ vssi_min in the query window	volcanic_vssi_sum_tg
+evolv2k_years_since_major	volcanic_forcing	T			Years since last major eruption	integer	years	derived	implemented		Years between year_end and the most recent event ≥ 10 Tg; null if none in window	years_since_last_major
 narrative	narrative	output			LLM narrative summary	string		output	planned		Claude API; non-specialist natural language summary		

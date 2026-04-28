@@ -54,3 +54,12 @@ def timbuktu_temporal(db_available):
         pytest.skip("DB not available")
     from app.db.temporal import get_temporal_context
     return get_temporal_context(**TIMBUKTU, year_start=1000, year_end=1100)
+
+
+@pytest.fixture(scope="session")
+def athens_bce_temporal(db_available):
+    """BCE query for Athens 500–400 BCE — should return volcanic events but no LMR series."""
+    if not db_available:
+        pytest.skip("DB not available")
+    from app.db.temporal import get_temporal_context
+    return get_temporal_context(lat=37.9838, lon=23.7275, year_start=-500, year_end=-400)

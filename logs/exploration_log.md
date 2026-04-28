@@ -22,6 +22,8 @@ Each entry: **Date · Task · Method · Finding · Implication**
 
 **Implication**: These columns must be treated with `NULLIF(col, -9999)` in any SQL query, or replaced with NaN after loading (as done in the notebook via `df_raw.replace(-9999, np.nan)`). Statistics computed before this fix are invalid for these six variables. All downstream scripts must apply the same treatment.
 
+**Action**: 2026-04-28 — Recreated both `v_basin08_persist_rev1` and `v_basin06_persist_rev1` with `NULLIF(col, -9999)` on all six affected columns (`slope_avg`, `slope_upstream`, `stream_gradient`, `pct_clay`, `pct_silt`, `pct_sand`). Migration saved as `sql/edop/migrate_v_basin08_persist_rev1_nullif.sql`. Verified: 0 rows with -9999 sentinel post-fix in either view.
+
 ---
 
 ### F1.2 — Slope is valid and right-skewed; apparent flatness is real
@@ -38,6 +40,8 @@ Each entry: **Date · Task · Method · Finding · Implication**
 
 **Implication**: These are among the most analytically tractable variables in the dataset — usable in PCA/clustering without transformation. However, their constrained sum (clay + silt + sand ≈ 100) means only two are independent. Including all three in dimensionality reduction will introduce a spurious linear dependency; one should be dropped.
 
+**Action**: 2026-04-28 — All three kept in the signature (each carries interpretive value for a researcher). `pct_sand` designated as the redundant member to drop when building classification feature matrices (clay and silt are more directly linked to soil cohesion and fertility). Codebook note added to `pct_sand` row. No API change.
+
 ---
 
 ### F1.4 — Temperature is bimodal
@@ -53,6 +57,8 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Finding**: `ari_ix_sav` (api key: `aridity`) is the Global Aridity Index (Zomer et al.), stored as P/PET × 100. Global median = 68 (P/PET = 0.68, semi-arid). P95 = 212 (P/PET = 2.12, moderately humid). Values above 100 indicate humid conditions (P > PET). The tail extends to ~1000 (wet tropics). Despite its name, higher values = wetter — it is a humidity index.
 
 **Implication**: Do not interpret raw values as ratios — divide by 100 for P/PET. The "cap at 100" mentioned in the BasinATLAS catalog refers to the source product's raw ratio cap (P/PET = 100), stored as 10,000 — essentially never reached. The semi-arid global median is consistent with the biome distribution (deserts dominant by basin count). Codebook updated to reflect correct units and scale.
+
+**Action**: 2026-04-28 — Confirmed: `edops_codebook_v01.tsv` `aridity_index` notes column already contains the correct explanation (P/PET × 100, arid/humid boundary at 100, higher = wetter, global median ~68). No further change needed.
 
 ---
 
@@ -427,7 +433,307 @@ Each entry: **Date · Task · Method · Finding · Implication**
 **Implication**: Power analysis should precede any correspondence test design. Do not report null results for cold/arid environments as evidence against environmental correspondence — absence of data is the explanation.
 
 ---
+## 2026-04-25 · Task 7 · eVolv2k v4 distribution and aggregation design
 
+**Method**: `notebooks/edop/explore/07_evolv2k_distribution.ipynb` · 256 events total, 1–1890 CE (LMR window) · CSV only, no DB required
+
+---
+
+### F7.1 — Catalog ends at 1890 CE; 20th-century queries return empty volcanic record
+
+**Finding**: The eVolv2k v4 CSV contains 256 events with `year_ad` max = 1890. No events exist for 1891–1998 CE, despite the LMR window extending to 1998. Pinatubo 1991, Agung 1963, El Chichón 1982, and other major 20th-century eruptions are absent. This is an ice-core archive coverage limitation, not quiescence.
+
+**Implication**: Band T queries with date ranges extending past ~1890 will return empty `volcanic_events` lists — which could be misread as "no significant eruptions." A `volcanic_events_coverage_note` field (or equivalent warning) should be added to the API response to flag this. The eVolv2k component of Band T is reliable only to ~1890 CE.
+
+**Action**: 2026-04-28 — Added `volcanic_events_note` to `get_temporal_context()` return dict (`app/db/temporal.py`). Field is non-null only when `year_end > 1890`; text: "eVolv2k v4 catalog covers ~1–1890 CE; events after 1890 (e.g. Pinatubo, Agung, El Chichón) are not in the record."
+
+---
+
+### F7.2 — Catalog is dominated by small, anonymous events; named volcanoes are 16% of the record
+
+**Finding**: 83.6% of events (214/256) have no named source volcano — they are ice-core-detected sulfate anomalies with no attributed eruption. Named events are 42/256 (16.4%). Tephra confirmation is even sparser (21 events). All canonical historically significant eruptions are present and correctly attributed: Samalas 1257 (59.42 Tg), Tambora 1815 (28.08 Tg), Eldgjá 939 (16.23 Tg), 536 CE mystery eruption (18.81 Tg), Krakatoa 1883 (9.34 Tg), Kuwae 1453 (9.97 Tg).
+
+**Implication**: Users expect named volcanoes; most events have none. API responses should set this expectation explicitly. The unnamed events are still valid forcing signals — they simply lack attribution. Do not filter to named events only.
+
+---
+
+### F7.3 — 5 Tg is the right default threshold; 10 Tg excludes Krakatoa and Kuwae
+
+**Finding**: At VSSI ≥ 5 Tg: 55 events (21% of catalog). At ≥ 10 Tg: 33 events. Krakatoa 1883 (9.34 Tg) and Kuwae 1453 (9.97 Tg) fall below the 10 Tg threshold. Both are historically consequential and climatically documented. The 5 Tg floor captures the interpretable tier without pulling in marginal noise.
+
+**Implication**: Confirm `vssi_min=5.0` as the API default. Document as a named, adjustable parameter with rationale. The 10 Tg level is useful as a "major event" label in response fields but should not be the default filter.
+
+---
+
+### F7.4 — Empty-window rates at 5 Tg: 30% at 50 yr, 3% at 100 yr, 0% at 200 yr
+
+**Finding**: Sliding-window analysis (step=10 yr) across 1–1998 CE: at VSSI ≥ 5 Tg, 70.3% of 50-yr windows contain ≥1 event; 96.8% of 100-yr windows; 100% of 200-yr windows. At ≥ 10 Tg: 50.8% / 78.9% / 97.2% respectively.
+
+**Implication**: For 100-year queries (the dominant humanities use case), volcanic context is almost always available at the 5 Tg threshold. For 50-year queries, 30% will return empty — this is a genuine "no significant forcing" finding, not an error. The API should frame empty returns explicitly. Rubric: 100-year window + 5 Tg threshold is the reliable operating zone; 50-year + 10 Tg is probabilistic.
+
+---
+
+### F7.5 — Aggregation: count and sum-VSSI are correlated (r=0.868) but not interchangeable; all three summaries serve distinct purposes
+
+**Finding**: In 100-yr sliding windows at ≥5 Tg: median count=2, median sum-VSSI=28 Tg, median time-since-last-major=47 yr. Count and sum-VSSI correlate at r=0.868 — high but not redundant. The 13% unexplained variance is driven by Samalas-class outliers: a window containing Samalas 1257 (59 Tg) registers count=4 (unremarkable) but sum-VSSI=120 Tg (extraordinary). Time-since-last-major captures recency structure count and sum cannot.
+
+**Implication**: Return all three aggregations in the API response: `volcanic_event_count`, `volcanic_vssi_sum_tg`, `years_since_last_major`. They are complementary, not redundant. Sum-VSSI is the key discriminator for outlier centuries.
+
+**Action**: 2026-04-28 — Added all three as computed fields in the `get_temporal_context()` return block (`app/db/temporal.py`). Computed from the already-fetched `events` list at zero extra DB cost. `years_since_last_major` uses 10 Tg as the "major event" threshold (per F7.3); returns None if no qualifying event in the window. Codebook updated with three new Band T implemented rows.
+
+---
+
+### F7.6 — Asymmetry field is binary for small events, continuous for climatically significant ones
+
+**Finding**: Full catalog asymmetry distribution is strongly bimodal at 0.0 and 1.0 — most small events are coded as purely SH or purely NH based on detection in a single polar ice sheet. Above 5 Tg, the distribution becomes genuinely spread across intermediate values (0.0–1.0), reflecting real bilateral stratospheric dispersal for large tropical eruptions (Samalas 0.588, Tambora 0.456, Krakatoa 0.629).
+
+**Implication**: Asymmetry is not a reliable continuous filter across the full catalog — it is an encoding artifact for sub-threshold events. Above 5 Tg it carries real signal about hemispheric reach. Return `asymmetry` as a per-event field; do not use it as a hard API filter. Location-aware weighting (if ever added) should apply only to events above threshold.
+
+---
+
+### F7.7 — Kaifeng 1000–1100 CE sits at the end of the Medieval volcanic quiet; the following century is the most volcanically intense in the record
+
+**Finding**: The 950–1100 CE window is the deepest volcanic quiet in the 2000-year eVolv2k record — near-zero event count and sum-VSSI. The Northern Song flourished in this period (consistent with the benign climatic baseline). The 1200–1300 CE window — covering the Northern Song's aftermath and the Mongol expansion — contains Samalas 1257 (59 Tg), making it the highest sum-VSSI century in the record (~120 Tg in 100-yr windows centered on 1250).
+
+**Implication**: The Kaifeng 1000–1100 query (baked in as a sandbox example by Ruth) captures the *end* of a climatically favorable period. The collapse of the Northern Song (1127 CE, Jingkang Incident) and subsequent Southern Song vulnerability to Mongol conquest (1279 CE) both fall in a dramatically more volcanically active and likely climatically disrupted period. This is a worked example of why temporal window choice matters — and a candidate correspondence hypothesis for future Band T work. Flag to Ruth.
+
+---
+
+### F7.8 — Hemispheric filtering is asymmetric and should not be implemented as a default API behavior
+
+**Finding**: 100-yr sliding window counts at VSSI ≥ 5 Tg by hemispheric filter: NH-relevant (asymmetry > 0.5) median=2, empty=10.5% — virtually identical to unfiltered (median=2, empty=3.2%). SH-relevant (asymmetry < 0.5) median=0, empty=60.5%. Symmetric-only median=1, empty=45.8%. NH filtering has near-zero effect because the catalog is 64.5% NH-dominant by event count. SH filtering makes the record uninformative — 60% of century-scale windows contain no SH-dominant events at the 5 Tg threshold.
+
+**Implication**: Do not implement hemispheric filtering as an API parameter. The catalog's NH bias is a dataset property to be documented, not compensated for. All events above the VSSI threshold should be returned regardless of query location, with `asymmetry` included as a per-event field for users who want to apply their own weighting. The "SH-relevant reduces median by 100%" result is a consequence of the median hitting zero, not universal emptiness — but the 60% empty-window rate is sufficient to rule out filtering as a useful default. API guide should note that eVolv2k is NH-biased by construction and that asymmetry should be interpreted accordingly.
+
+---
+
+### F7.9 — eVolv2k and LMR are currently coupled by the LMR date window, but should be decoupled in the API
+
+**Finding**: The current Band T implementation gates eVolv2k returns by the LMR date range (1–1998 CE), because both layers were introduced together. But eVolv2k's actual coverage extends to ~500 BCE — the full catalog contains 45 pre-CE events, including the 44 BCE Okmok eruption (a candidate forcing event for the fall of the Roman Republic) and other historically significant BCE eruptions. These are inaccessible to any current Band T query. LMR's 1 CE floor is a proxy-network limitation: paleoclimate reanalysis requires sufficient tree ring, ice core, and speleothem density, which thins rapidly before ~200 CE and is untenable before 1 CE globally. That constraint is specific to LMR and does not apply to eVolv2k.
+
+**Implication**: Decouple the two layers in the API. eVolv2k should be queryable for any window within its actual coverage (~500 BCE–1890 CE), returning events with a status indicating the volcanic record is available even when LMR is not. LMR should retain its 1–1998 CE gate with a note about proxy network thinning. A query for Babylon 600–400 BCE should return volcanic events (if any above threshold) alongside an explicit `lmr_status: out_of_range` — not silence. This is a design change to route and document before the API is finalized, not a characterization task. Flag for prospectus update.
+
+**Action**: 2026-04-28 — Decoupled in `app/db/temporal.py`: LMR clamped to 0–1998, eVolv2k clamped to −491–1890 independently. `lmr_status` field added ("available"/"out_of_range"). BCE queries now return volcanic events with empty LMR series. Hard rejection gate removed from `app/api/routes.py`. DB confirmed: 59.33 Tg event at 426 BCE (largest pre-CE event in catalog). Three new tests added to `tests/test_band_t.py`: BCE LMR out_of_range, 426 BCE event detection, BCE aggregates.
+
+---
+
+## 2026-04-25 · Task 8 · HYDE 3.4 — per-epoch distributions and signal emergence
+
+**Method**: `notebooks/edop/explore/08_hyde_distributions.ipynb` · 5 NetCDF files (cropland, grazing_land, urban_area, population_density, total_rice) · 8 epochs (-8000, -4000, -1000, 0, 1000, 1500, 1900, 2000) · xarray lazy slicing, one time step loaded at a time
+
+**Dataset note**: Files are labeled HYDE 3.4 (created April 2025), not 3.5. Time axis uses `cftime.DatetimeNoLeap` with `has_year_zero=True` (astronomical year numbering). 128 time steps with variable resolution: millennial BCE, centennial 100–1700 CE, decadal 1710–1950, annual 1951–2025. Grid: 2160 × 4320 cells at 5-arcmin (~9km) resolution. Units: km² for area variables; capita/km² for population_density.
+
+---
+
+### F8.1 — Grazing land is the first and most spatially extensive anthropogenic signal; cropland follows
+
+**Finding**: At 4000 BCE, grazing land is already at ~80% zero cells (20% non-zero) while cropland is at ~94% zero (6% non-zero). By 1000 BCE grazing reaches 68% zero vs. cropland 83%. The gap persists through the full record — at 2000 CE grazing is 41% zero, cropland 56% zero. On the log-scale mean trajectory, grazing consistently exceeds cropland in absolute km² area at every epoch. Both variables follow roughly log-linear growth trajectories, implying consistent exponential expansion rates across the full period.
+
+**Implication**: For Band T queries in the BCE period, grazing land is the more informative land-use variable. The emergence of non-trivial cropland signal begins around 4000–1000 BCE, concentrated in the Fertile Crescent, Nile valley, Indus, and Yellow River regions. Grazing's earlier and broader signal reflects the archaeological reality that pastoralism preceded and spatially exceeded sedentary agriculture.
+
+---
+
+### F8.2 — Urban area and total rice are globally invisible at distribution scale; specialty variables only
+
+**Finding**: Urban area remains at ~99–100% zero cells through 1900 CE; the p99 value is 0.096 km² even at 1900 CE. Total rice is 100% zero at 8000 BCE and still 98.5% zero at 2000 CE. Both variables show signal only in very high percentiles, concentrated in a small number of cells. On the log-scale trajectory, urban area shows a hockey-stick inflection after 1900 CE reflecting intensification within already-occupied cells rather than spatial expansion.
+
+**Implication**: Urban area and total rice will return zero for the vast majority of Band T basin queries regardless of epoch. They are not useful as default Band T fields. Consider making them opt-in, or returning them only when non-zero. Their value is for specialist queries — urban area for pre-modern city studies, total rice for SE Asian agricultural history.
+
+---
+
+### F8.3 — Population density % zero is flat across 10,000 years; this is a model artifact, not an empirical finding
+
+**Finding**: Population density shows ~45% zero cells at 8000 BCE, declining only to ~40% at 2000 CE — a nearly flat trajectory. This is not an empirical finding about human settlement history. HYDE's deep-time population layer distributes a global population estimate (derived from secondary historical sources) across all land cells proportionally to a habitability potential score. Any cell with non-zero habitability receives a non-zero population density value, even if that value is 0.0003 cap/km² — statistically less than one person per square kilometer. The % zero metric is measuring the extent of HYDE's habitability model, not the presence of humans.
+
+**Implication**: This does not pass a basic smell test. The Out of Africa dispersal, the late peopling of the Americas (~15,000 BCE), the settlement of the Pacific — none of this spatial history is recoverable from a model that pre-populates every habitable cell from the start. HYDE's population layer is redundant with EDOP's own environmental suitability characterization (Bands A–E) in the deep BCE period, and less honest. Population density from HYDE is likely meaningful only from roughly 0–1000 CE onward, where global population estimates are anchored by documentary and archaeological evidence and spatial allocation has real data to constrain it. Pre-CE HYDE population values should either be excluded from Band T API responses or returned with a strong epistemic caveat. Do not use % zero as the signal-emergence metric for this variable — use a meaningful density threshold (e.g. ≥ 1 cap/km²) instead.
+
+---
+
+### F8.5 — EDOP's climate characterization (Band C) is silently wrong for BCE queries
+
+**Finding**: Band C (bioclimatic proxies: temperature, precipitation, aridity, biome, ecoregion) is sourced from WorldClim, a contemporary climatology representing approximately 1970–2000 CE. For any BCE query, EDOP returns contemporary climate values without qualification. A query for Çatalhöyük 7000 BCE returns present-day Anatolian climate, not Neolithic climate. LMR (the paleoclimate reconstruction in Band T) covers only 1–1998 CE and does not extend into the BCE period. There is currently no paleoclimate layer in EDOP that covers BCE conditions. Bands A (physiography), B (hydrology), and E (coastality) are geomorphological and topological — effectively timeless on human timescales — and remain valid for BCE queries. Band C is not.
+
+**Implication**: BCE queries in EDOP are implicitly geomorphological characterizations, not environmental ones in the full sense. This should be disclosed in the API response, not left for users to discover. A `climate_note` field — e.g. "Band C reflects contemporary baselines (WorldClim ~1970–2000 CE); no paleoclimate reconstruction is available for this query period" — should be injected when `to_year < 0` or when no LMR data is available. The HYDE habitability model (which may internally use Holocene paleoclimate reconstructions) is not a reliable substitute — its spatial allocation methodology is too indirect and its assumptions are opaque. The right fix is disclosure, not patching. Flag for API design and prospectus update.
+
+---
+
+### F8.4 — Population density mean shows a 20th-century hockey stick; land use variables do not
+
+**Finding**: On a linear scale, mean population density is essentially flat from 8000 BCE through 1500 CE, rises modestly to ~11 cap/km² by 1900 CE, then jumps to ~40 cap/km² at 2000 CE — more than 3× growth in a single century. The area variables (cropland, grazing) show no equivalent hockey stick on their log-scale trajectories; their growth rates are roughly constant across the full period. The industrial-era population explosion is a qualitatively different phenomenon from the steady long-run expansion of land use.
+
+**Implication**: For Band T queries spanning 1900–2000 CE, population density is the most dramatically changing variable. For pre-1900 queries, the intensity signal is modest on an absolute scale even if the spatial footprint (measured by % non-zero) is ancient. This has direct bearing on how Band T summarizes HYDE for historical period queries: the 20th-century values should be treated as a distinct regime, not just the continuation of a long trend.
+
+---
+
+### F8.7 — 1000 BCE is the defensible global baseline for land-use anomaly reporting
+
+**Finding**: Ratio of CE epoch mean to candidate baseline epochs for cropland and grazing land:
+- vs 8000 BCE: ratios of 1000x–9500x (cropland) and 400x–3500x (grazing) — denominator too near-zero to be analytically useful
+- vs 4000 BCE: ratios of 19x–157x (cropland) and 16x–129x (grazing) — large but more tractable
+- vs 1000 BCE: ratios of 2.8x–23x (cropland) and 3.9x–32x (grazing) — interpretable and historically meaningful
+
+At 1000 BCE, agriculture is established in all core civilizational regions (Fertile Crescent, Nile, Indus, Yellow River) but has not yet intensified globally. Cropland at 1000 CE is ~3x the 1000 BCE level; at 2000 CE ~23x. These are ratios a non-specialist user can interpret.
+
+**Implication**: Use 1000 BCE as the global pre-anthropogenic baseline for HYDE land-use anomaly fields in the Band T API response. Return both the raw epoch value and the ratio to 1000 BCE. Caveat in API guide: the baseline is global — in already-agricultural regions (Mesopotamia, Egypt, China) the 1000 BCE baseline is not "pre-agricultural," so local ratios will understate intensification relative to a truly pre-agricultural local condition. A future regional baseline refinement is possible but deferred.
+
+---
+
+### F8.6 — Open design questions deferred to October expert meeting
+
+**Question 1 — Does population density belong in an environmental signature?** Population is a human phenomenon, not an environmental one. EDOP's core claim is environmental characterization of place; including population density in Band T muddies that boundary. The land use variables (cropland, grazing) characterize human transformation of the landscape, which is defensibly environmental. Population density characterizes human presence, which is more ambiguously so. Whether Band T should include population density at all — or whether it belongs in a future CDOP layer — is a design question that warrants expert input.
+
+**Question 2 — Should HYDE habitability be surfaced for BCE queries as an explicit, qualified signal?** For BCE queries where Band C (contemporary climate) is not representative and LMR is out of range, HYDE's internal habitability model — whatever its limitations — may be the only available proxy for environmental conditions at the query epoch. Rather than discarding it, it could be returned as a clearly labeled, heavily caveated field: "HYDE-modeled habitability index at epoch X (reconstruction uncertainty high; treat as indicative only)." Whether this adds value or misleads users is a judgment call that benefits from domain expert review. Flag for the October 2026 Pitt presentation as an open question.
+
+
+
+## 2026-04-26 · Task 10 · LMR v2.1 temporal/spatial structure and grid behaviour
+
+**Method**: `notebooks/edop/explore/10_lmr_structure.ipynb` · Variables: PDSI, air temperature (anomaly), precipitation rate (anomaly) · Grid: 2°×2°, 16,380 cells globally (values at all cells including ocean) · Temporal: 0–1998 CE, 2001 annual steps · Ensemble: 20 MCruns × (mean + spread) files
+
+---
+### F9.1 — Polygon-interior and centroid agree for small basins; diverge meaningfully above ~100 km²
+
+**Finding**: Aggregation comparison at 2000 CE cropland (L8 sample, 500 basins): median absolute difference = 0.000 km², p95 = 8.7 km². Disagreement is essentially zero for basins under ~10 km² and grows with basin size, concentrated above ~100 km² sub_area. Median cells per basin = 8; p95 = 39. 39 of 500 basins (8%) had no HYDE cell center inside their polygon and required centroid fallback — these are the smallest, most rugged sub-basins. One notable outlier: a basin where centroid returned ~0 km² cropland but polygon-interior returned ~38 km², a case where the centroid cell landed on an unfarmed patch while the polygon interior was predominantly agricultural. The relative-diff p95 = 1.0 is a denominator artifact (near-zero poly_val), not evidence of systematic disagreement.
+
+**Implication**: Polygon-interior is the correct aggregation method and earns its computational cost for basins above ~100 km². For the smallest L8 sub-basins it is equivalent to centroid but not worse. The outlier case demonstrates the failure mode centroid is prone to and justifies the polygon-interior choice on principle. Centroid fallback for the 8% of tiny basins is acceptable.
+
+---
+
+### F9.2 — HYDE s values: global distribution confirms heavy zeros; grazing more extensive than cropland at all epochs
+
+**Finding**: L8 sample (500 basins), polygon-interior s values. At all epochs through 1000 CE, cropland median = 0 and 25th percentile = 0 — more than half the sample has no cropland signal. At 2000 CE, cropland median rises to only 0.008 km²/cell, 75th percentile = 8.0 km²/cell. Grazing land is consistently more spatially extensive: at 2000 CE grazing median = 1.52 km²/cell vs cropland median = 0.008 km²/cell. Mean growth from 1000 BCE to 2000 CE: cropland ~18×, grazing ~32×. The grazing expansion reflects colonial-era pastoral land transformation (Americas, Australia, sub-Saharan Africa) rather than industrialization; the land-area footprint of grazing far exceeds cropland globally.
+
+**Implication**: For Band T basin-level HYDE queries, zero returns will be the majority result for cropland at all pre-CE epochs and for most basins even at 2000 CE. Non-zero values are concentrated in a minority of agriculturally significant basins. Grazing land signal emerges earlier and covers more basins than cropland — it is the more globally representative land-use variable for historical queries. API responses should frame zero as an honest "no land use signal at this location/epoch," not a missing-data condition.
+
+---
+
+### F9.3 — L6 medians substantially higher than L8; larger polygons capture earlier and wider land-use signal
+
+**Finding**: L6 sample s values show consistently higher medians than L8 at the same epochs. At 1000 CE: L8 cropland median = 0.000, L6 = 0.022 km²/cell. At 2000 CE: L8 cropland median = 0.008, L6 = 1.055 km²/cell; L8 grazing median = 1.52, L6 = 7.27 km²/cell. Means are also slightly higher at L6 (cropland 2000 CE: L8 mean = 7.32, L6 = 8.46 km²/cell) but the median shift is the more telling statistic. A near-zero floating-point value (1.3×10⁻⁷) appears at L6 cropland 0 CE — a HYDE model artefact consistent with F8.3, not a real signal.
+
+**Implication**: L6 basins are more likely to contain at least some agricultural land within their larger polygon boundary even when the local sub-basin core is unfarmed — the larger polygon casts a wider net and captures more of the agricultural fringe. L6 signatures are inherently more land-use-signal-rich than L8 at the same epoch. This has design implications: a Band T HYDE query at L6 will return more non-zero values and apparent earlier signal emergence than the same query at L8, but the signal reflects a broader regional average rather than local conditions. The two levels are answering different questions, consistent with F5.7.
+
+---
+
+### F9.4 — HYDE s/u divergence is dramatically wider than climate divergence; effective N is small
+
+**Finding**: HYDE s/u divergence (log₂(upstream/local)) was computed for basins where both s and u exceeded 0.001 km². Effective N ranged from 42 (L8 cropland 1000 BCE) to 104 (L8 grazing 2000 CE) — 8–21% of the 500-basin sample. The rest are headwaters (no upstream), zero-land-use environments, or both. Tail extents are far wider than the climate divergences in Task 3: HYDE p95 reaches +5.52 log₂ (upstream 46× more cropland than local, L6 2000 CE) vs climate precipitation p95 of +0.39 log₂. Cropland medians are consistently negative (local > upstream, range −0.91 to −0.07), meaning for most historically active basins the local site IS the agricultural concentration. Grazing medians are near zero at all epochs. A positive right tail persists at every epoch in both variables — the minority of Ur-type configurations where an unfarmed or less-farmed local basin sits downstream of an agricultural heartland.
+
+**Implication**: HYDE s/u divergence is a stronger and more structurally interesting signal than climate divergence when it fires, but fires in a smaller fraction of basins. The negative cropland median (local > upstream) and the persistent positive tail (upstream > local) are both analytically meaningful and point in opposite cultural-historical directions: the first describes a settlement at the agricultural core; the second describes a downstream receiver of upstream agricultural surplus or runoff. Both configurations are real and historically attested.
+
+---
+
+### F9.5 — s/u divergence collapses toward zero by 2000 CE; the most analytically useful window is 0–1000 CE
+
+**Finding**: Divergence distributions shift markedly between 1000 BCE and 2000 CE. At 1000 BCE, distributions are flat and wide — sparse, patchy land use produces large and variable local/upstream contrasts in either direction. By 2000 CE, both cropland and grazing distributions tighten sharply around zero and converge with each other. This reflects land use expanding broadly enough that most basins and their upstream catchments have comparable amounts — the contrast collapses. The convergence is consistent with agricultural and pastoral expansion filling in the landscape relatively uniformly across both local and upstream positions, rather than remaining concentrated in a few hotspots. The positive and negative tails persist but the bulk of the distribution loses its divergence signal.
+
+**Implication**: For CDOP correspondence work, HYDE s/u divergence is most analytically productive in the middle epochs (roughly 0–1000 CE), where land use is established enough for divergence to be computable but not yet so globally widespread that the local/upstream contrast has washed out. Queries at 2000 CE will return near-zero divergence for most basins — not because land use is absent but because it is now too uniform to discriminate. This has direct implications for Band T API design: the divergence field is most informative for pre-industrial historical queries and should be interpreted cautiously for modern-era baselines. Open question for expert review: whether the convergence is genuinely "expansion in place" (uniform spread) or partly a large-basin averaging artefact at L6 — the L8 and L6 distributions show the same pattern, suggesting the former, but not conclusively.
+
+---
+
+### F9.6 — BasinATLAS (EarthStat) and HYDE 2000 CE cropland agree globally but diverge spatially at sub-basin scale; Band D is not a proxy for historical land use
+
+**Finding**: BasinATLAS `crp_pc_sse` is sourced from EarthStat circa 2000 — a hybrid product combining agricultural inventory data with MODIS/GLC2000 satellite classification. HYDE 3.4 at 2000 CE uses the same inventory data (FAO statistics) allocated spatially via population density and suitability models. Globally their totals agree closely (~15M km² cropland each). Divergence is therefore a **spatial allocation** problem, not a definitional one.
+
+At three reference sites, HYDE 2000 CE (as % of basin area) vs static EarthStat:
+
+| Site | EarthStat (static) | HYDE 1000 BCE | HYDE 1 CE | HYDE 1000 CE | HYDE 2000 CE |
+|---|---|---|---|---|---|
+| Timbuktu | 0% | 0.0% | 0.02% | 0.08% | 1.3% |
+| Ur | 60% | 4.0% | 2.9% | 4.9% | 18.1% |
+| Kaifeng | 71% | 16.6% | 65.4% | 37.7% | 59.7% |
+
+Kaifeng is coherent across the two sources (59.7% vs 71% at 2000 CE; the HYDE 1 CE peak at 65% reflects Han dynasty intensification). Timbuktu is consistent (both near zero). Ur is the outlier: EarthStat assigns 60% to the sub-basin while HYDE allocates only 18% at 2000 CE — a ~3× gap despite agreeing globally. Small L8 basins in high-intensity, irrigation-dominated agricultural regions (Mesopotamian plain) are most exposed to this kind of spatial allocation disagreement.
+
+**Implication**: The divergence is not a HYDE calibration failure — it reflects genuine uncertainty in *where* cropland sits within a region at fine spatial resolution, which both products resolve differently. HYDE's historical time series is internally consistent and should be interpreted as trajectories and anomalies, not absolute ground truth per sub-basin. For small L8 basins in agricultural hotspots, the EarthStat static value and HYDE temporal query are not interchangeable. Band D (EarthStat) and Band T (HYDE) measure related but distinct things; researchers should not use Band D as a proxy for historical land use. This divergence is flagged for expert review alongside F8.5 and F8.6 (October 2026 meeting).
+
+---
+
+### F9.7 — Reference site HYDE trajectories are historically legible; Kaifeng shows Han dynasty peak, Ur shows ancient agriculture, Timbuktu is near-zero throughout
+
+**Finding**: Polygon-interior HYDE cropland (km², local basin) at three reference sites across four epochs:
+
+| Site | 1000 BCE | 1 CE | 1000 CE | 2000 CE |
+|---|---|---|---|---|
+| Timbuktu | 0.00 | 0.02 | 0.08 | 1.30 |
+| Ur | 10.79 | 10.06 | 17.55 | 72.03 |
+| Kaifeng | 28.81 | 174.72 | 100.78 | 159.47 |
+
+(Values are total km² of cropland within the L8 sub-basin polygon, computed as polygon-interior mean × n_cells.)
+
+Kaifeng's 1 CE peak at ~175 km² — the highest value across all epochs and sites — corresponds to Han dynasty agricultural intensification in the Yellow River basin, one of the most productive agricultural regions in the ancient world. The drop to ~101 km² at 1000 CE and recovery to ~160 km² at 2000 CE traces the contraction and re-expansion of farming across the Song–Ming–Qing periods. Ur shows a modest but consistent ancient signal (10–18 km²) across all pre-modern epochs, consistent with Mesopotamian irrigated agriculture predating the HYDE window; the 2000 CE jump to 72 km² reflects modern Iraqi irrigation expansion. Timbuktu is effectively zero throughout — the Saharan fringe location produces no land-use signal at sub-basin scale.
+
+**Implication**: HYDE trajectories at individual reference sites are historically interpretable and align with known cultural-historical patterns. The signal is real and discriminating, not noise. This validates the Band T HYDE component as a meaningful input for CDOP correspondence work, particularly for the 0–1000 CE window identified in F9.5 as the most analytically productive epoch range.
+
+----
+
+### F10.1 — LMR time series show an expanding-funnel shape: an artifact of proxy density, not a climate signal
+
+**Finding**: All three variables (PDSI, temperature, precipitation) show compressed year-to-year variance in the early period (0–500 CE) that expands progressively through the record. In the early centuries each line in the time series gallery hugs close to zero with small oscillations; from ~1200 CE onward the same lines swing widely. This pattern is uniform across all latitude bands and locations.
+
+This is the LMR "regression to prior" effect. When proxy records are sparse (early centuries), all 20 MCruns produce cautious reconstructions constrained by the model's long-run climatology prior — their grand mean stays near zero. As proxy density increases in later centuries, each MCrun is pulled by real proxy data toward a genuine signal; the grand mean inherits that signal's variability. The funnel shape is a data-quality signature, not a climate signature: pre-500 CE reconstruction amplitude is systematically suppressed relative to the actual historical climate variability at those locations.
+
+**Implication**: LMR is not equally reliable across its full 0–1998 CE window. The early period (roughly 0–700 CE) is the least trustworthy — not because the data is wrong, but because the reconstruction has low power to detect anomalies when proxies are sparse. Band T queries in this window should carry a caveat about reduced reconstruction fidelity. The most analytically productive window is approximately 700–1900 CE, where proxy networks are dense enough to constrain the reconstruction meaningfully. This interacts with the HYDE finding (F9.5) that s/u divergence is most useful at 0–1000 CE — the overlap of reliable LMR and meaningful HYDE divergence is roughly 700–1000 CE.
+
+---
+
+### F10.2 — Temporal variance dominates geographic variance for all three LMR variables; Band T is genuinely non-redundant with Band C
+
+**Finding**: Variance decomposition across 34 sample locations × 2001 years:
+
+| Variable | Geographic % | Temporal % | Dominant |
+|---|---|---|---|
+| PDSI | 23.7% | 76.3% | Temporal |
+| Air temperature | 31.6% | 68.4% | Temporal |
+| Precipitation rate | 7.3% | 92.7% | Temporal |
+
+Geographic variance measures how much the 2000-year mean anomaly differs between locations; temporal variance measures how much a single location's value swings from year to year. Since LMR stores anomalies from the model climatology prior (not absolute values), all locations have long-run means near zero — geographic differences nearly vanish. Temporal fluctuations driven by proxy data are the dominant source of variance.
+
+**Implication**: The result is the opposite of what was anticipated for temperature (expected geographic dominance). Because LMR variables are anomaly fields, knowing *when* a query is placed matters more than knowing *where* for all three variables. This validates Band T as genuinely non-redundant with Band C: Band C provides absolute climatology (what temperature/precipitation is typical here); LMR provides the departure from that norm at a given epoch (how anomalous was this period). A long-window LMR mean would converge toward zero and add little — the value is in the temporal structure. Precipitation is the most temporally dominated (92.7%), consistent with high interannual variability and near-zero long-run anomaly means.
+
+---
+
+### F10.3 — Within-run spread dominates across-run std by ~4.6×; spread is stable across the record and a usable uncertainty field
+
+**Finding**: Median uncertainty magnitudes across sample locations and all years:
+
+| Variable | Within-run spread | Across-run std | Ratio |
+|---|---|---|---|
+| PDSI | 1.51 | 0.33 | 4.63× |
+| Air temperature | 0.48 K | 0.11 K | 4.32× |
+| Precipitation rate | ~0 (display precision) | ~0 | ~4.9× |
+
+Within-run spread (std across ~100 particles within each MCrun) is ~4.6× larger than across-run std (disagreement between the 20 MCruns). The 20 MCruns — each using a different random proxy subset — produce consistent grand means. The dominant uncertainty is particle dispersion within each MCrun: the range of plausible climate states the model's dynamics and proxy assimilation admit at each time step.
+
+PDSI spread early (0–500 CE) vs late (1500–1998 CE): 1.55 vs 1.36, ratio 1.13×. Spread is only modestly elevated in the early period despite the dramatic funnel visible in the grand mean. This is because spread captures model intrinsic uncertainty (which sets a floor even without proxies), while the funnel reflects suppression of the *mean signal* by regression to the prior. Proxies constrain the mean but don't eliminate particle dispersion.
+
+**Implication**: The within-run spread is the appropriate uncertainty field to expose in the Band T API — it is the larger, more meaningful source, and it is reasonably stable across the record (~13% elevation in early centuries vs late). It cannot serve as a standalone proxy for the funnel-effect (F10.1): spread alone will not strongly flag early-period reconstructions as less reliable. An explicit epoch-based caveat (e.g. "reconstruction fidelity reduced before ~700 CE due to sparse proxy networks") is necessary in addition to returning the spread value.
+
+---
+
+### F10.4 — Band C and LMR are statistically orthogonal; 1850–1900 window sits within LIA cooling
+
+**Finding**: Spearman correlation between Band C absolute climatology and LMR 1850–1900 anomaly (relative to full 2000-year mean): temperature r = −0.055 (p = 0.759), precipitation r = −0.112 (p = 0.527). Both near zero and non-significant across 34 sample locations. LMR 1850–1900 temperature anomaly stats: mean = −0.065 K, median = −0.053 K, std = 0.075 K, range −0.221 to +0.061 K. The 75th percentile is −0.010 K — most locations are slightly below the 2000-year mean in this window. Only a few locations (high Subtropical NH) show positive anomalies.
+
+The negative mean anomaly reflects the LIA signal: 1850–1900 sits at the end of the Little Ice Age cooling period relative to the 2000-year mean. The Medieval Climate Anomaly (950–1250 CE) raised the 2000-year mean for NH locations, making 1850–1900 appear cool in comparison. The industrial warming that dominates post-1900 is largely outside LMR's effective window for aggregate comparison.
+
+**Implication**: Band C (absolute climatology, WorldClim) and LMR (temporal anomaly, paleoclimate reanalysis) contain statistically independent information and are genuinely non-redundant in the signature. A researcher using both receives orthogonal characterisations: what is the typical climate here (Band C), and how much did climate at this location depart from its long-run norm at a given epoch (Band T/LMR). There is no risk of double-counting. This also means there is no useful "sanity check" between the two in the traditional sense — agreement is not expected and near-zero correlation is the correct outcome.
+
+---
+
+### F10.5 — LMR 2°×2° grid is ~38× coarser than L8 basin resolution; spatial precision ceiling is ~200 km
+
+**Finding**: 190,675 L8 basins map to 4,999 unique LMR 2°×2° cells — a 38:1 compression ratio. Basins-per-cell distribution: median 39, p75 56, p95 74, max 109. LMR provides values at all 16,380 grid cells globally (land and ocean); 4,999 of those cells (30%) contain at least one L8 basin, covering the land areas with HydroSHEDS river basin coverage. The remaining 11,381 cells are ocean, polar regions, or endorheic areas outside HydroSHEDS. The highest basin densities (approaching 110 per cell) occur in mountain zones — Alps, Himalayas, Rockies — where many small headwater sub-basins pack into a single 2° square.
+
+**Implication**: A Band T LMR query for any given L8 basin returns the same value as ~39 neighboring basins on average. The spatial precision of the LMR component is approximately one 2°×2° cell (~200 km at mid-latitudes), regardless of basin size. Fine-grained local climate anomaly characterisation is not possible with LMR at L8 resolution — the reconstruction is inherently regional. This should be disclosed in API documentation: "LMR climate anomaly values are resolved at 2° spatial resolution (~200 km); multiple adjacent basins will return identical values." For CDOP correspondence work, LMR anomalies can distinguish broad regional climate periods but not local micro-climate differences between neighboring basins.
+
+---
+
+## 2026-04-26 · Task 9 · HYDE basin aggregation and s/u characterization
+
+**Method**: `notebooks/edop/explore/09_hyde_basin_aggregation.ipynb` · L8: 500-basin stratified sample (25/cluster × 20 clusters); L6: 500-basin stratified sample from Task 5b clusters · HYDE variables: cropland, grazing_land · Epochs: 1000 BCE, 0 CE, 1000 CE, 2000 CE · Aggregation: polygon-interior mean (shapely vectorized contains) for s values; centroid lookup + sub_area-weighted traversal for u values
+
+---
 ## 2026-04-27 · Task 11 · LMR period and event fingerprints
 
 **Method**: `notebooks/edop/explore/11_lmr_periods_volcanics.ipynb` · Reuses 34-cell L8-anchored sample from Task 10 · Period anomalies: PDSI and air temperature for Late Antique (500–700 CE), MCA (950–1250 CE), LIA (1300–1850 CE) relative to three reference windows · Volcanic composite: 5 events ≥20 Tg in reliable window (700–1900 CE), lag-response at individual cells and nhmt/gmt hemisphere means · Location-specific validation: Kaifeng (~35°N, 114°E) and Central Europe (~48°N, 10°E) across the full Song dynasty (960–1280 CE) with Samalas (1257, 59 Tg) close-up
@@ -512,298 +818,3 @@ This is not a property unique to LMR — it characterises virtually all multi-pr
 **Implication**: This limitation must be explicitly stated in Band T API documentation, not buried in technical notes. A Song dynasty historian using EDOP to query climate at Kaifeng should know that the LMR values there are less precisely constrained than equivalent values for a medieval European site. The within-run spread field (F10.3) does not adequately capture this geographic bias — spread is driven by model dynamics and does not scale with proxy density in a way users can easily interpret. A qualitative disclosure is needed: "LMR reconstruction quality varies by region; coverage is strongest in Europe and North America and weaker in East Asia, South Asia, and the Southern Hemisphere."
 
 ---
-
-## 2026-04-26 · Task 10 · LMR v2.1 temporal/spatial structure and grid behaviour
-
-**Method**: `notebooks/edop/explore/10_lmr_structure.ipynb` · Variables: PDSI, air temperature (anomaly), precipitation rate (anomaly) · Grid: 2°×2°, 16,380 cells globally (values at all cells including ocean) · Temporal: 0–1998 CE, 2001 annual steps · Ensemble: 20 MCruns × (mean + spread) files
-
----
-
-### F10.1 — LMR time series show an expanding-funnel shape: an artifact of proxy density, not a climate signal
-
-**Finding**: All three variables (PDSI, temperature, precipitation) show compressed year-to-year variance in the early period (0–500 CE) that expands progressively through the record. In the early centuries each line in the time series gallery hugs close to zero with small oscillations; from ~1200 CE onward the same lines swing widely. This pattern is uniform across all latitude bands and locations.
-
-This is the LMR "regression to prior" effect. When proxy records are sparse (early centuries), all 20 MCruns produce cautious reconstructions constrained by the model's long-run climatology prior — their grand mean stays near zero. As proxy density increases in later centuries, each MCrun is pulled by real proxy data toward a genuine signal; the grand mean inherits that signal's variability. The funnel shape is a data-quality signature, not a climate signature: pre-500 CE reconstruction amplitude is systematically suppressed relative to the actual historical climate variability at those locations.
-
-**Implication**: LMR is not equally reliable across its full 0–1998 CE window. The early period (roughly 0–700 CE) is the least trustworthy — not because the data is wrong, but because the reconstruction has low power to detect anomalies when proxies are sparse. Band T queries in this window should carry a caveat about reduced reconstruction fidelity. The most analytically productive window is approximately 700–1900 CE, where proxy networks are dense enough to constrain the reconstruction meaningfully. This interacts with the HYDE finding (F9.5) that s/u divergence is most useful at 0–1000 CE — the overlap of reliable LMR and meaningful HYDE divergence is roughly 700–1000 CE.
-
----
-
-### F10.2 — Temporal variance dominates geographic variance for all three LMR variables; Band T is genuinely non-redundant with Band C
-
-**Finding**: Variance decomposition across 34 sample locations × 2001 years:
-
-| Variable | Geographic % | Temporal % | Dominant |
-|---|---|---|---|
-| PDSI | 23.7% | 76.3% | Temporal |
-| Air temperature | 31.6% | 68.4% | Temporal |
-| Precipitation rate | 7.3% | 92.7% | Temporal |
-
-Geographic variance measures how much the 2000-year mean anomaly differs between locations; temporal variance measures how much a single location's value swings from year to year. Since LMR stores anomalies from the model climatology prior (not absolute values), all locations have long-run means near zero — geographic differences nearly vanish. Temporal fluctuations driven by proxy data are the dominant source of variance.
-
-**Implication**: The result is the opposite of what was anticipated for temperature (expected geographic dominance). Because LMR variables are anomaly fields, knowing *when* a query is placed matters more than knowing *where* for all three variables. This validates Band T as genuinely non-redundant with Band C: Band C provides absolute climatology (what temperature/precipitation is typical here); LMR provides the departure from that norm at a given epoch (how anomalous was this period). A long-window LMR mean would converge toward zero and add little — the value is in the temporal structure. Precipitation is the most temporally dominated (92.7%), consistent with high interannual variability and near-zero long-run anomaly means.
-
----
-
-### F10.3 — Within-run spread dominates across-run std by ~4.6×; spread is stable across the record and a usable uncertainty field
-
-**Finding**: Median uncertainty magnitudes across sample locations and all years:
-
-| Variable | Within-run spread | Across-run std | Ratio |
-|---|---|---|---|
-| PDSI | 1.51 | 0.33 | 4.63× |
-| Air temperature | 0.48 K | 0.11 K | 4.32× |
-| Precipitation rate | ~0 (display precision) | ~0 | ~4.9× |
-
-Within-run spread (std across ~100 particles within each MCrun) is ~4.6× larger than across-run std (disagreement between the 20 MCruns). The 20 MCruns — each using a different random proxy subset — produce consistent grand means. The dominant uncertainty is particle dispersion within each MCrun: the range of plausible climate states the model's dynamics and proxy assimilation admit at each time step.
-
-PDSI spread early (0–500 CE) vs late (1500–1998 CE): 1.55 vs 1.36, ratio 1.13×. Spread is only modestly elevated in the early period despite the dramatic funnel visible in the grand mean. This is because spread captures model intrinsic uncertainty (which sets a floor even without proxies), while the funnel reflects suppression of the *mean signal* by regression to the prior. Proxies constrain the mean but don't eliminate particle dispersion.
-
-**Implication**: The within-run spread is the appropriate uncertainty field to expose in the Band T API — it is the larger, more meaningful source, and it is reasonably stable across the record (~13% elevation in early centuries vs late). It cannot serve as a standalone proxy for the funnel-effect (F10.1): spread alone will not strongly flag early-period reconstructions as less reliable. An explicit epoch-based caveat (e.g. "reconstruction fidelity reduced before ~700 CE due to sparse proxy networks") is necessary in addition to returning the spread value.
-
----
-
-### F10.4 — Band C and LMR are statistically orthogonal; 1850–1900 window sits within LIA cooling
-
-**Finding**: Spearman correlation between Band C absolute climatology and LMR 1850–1900 anomaly (relative to full 2000-year mean): temperature r = −0.055 (p = 0.759), precipitation r = −0.112 (p = 0.527). Both near zero and non-significant across 34 sample locations. LMR 1850–1900 temperature anomaly stats: mean = −0.065 K, median = −0.053 K, std = 0.075 K, range −0.221 to +0.061 K. The 75th percentile is −0.010 K — most locations are slightly below the 2000-year mean in this window. Only a few locations (high Subtropical NH) show positive anomalies.
-
-The negative mean anomaly reflects the LIA signal: 1850–1900 sits at the end of the Little Ice Age cooling period relative to the 2000-year mean. The Medieval Climate Anomaly (950–1250 CE) raised the 2000-year mean for NH locations, making 1850–1900 appear cool in comparison. The industrial warming that dominates post-1900 is largely outside LMR's effective window for aggregate comparison.
-
-**Implication**: Band C (absolute climatology, WorldClim) and LMR (temporal anomaly, paleoclimate reanalysis) contain statistically independent information and are genuinely non-redundant in the signature. A researcher using both receives orthogonal characterisations: what is the typical climate here (Band C), and how much did climate at this location depart from its long-run norm at a given epoch (Band T/LMR). There is no risk of double-counting. This also means there is no useful "sanity check" between the two in the traditional sense — agreement is not expected and near-zero correlation is the correct outcome.
-
----
-
-### F10.5 — LMR 2°×2° grid is ~38× coarser than L8 basin resolution; spatial precision ceiling is ~200 km
-
-**Finding**: 190,675 L8 basins map to 4,999 unique LMR 2°×2° cells — a 38:1 compression ratio. Basins-per-cell distribution: median 39, p75 56, p95 74, max 109. LMR provides values at all 16,380 grid cells globally (land and ocean); 4,999 of those cells (30%) contain at least one L8 basin, covering the land areas with HydroSHEDS river basin coverage. The remaining 11,381 cells are ocean, polar regions, or endorheic areas outside HydroSHEDS. The highest basin densities (approaching 110 per cell) occur in mountain zones — Alps, Himalayas, Rockies — where many small headwater sub-basins pack into a single 2° square.
-
-**Implication**: A Band T LMR query for any given L8 basin returns the same value as ~39 neighboring basins on average. The spatial precision of the LMR component is approximately one 2°×2° cell (~200 km at mid-latitudes), regardless of basin size. Fine-grained local climate anomaly characterisation is not possible with LMR at L8 resolution — the reconstruction is inherently regional. This should be disclosed in API documentation: "LMR climate anomaly values are resolved at 2° spatial resolution (~200 km); multiple adjacent basins will return identical values." For CDOP correspondence work, LMR anomalies can distinguish broad regional climate periods but not local micro-climate differences between neighboring basins.
-
----
-
-## 2026-04-26 · Task 9 · HYDE basin aggregation and s/u characterization
-
-**Method**: `notebooks/edop/explore/09_hyde_basin_aggregation.ipynb` · L8: 500-basin stratified sample (25/cluster × 20 clusters); L6: 500-basin stratified sample from Task 5b clusters · HYDE variables: cropland, grazing_land · Epochs: 1000 BCE, 0 CE, 1000 CE, 2000 CE · Aggregation: polygon-interior mean (shapely vectorized contains) for s values; centroid lookup + sub_area-weighted traversal for u values
-
----
-
-### F9.1 — Polygon-interior and centroid agree for small basins; diverge meaningfully above ~100 km²
-
-**Finding**: Aggregation comparison at 2000 CE cropland (L8 sample, 500 basins): median absolute difference = 0.000 km², p95 = 8.7 km². Disagreement is essentially zero for basins under ~10 km² and grows with basin size, concentrated above ~100 km² sub_area. Median cells per basin = 8; p95 = 39. 39 of 500 basins (8%) had no HYDE cell center inside their polygon and required centroid fallback — these are the smallest, most rugged sub-basins. One notable outlier: a basin where centroid returned ~0 km² cropland but polygon-interior returned ~38 km², a case where the centroid cell landed on an unfarmed patch while the polygon interior was predominantly agricultural. The relative-diff p95 = 1.0 is a denominator artifact (near-zero poly_val), not evidence of systematic disagreement.
-
-**Implication**: Polygon-interior is the correct aggregation method and earns its computational cost for basins above ~100 km². For the smallest L8 sub-basins it is equivalent to centroid but not worse. The outlier case demonstrates the failure mode centroid is prone to and justifies the polygon-interior choice on principle. Centroid fallback for the 8% of tiny basins is acceptable.
-
----
-
-### F9.2 — HYDE s values: global distribution confirms heavy zeros; grazing more extensive than cropland at all epochs
-
-**Finding**: L8 sample (500 basins), polygon-interior s values. At all epochs through 1000 CE, cropland median = 0 and 25th percentile = 0 — more than half the sample has no cropland signal. At 2000 CE, cropland median rises to only 0.008 km²/cell, 75th percentile = 8.0 km²/cell. Grazing land is consistently more spatially extensive: at 2000 CE grazing median = 1.52 km²/cell vs cropland median = 0.008 km²/cell. Mean growth from 1000 BCE to 2000 CE: cropland ~18×, grazing ~32×. The grazing expansion reflects colonial-era pastoral land transformation (Americas, Australia, sub-Saharan Africa) rather than industrialization; the land-area footprint of grazing far exceeds cropland globally.
-
-**Implication**: For Band T basin-level HYDE queries, zero returns will be the majority result for cropland at all pre-CE epochs and for most basins even at 2000 CE. Non-zero values are concentrated in a minority of agriculturally significant basins. Grazing land signal emerges earlier and covers more basins than cropland — it is the more globally representative land-use variable for historical queries. API responses should frame zero as an honest "no land use signal at this location/epoch," not a missing-data condition.
-
----
-
-### F9.3 — L6 medians substantially higher than L8; larger polygons capture earlier and wider land-use signal
-
-**Finding**: L6 sample s values show consistently higher medians than L8 at the same epochs. At 1000 CE: L8 cropland median = 0.000, L6 = 0.022 km²/cell. At 2000 CE: L8 cropland median = 0.008, L6 = 1.055 km²/cell; L8 grazing median = 1.52, L6 = 7.27 km²/cell. Means are also slightly higher at L6 (cropland 2000 CE: L8 mean = 7.32, L6 = 8.46 km²/cell) but the median shift is the more telling statistic. A near-zero floating-point value (1.3×10⁻⁷) appears at L6 cropland 0 CE — a HYDE model artefact consistent with F8.3, not a real signal.
-
-**Implication**: L6 basins are more likely to contain at least some agricultural land within their larger polygon boundary even when the local sub-basin core is unfarmed — the larger polygon casts a wider net and captures more of the agricultural fringe. L6 signatures are inherently more land-use-signal-rich than L8 at the same epoch. This has design implications: a Band T HYDE query at L6 will return more non-zero values and apparent earlier signal emergence than the same query at L8, but the signal reflects a broader regional average rather than local conditions. The two levels are answering different questions, consistent with F5.7.
-
----
-
-### F9.4 — HYDE s/u divergence is dramatically wider than climate divergence; effective N is small
-
-**Finding**: HYDE s/u divergence (log₂(upstream/local)) was computed for basins where both s and u exceeded 0.001 km². Effective N ranged from 42 (L8 cropland 1000 BCE) to 104 (L8 grazing 2000 CE) — 8–21% of the 500-basin sample. The rest are headwaters (no upstream), zero-land-use environments, or both. Tail extents are far wider than the climate divergences in Task 3: HYDE p95 reaches +5.52 log₂ (upstream 46× more cropland than local, L6 2000 CE) vs climate precipitation p95 of +0.39 log₂. Cropland medians are consistently negative (local > upstream, range −0.91 to −0.07), meaning for most historically active basins the local site IS the agricultural concentration. Grazing medians are near zero at all epochs. A positive right tail persists at every epoch in both variables — the minority of Ur-type configurations where an unfarmed or less-farmed local basin sits downstream of an agricultural heartland.
-
-**Implication**: HYDE s/u divergence is a stronger and more structurally interesting signal than climate divergence when it fires, but fires in a smaller fraction of basins. The negative cropland median (local > upstream) and the persistent positive tail (upstream > local) are both analytically meaningful and point in opposite cultural-historical directions: the first describes a settlement at the agricultural core; the second describes a downstream receiver of upstream agricultural surplus or runoff. Both configurations are real and historically attested.
-
----
-
-### F9.5 — s/u divergence collapses toward zero by 2000 CE; the most analytically useful window is 0–1000 CE
-
-**Finding**: Divergence distributions shift markedly between 1000 BCE and 2000 CE. At 1000 BCE, distributions are flat and wide — sparse, patchy land use produces large and variable local/upstream contrasts in either direction. By 2000 CE, both cropland and grazing distributions tighten sharply around zero and converge with each other. This reflects land use expanding broadly enough that most basins and their upstream catchments have comparable amounts — the contrast collapses. The convergence is consistent with agricultural and pastoral expansion filling in the landscape relatively uniformly across both local and upstream positions, rather than remaining concentrated in a few hotspots. The positive and negative tails persist but the bulk of the distribution loses its divergence signal.
-
-**Implication**: For CDOP correspondence work, HYDE s/u divergence is most analytically productive in the middle epochs (roughly 0–1000 CE), where land use is established enough for divergence to be computable but not yet so globally widespread that the local/upstream contrast has washed out. Queries at 2000 CE will return near-zero divergence for most basins — not because land use is absent but because it is now too uniform to discriminate. This has direct implications for Band T API design: the divergence field is most informative for pre-industrial historical queries and should be interpreted cautiously for modern-era baselines. Open question for expert review: whether the convergence is genuinely "expansion in place" (uniform spread) or partly a large-basin averaging artefact at L6 — the L8 and L6 distributions show the same pattern, suggesting the former, but not conclusively.
-
----
-
-### F9.6 — BasinATLAS (EarthStat) and HYDE 2000 CE cropland agree globally but diverge spatially at sub-basin scale; Band D is not a proxy for historical land use
-
-**Finding**: BasinATLAS `crp_pc_sse` is sourced from EarthStat circa 2000 — a hybrid product combining agricultural inventory data with MODIS/GLC2000 satellite classification. HYDE 3.4 at 2000 CE uses the same inventory data (FAO statistics) allocated spatially via population density and suitability models. Globally their totals agree closely (~15M km² cropland each). Divergence is therefore a **spatial allocation** problem, not a definitional one.
-
-At three reference sites, HYDE 2000 CE (as % of basin area) vs static EarthStat:
-
-| Site | EarthStat (static) | HYDE 1000 BCE | HYDE 1 CE | HYDE 1000 CE | HYDE 2000 CE |
-|---|---|---|---|---|---|
-| Timbuktu | 0% | 0.0% | 0.02% | 0.08% | 1.3% |
-| Ur | 60% | 4.0% | 2.9% | 4.9% | 18.1% |
-| Kaifeng | 71% | 16.6% | 65.4% | 37.7% | 59.7% |
-
-Kaifeng is coherent across the two sources (59.7% vs 71% at 2000 CE; the HYDE 1 CE peak at 65% reflects Han dynasty intensification). Timbuktu is consistent (both near zero). Ur is the outlier: EarthStat assigns 60% to the sub-basin while HYDE allocates only 18% at 2000 CE — a ~3× gap despite agreeing globally. Small L8 basins in high-intensity, irrigation-dominated agricultural regions (Mesopotamian plain) are most exposed to this kind of spatial allocation disagreement.
-
-**Implication**: The divergence is not a HYDE calibration failure — it reflects genuine uncertainty in *where* cropland sits within a region at fine spatial resolution, which both products resolve differently. HYDE's historical time series is internally consistent and should be interpreted as trajectories and anomalies, not absolute ground truth per sub-basin. For small L8 basins in agricultural hotspots, the EarthStat static value and HYDE temporal query are not interchangeable. Band D (EarthStat) and Band T (HYDE) measure related but distinct things; researchers should not use Band D as a proxy for historical land use. This divergence is flagged for expert review alongside F8.5 and F8.6 (October 2026 meeting).
-
----
-
-### F9.7 — Reference site HYDE trajectories are historically legible; Kaifeng shows Han dynasty peak, Ur shows ancient agriculture, Timbuktu is near-zero throughout
-
-**Finding**: Polygon-interior HYDE cropland (km², local basin) at three reference sites across four epochs:
-
-| Site | 1000 BCE | 1 CE | 1000 CE | 2000 CE |
-|---|---|---|---|---|
-| Timbuktu | 0.00 | 0.02 | 0.08 | 1.30 |
-| Ur | 10.79 | 10.06 | 17.55 | 72.03 |
-| Kaifeng | 28.81 | 174.72 | 100.78 | 159.47 |
-
-(Values are total km² of cropland within the L8 sub-basin polygon, computed as polygon-interior mean × n_cells.)
-
-Kaifeng's 1 CE peak at ~175 km² — the highest value across all epochs and sites — corresponds to Han dynasty agricultural intensification in the Yellow River basin, one of the most productive agricultural regions in the ancient world. The drop to ~101 km² at 1000 CE and recovery to ~160 km² at 2000 CE traces the contraction and re-expansion of farming across the Song–Ming–Qing periods. Ur shows a modest but consistent ancient signal (10–18 km²) across all pre-modern epochs, consistent with Mesopotamian irrigated agriculture predating the HYDE window; the 2000 CE jump to 72 km² reflects modern Iraqi irrigation expansion. Timbuktu is effectively zero throughout — the Saharan fringe location produces no land-use signal at sub-basin scale.
-
-**Implication**: HYDE trajectories at individual reference sites are historically interpretable and align with known cultural-historical patterns. The signal is real and discriminating, not noise. This validates the Band T HYDE component as a meaningful input for CDOP correspondence work, particularly for the 0–1000 CE window identified in F9.5 as the most analytically productive epoch range.
-
----
-
-## 2026-04-25 · Task 7 · eVolv2k v4 distribution and aggregation design
-
-**Method**: `notebooks/edop/explore/07_evolv2k_distribution.ipynb` · 256 events total, 1–1890 CE (LMR window) · CSV only, no DB required
-
----
-
-### F7.1 — Catalog ends at 1890 CE; 20th-century queries return empty volcanic record
-
-**Finding**: The eVolv2k v4 CSV contains 256 events with `year_ad` max = 1890. No events exist for 1891–1998 CE, despite the LMR window extending to 1998. Pinatubo 1991, Agung 1963, El Chichón 1982, and other major 20th-century eruptions are absent. This is an ice-core archive coverage limitation, not quiescence.
-
-**Implication**: Band T queries with date ranges extending past ~1890 will return empty `volcanic_events` lists — which could be misread as "no significant eruptions." A `volcanic_events_coverage_note` field (or equivalent warning) should be added to the API response to flag this. The eVolv2k component of Band T is reliable only to ~1890 CE.
-
----
-
-### F7.2 — Catalog is dominated by small, anonymous events; named volcanoes are 16% of the record
-
-**Finding**: 83.6% of events (214/256) have no named source volcano — they are ice-core-detected sulfate anomalies with no attributed eruption. Named events are 42/256 (16.4%). Tephra confirmation is even sparser (21 events). All canonical historically significant eruptions are present and correctly attributed: Samalas 1257 (59.42 Tg), Tambora 1815 (28.08 Tg), Eldgjá 939 (16.23 Tg), 536 CE mystery eruption (18.81 Tg), Krakatoa 1883 (9.34 Tg), Kuwae 1453 (9.97 Tg).
-
-**Implication**: Users expect named volcanoes; most events have none. API responses should set this expectation explicitly. The unnamed events are still valid forcing signals — they simply lack attribution. Do not filter to named events only.
-
----
-
-### F7.3 — 5 Tg is the right default threshold; 10 Tg excludes Krakatoa and Kuwae
-
-**Finding**: At VSSI ≥ 5 Tg: 55 events (21% of catalog). At ≥ 10 Tg: 33 events. Krakatoa 1883 (9.34 Tg) and Kuwae 1453 (9.97 Tg) fall below the 10 Tg threshold. Both are historically consequential and climatically documented. The 5 Tg floor captures the interpretable tier without pulling in marginal noise.
-
-**Implication**: Confirm `vssi_min=5.0` as the API default. Document as a named, adjustable parameter with rationale. The 10 Tg level is useful as a "major event" label in response fields but should not be the default filter.
-
----
-
-### F7.4 — Empty-window rates at 5 Tg: 30% at 50 yr, 3% at 100 yr, 0% at 200 yr
-
-**Finding**: Sliding-window analysis (step=10 yr) across 1–1998 CE: at VSSI ≥ 5 Tg, 70.3% of 50-yr windows contain ≥1 event; 96.8% of 100-yr windows; 100% of 200-yr windows. At ≥ 10 Tg: 50.8% / 78.9% / 97.2% respectively.
-
-**Implication**: For 100-year queries (the dominant humanities use case), volcanic context is almost always available at the 5 Tg threshold. For 50-year queries, 30% will return empty — this is a genuine "no significant forcing" finding, not an error. The API should frame empty returns explicitly. Rubric: 100-year window + 5 Tg threshold is the reliable operating zone; 50-year + 10 Tg is probabilistic.
-
----
-
-### F7.5 — Aggregation: count and sum-VSSI are correlated (r=0.868) but not interchangeable; all three summaries serve distinct purposes
-
-**Finding**: In 100-yr sliding windows at ≥5 Tg: median count=2, median sum-VSSI=28 Tg, median time-since-last-major=47 yr. Count and sum-VSSI correlate at r=0.868 — high but not redundant. The 13% unexplained variance is driven by Samalas-class outliers: a window containing Samalas 1257 (59 Tg) registers count=4 (unremarkable) but sum-VSSI=120 Tg (extraordinary). Time-since-last-major captures recency structure count and sum cannot.
-
-**Implication**: Return all three aggregations in the API response: `volcanic_event_count`, `volcanic_vssi_sum_tg`, `years_since_last_major`. They are complementary, not redundant. Sum-VSSI is the key discriminator for outlier centuries.
-
----
-
-### F7.6 — Asymmetry field is binary for small events, continuous for climatically significant ones
-
-**Finding**: Full catalog asymmetry distribution is strongly bimodal at 0.0 and 1.0 — most small events are coded as purely SH or purely NH based on detection in a single polar ice sheet. Above 5 Tg, the distribution becomes genuinely spread across intermediate values (0.0–1.0), reflecting real bilateral stratospheric dispersal for large tropical eruptions (Samalas 0.588, Tambora 0.456, Krakatoa 0.629).
-
-**Implication**: Asymmetry is not a reliable continuous filter across the full catalog — it is an encoding artifact for sub-threshold events. Above 5 Tg it carries real signal about hemispheric reach. Return `asymmetry` as a per-event field; do not use it as a hard API filter. Location-aware weighting (if ever added) should apply only to events above threshold.
-
----
-
-### F7.7 — Kaifeng 1000–1100 CE sits at the end of the Medieval volcanic quiet; the following century is the most volcanically intense in the record
-
-**Finding**: The 950–1100 CE window is the deepest volcanic quiet in the 2000-year eVolv2k record — near-zero event count and sum-VSSI. The Northern Song flourished in this period (consistent with the benign climatic baseline). The 1200–1300 CE window — covering the Northern Song's aftermath and the Mongol expansion — contains Samalas 1257 (59 Tg), making it the highest sum-VSSI century in the record (~120 Tg in 100-yr windows centered on 1250).
-
-**Implication**: The Kaifeng 1000–1100 query (baked in as a sandbox example by Ruth) captures the *end* of a climatically favorable period. The collapse of the Northern Song (1127 CE, Jingkang Incident) and subsequent Southern Song vulnerability to Mongol conquest (1279 CE) both fall in a dramatically more volcanically active and likely climatically disrupted period. This is a worked example of why temporal window choice matters — and a candidate correspondence hypothesis for future Band T work. Flag to Ruth.
-
----
-
-### F7.8 — Hemispheric filtering is asymmetric and should not be implemented as a default API behavior
-
-**Finding**: 100-yr sliding window counts at VSSI ≥ 5 Tg by hemispheric filter: NH-relevant (asymmetry > 0.5) median=2, empty=10.5% — virtually identical to unfiltered (median=2, empty=3.2%). SH-relevant (asymmetry < 0.5) median=0, empty=60.5%. Symmetric-only median=1, empty=45.8%. NH filtering has near-zero effect because the catalog is 64.5% NH-dominant by event count. SH filtering makes the record uninformative — 60% of century-scale windows contain no SH-dominant events at the 5 Tg threshold.
-
-**Implication**: Do not implement hemispheric filtering as an API parameter. The catalog's NH bias is a dataset property to be documented, not compensated for. All events above the VSSI threshold should be returned regardless of query location, with `asymmetry` included as a per-event field for users who want to apply their own weighting. The "SH-relevant reduces median by 100%" result is a consequence of the median hitting zero, not universal emptiness — but the 60% empty-window rate is sufficient to rule out filtering as a useful default. API guide should note that eVolv2k is NH-biased by construction and that asymmetry should be interpreted accordingly.
-
----
-
-### F7.9 — eVolv2k and LMR are currently coupled by the LMR date window, but should be decoupled in the API
-
-**Finding**: The current Band T implementation gates eVolv2k returns by the LMR date range (1–1998 CE), because both layers were introduced together. But eVolv2k's actual coverage extends to ~500 BCE — the full catalog contains 45 pre-CE events, including the 44 BCE Okmok eruption (a candidate forcing event for the fall of the Roman Republic) and other historically significant BCE eruptions. These are inaccessible to any current Band T query. LMR's 1 CE floor is a proxy-network limitation: paleoclimate reanalysis requires sufficient tree ring, ice core, and speleothem density, which thins rapidly before ~200 CE and is untenable before 1 CE globally. That constraint is specific to LMR and does not apply to eVolv2k.
-
-**Implication**: Decouple the two layers in the API. eVolv2k should be queryable for any window within its actual coverage (~500 BCE–1890 CE), returning events with a status indicating the volcanic record is available even when LMR is not. LMR should retain its 1–1998 CE gate with a note about proxy network thinning. A query for Babylon 600–400 BCE should return volcanic events (if any above threshold) alongside an explicit `lmr_status: out_of_range` — not silence. This is a design change to route and document before the API is finalized, not a characterization task. Flag for prospectus update.
-
----
-
-## 2026-04-25 · Task 8 · HYDE 3.4 — per-epoch distributions and signal emergence
-
-**Method**: `notebooks/edop/explore/08_hyde_distributions.ipynb` · 5 NetCDF files (cropland, grazing_land, urban_area, population_density, total_rice) · 8 epochs (-8000, -4000, -1000, 0, 1000, 1500, 1900, 2000) · xarray lazy slicing, one time step loaded at a time
-
-**Dataset note**: Files are labeled HYDE 3.4 (created April 2025), not 3.5. Time axis uses `cftime.DatetimeNoLeap` with `has_year_zero=True` (astronomical year numbering). 128 time steps with variable resolution: millennial BCE, centennial 100–1700 CE, decadal 1710–1950, annual 1951–2025. Grid: 2160 × 4320 cells at 5-arcmin (~9km) resolution. Units: km² for area variables; capita/km² for population_density.
-
----
-
-### F8.1 — Grazing land is the first and most spatially extensive anthropogenic signal; cropland follows
-
-**Finding**: At 4000 BCE, grazing land is already at ~80% zero cells (20% non-zero) while cropland is at ~94% zero (6% non-zero). By 1000 BCE grazing reaches 68% zero vs. cropland 83%. The gap persists through the full record — at 2000 CE grazing is 41% zero, cropland 56% zero. On the log-scale mean trajectory, grazing consistently exceeds cropland in absolute km² area at every epoch. Both variables follow roughly log-linear growth trajectories, implying consistent exponential expansion rates across the full period.
-
-**Implication**: For Band T queries in the BCE period, grazing land is the more informative land-use variable. The emergence of non-trivial cropland signal begins around 4000–1000 BCE, concentrated in the Fertile Crescent, Nile valley, Indus, and Yellow River regions. Grazing's earlier and broader signal reflects the archaeological reality that pastoralism preceded and spatially exceeded sedentary agriculture.
-
----
-
-### F8.2 — Urban area and total rice are globally invisible at distribution scale; specialty variables only
-
-**Finding**: Urban area remains at ~99–100% zero cells through 1900 CE; the p99 value is 0.096 km² even at 1900 CE. Total rice is 100% zero at 8000 BCE and still 98.5% zero at 2000 CE. Both variables show signal only in very high percentiles, concentrated in a small number of cells. On the log-scale trajectory, urban area shows a hockey-stick inflection after 1900 CE reflecting intensification within already-occupied cells rather than spatial expansion.
-
-**Implication**: Urban area and total rice will return zero for the vast majority of Band T basin queries regardless of epoch. They are not useful as default Band T fields. Consider making them opt-in, or returning them only when non-zero. Their value is for specialist queries — urban area for pre-modern city studies, total rice for SE Asian agricultural history.
-
----
-
-### F8.3 — Population density % zero is flat across 10,000 years; this is a model artifact, not an empirical finding
-
-**Finding**: Population density shows ~45% zero cells at 8000 BCE, declining only to ~40% at 2000 CE — a nearly flat trajectory. This is not an empirical finding about human settlement history. HYDE's deep-time population layer distributes a global population estimate (derived from secondary historical sources) across all land cells proportionally to a habitability potential score. Any cell with non-zero habitability receives a non-zero population density value, even if that value is 0.0003 cap/km² — statistically less than one person per square kilometer. The % zero metric is measuring the extent of HYDE's habitability model, not the presence of humans.
-
-**Implication**: This does not pass a basic smell test. The Out of Africa dispersal, the late peopling of the Americas (~15,000 BCE), the settlement of the Pacific — none of this spatial history is recoverable from a model that pre-populates every habitable cell from the start. HYDE's population layer is redundant with EDOP's own environmental suitability characterization (Bands A–E) in the deep BCE period, and less honest. Population density from HYDE is likely meaningful only from roughly 0–1000 CE onward, where global population estimates are anchored by documentary and archaeological evidence and spatial allocation has real data to constrain it. Pre-CE HYDE population values should either be excluded from Band T API responses or returned with a strong epistemic caveat. Do not use % zero as the signal-emergence metric for this variable — use a meaningful density threshold (e.g. ≥ 1 cap/km²) instead.
-
----
-
-### F8.5 — EDOP's climate characterization (Band C) is silently wrong for BCE queries
-
-**Finding**: Band C (bioclimatic proxies: temperature, precipitation, aridity, biome, ecoregion) is sourced from WorldClim, a contemporary climatology representing approximately 1970–2000 CE. For any BCE query, EDOP returns contemporary climate values without qualification. A query for Çatalhöyük 7000 BCE returns present-day Anatolian climate, not Neolithic climate. LMR (the paleoclimate reconstruction in Band T) covers only 1–1998 CE and does not extend into the BCE period. There is currently no paleoclimate layer in EDOP that covers BCE conditions. Bands A (physiography), B (hydrology), and E (coastality) are geomorphological and topological — effectively timeless on human timescales — and remain valid for BCE queries. Band C is not.
-
-**Implication**: BCE queries in EDOP are implicitly geomorphological characterizations, not environmental ones in the full sense. This should be disclosed in the API response, not left for users to discover. A `climate_note` field — e.g. "Band C reflects contemporary baselines (WorldClim ~1970–2000 CE); no paleoclimate reconstruction is available for this query period" — should be injected when `to_year < 0` or when no LMR data is available. The HYDE habitability model (which may internally use Holocene paleoclimate reconstructions) is not a reliable substitute — its spatial allocation methodology is too indirect and its assumptions are opaque. The right fix is disclosure, not patching. Flag for API design and prospectus update.
-
----
-
-### F8.4 — Population density mean shows a 20th-century hockey stick; land use variables do not
-
-**Finding**: On a linear scale, mean population density is essentially flat from 8000 BCE through 1500 CE, rises modestly to ~11 cap/km² by 1900 CE, then jumps to ~40 cap/km² at 2000 CE — more than 3× growth in a single century. The area variables (cropland, grazing) show no equivalent hockey stick on their log-scale trajectories; their growth rates are roughly constant across the full period. The industrial-era population explosion is a qualitatively different phenomenon from the steady long-run expansion of land use.
-
-**Implication**: For Band T queries spanning 1900–2000 CE, population density is the most dramatically changing variable. For pre-1900 queries, the intensity signal is modest on an absolute scale even if the spatial footprint (measured by % non-zero) is ancient. This has direct bearing on how Band T summarizes HYDE for historical period queries: the 20th-century values should be treated as a distinct regime, not just the continuation of a long trend.
-
----
-
-### F8.7 — 1000 BCE is the defensible global baseline for land-use anomaly reporting
-
-**Finding**: Ratio of CE epoch mean to candidate baseline epochs for cropland and grazing land:
-- vs 8000 BCE: ratios of 1000x–9500x (cropland) and 400x–3500x (grazing) — denominator too near-zero to be analytically useful
-- vs 4000 BCE: ratios of 19x–157x (cropland) and 16x–129x (grazing) — large but more tractable
-- vs 1000 BCE: ratios of 2.8x–23x (cropland) and 3.9x–32x (grazing) — interpretable and historically meaningful
-
-At 1000 BCE, agriculture is established in all core civilizational regions (Fertile Crescent, Nile, Indus, Yellow River) but has not yet intensified globally. Cropland at 1000 CE is ~3x the 1000 BCE level; at 2000 CE ~23x. These are ratios a non-specialist user can interpret.
-
-**Implication**: Use 1000 BCE as the global pre-anthropogenic baseline for HYDE land-use anomaly fields in the Band T API response. Return both the raw epoch value and the ratio to 1000 BCE. Caveat in API guide: the baseline is global — in already-agricultural regions (Mesopotamia, Egypt, China) the 1000 BCE baseline is not "pre-agricultural," so local ratios will understate intensification relative to a truly pre-agricultural local condition. A future regional baseline refinement is possible but deferred.
-
----
-
-### F8.6 — Open design questions deferred to October expert meeting
-
-**Question 1 — Does population density belong in an environmental signature?** Population is a human phenomenon, not an environmental one. EDOP's core claim is environmental characterization of place; including population density in Band T muddies that boundary. The land use variables (cropland, grazing) characterize human transformation of the landscape, which is defensibly environmental. Population density characterizes human presence, which is more ambiguously so. Whether Band T should include population density at all — or whether it belongs in a future CDOP layer — is a design question that warrants expert input.
-
-**Question 2 — Should HYDE habitability be surfaced for BCE queries as an explicit, qualified signal?** For BCE queries where Band C (contemporary climate) is not representative and LMR is out of range, HYDE's internal habitability model — whatever its limitations — may be the only available proxy for environmental conditions at the query epoch. Rather than discarding it, it could be returned as a clearly labeled, heavily caveated field: "HYDE-modeled habitability index at epoch X (reconstruction uncertainty high; treat as indicative only)." Whether this adds value or misleads users is a judgment call that benefits from domain expert review. Flag for the October 2026 Pitt presentation as an open question.

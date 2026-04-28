@@ -81,3 +81,36 @@ def test_temporal_samalas_in_correct_window(db_available):
     assert 1257 in years, f"Samalas 1257 not found in events: {events}"
     samalas = next(e for e in events if e["year_ad"] == 1257)
     assert samalas["vssi_tg"] > 50, f"Samalas VSSI unexpectedly low: {samalas['vssi_tg']}"
+
+
+def test_bce_query_lmr_out_of_range(athens_bce_temporal):
+    """BCE query returns lmr_status=out_of_range with empty climate series."""
+    t = athens_bce_temporal
+    assert t["lmr_status"] == "out_of_range"
+    assert t["pdsi_series"] == []
+    assert t["air_series"] == []
+    assert t["prate_series"] == []
+    assert t["grid_cell"] is None
+
+
+def test_bce_query_426_event(athens_bce_temporal):
+    """
+    426 BCE has a 59.33 Tg eruption — the largest in the eVolv2k record
+    outside the CE period. Must appear in a 500–400 BCE query.
+    """
+    events = athens_bce_temporal["volcanic_events"]
+    years = [e["year_ad"] for e in events]
+    assert -426 in years, f"426 BCE eruption not found; events: {events}"
+    event = next(e for e in events if e["year_ad"] == -426)
+    assert event["vssi_tg"] > 50, f"426 BCE VSSI unexpectedly low: {event['vssi_tg']}"
+
+
+def test_bce_query_volcanic_aggregates(athens_bce_temporal):
+    """Aggregated volcanic fields are computed correctly for a BCE window."""
+    t = athens_bce_temporal
+    assert t["volcanic_event_count"] == len(t["volcanic_events"])
+    assert t["volcanic_vssi_sum_tg"] == round(
+        sum(e["vssi_tg"] for e in t["volcanic_events"]), 2
+    )
+    # 426 BCE event is 59 Tg — years_since_last_major should be computable
+    assert t["years_since_last_major"] is not None
