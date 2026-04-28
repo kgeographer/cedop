@@ -437,6 +437,28 @@ def signature(
                 band_t = temporal
         sig.setdefault("profile_groups", {})["T"] = band_t
 
+    # F8.5: Qualifying notes for BCE queries on epoch-sensitive bands.
+    # Bands C and D are sourced from contemporary datasets and do not represent
+    # conditions at the query epoch. The bands are returned as requested — users
+    # may want contemporary baselines for comparison — but the note discloses
+    # the limitation. Design principle: notes inform, they do not gatekeep.
+    if from_year is not None and from_year < 0:
+        band_c = sig.get("profile_groups", {}).get("C")
+        if band_c is not None:
+            band_c["_note"] = (
+                "Band C reflects contemporary climatology (WorldClim ~1970–2000 CE). "
+                "No paleoclimate reconstruction is available for BCE queries; "
+                "these values describe present-day conditions at this location, "
+                "not conditions at the requested epoch."
+            )
+        band_d = sig.get("profile_groups", {}).get("D")
+        if band_d is not None:
+            band_d["_note"] = (
+                "Band D reflects contemporary land use and demographic data "
+                "(EarthStat ~2000 CE, human footprint 2009 CE, GDP contemporary). "
+                "These values do not represent conditions at the requested epoch."
+            )
+
     # Inject meta block — query context, data sources, versioning
     query: Dict[str, Any] = {"lat": lat, "lon": lon, "bands": bands.upper(), "level": level}
     if from_year is not None:

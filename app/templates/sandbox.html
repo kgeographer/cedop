@@ -112,9 +112,9 @@
           <!-- F-band year inputs — shown when F is checked -->
           <div id="f-year-row" class="d-none mb-2">
             <div class="d-flex gap-1 align-items-center">
-              <input type="number" id="f-year-start" class="form-control form-control-sm" style="width:72px" placeholder="from" min="0" max="1998">
+              <input type="number" id="f-year-start" class="form-control form-control-sm" style="width:80px" placeholder="from" min="-491" max="1998">
               <span class="text-muted small">–</span>
-              <input type="number" id="f-year-end" class="form-control form-control-sm" style="width:72px" placeholder="to" min="0" max="1998">
+              <input type="number" id="f-year-end" class="form-control form-control-sm" style="width:80px" placeholder="to" min="-491" max="1998">
               <input type="number" id="f-vssi-min" class="visually-hidden" value="5" min="0" step="1">
             </div>
           </div>
@@ -602,15 +602,18 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     }
   }
 
-  function buildAccordionPanel(code, label, body, isFirst, accId) {
+  function buildAccordionPanel(code, label, body, isFirst, accId, note) {
     const hId = `sb-h-${code}`, cId = `sb-c-${code}`;
+    const noteHtml = note
+      ? ` <small class="ms-2 fw-normal text-warning-emphasis" style="font-size:0.7rem">${escapeHtml(note.slice(0, 55))}… <span style="text-decoration:underline">more</span></small>`
+      : '';
     return `
       <div class="accordion-item">
         <h2 class="accordion-header" id="${hId}">
           <button class="accordion-button ${isFirst?'':'collapsed'}" type="button"
                   data-bs-toggle="collapse" data-bs-target="#${cId}"
                   aria-expanded="${isFirst}" aria-controls="${cId}">
-            ${escapeHtml(code)} — ${escapeHtml(label)}
+            ${escapeHtml(code)} — ${escapeHtml(label)}${noteHtml}
           </button>
         </h2>
         <div id="${cId}" class="accordion-collapse collapse ${isFirst?'show':''}"
@@ -666,8 +669,9 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
           data-bs-toggle="tooltip" data-bs-title="${escapeHtml(tip)}"></i>`;
 
     // --- Header row ---
+    const gcStr = gc ? `${gc.lat}°N, ${gc.lon}°E` : 'n/a (LMR out of range)';
     let html = `<div class="small mb-2 text-muted">
-      <strong>Grid cell</strong>: ${gc.lat}°N, ${gc.lon}°E &nbsp;|&nbsp;
+      <strong>Grid cell</strong>: ${gcStr} &nbsp;|&nbsp;
       <strong>Period</strong>: ${data.year_start}–${data.year_end} CE
     </div>`;
 
@@ -842,13 +846,17 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
       const groups = sig.profile_groups || {};
       ['A','B','C','D','E'].filter(c => groups[c]).forEach(code => {
         const g = groups[code];
-        const body = (g.items || []).map(it =>
+        const noteAlert = g._note
+          ? `<div class="alert alert-warning py-1 px-2 mb-2" style="font-size:0.78rem">${escapeHtml(g._note)}</div>`
+          : '';
+        const rows = (g.items || []).map(it =>
           `<div class="d-flex justify-content-between gap-2 py-1 border-bottom">
              <div class="text-muted">${escapeHtml(it.label || humanizeKey(it.key || ''))}</div>
              <div class="text-end">${escapeHtml(formatValue(it.value))}</div>
            </div>`,
         ).join('') || '<div class="text-muted">(no fields)</div>';
-        panels += buildAccordionPanel(code, g.label || code, body, first, accId);
+        const body = noteAlert + rows;
+        panels += buildAccordionPanel(code, g.label || code, body, first, accId, g._note || null);
         first = false;
       });
       if (temporalData && temporalData._status === 'ok') {
