@@ -198,15 +198,27 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Next: Task 12 (Anthromes categorical typology — design specifics TBD before notebook). **Do not** start correspondence testing until Task 12 scoped.
 
-## Current Work — sigrefine01 branch (as of 2026-04-28)
+## Current Work — sigrefine01 branch (as of 2026-04-29)
 
-Signature refinement phase. All exploration findings annotated. Three implementation commits done (sentinel fix, BCE decoupling, LMR notes). **Paused mid-session** adding HYDE land use variables to Band T.
+Signature refinement phase. HYDE 3.4 land-use pipeline complete and live in Band T API (commit 8366f74).
 
-**HYDE variables decided**: `cropland`, `grazing_land`, `pasture`, `rangeland` (all HYDE 3.4 NetCDF, on disk at `data/hyde/NetCDF/`). HYDE is NOT yet in the database — full pipeline required.
+**HYDE implementation complete**:
+- `temporal.hyde_cells` (2,215,829 rows) + `temporal.hyde_times` (128 steps) loaded and indexed
+- `app/db/hyde.py`: `get_hyde_land_use(lat, lon, from_year, to_year, level)` — per-epoch dicts with `_km2` and `_pct` fields; `_note` carries temporal resolution disclosure
+- `app/db/connection.py` and `scripts/shared/db_utils.py`: explicit `load_dotenv` path; DB on port 5435
+- Wired into `routes.py` → `profile_groups["T"]["hyde_land_use"]`
+- Exploration log F8.8–F8.10 added
 
-**Outstanding question before implementing**: how to represent HYDE epochs in the API response for a window query — return all epochs within window (Option A, preferred) or single nearest epoch (Option B). Decide at session start.
+**Remaining on this branch** (in order):
+1. Band D: add `pasture_extent` (EarthStat L09) — codebook entry + `signature.py` query
+2. Codebook (`metadata/edops_codebook_v01.tsv`): 4 new HYDE rows (cropland, grazing, pasture, rangeland)
+3. Sandbox (`app/templates/sandbox.html`): surface HYDE epochs in Band T accordion
+4. Prospectus update: qualifying-notes-as-first-class-content principle; 1000–1850 CE baseline convention
+5. Server deploy: merge sigrefine01 → main → push → `git pull` + restart on kgeographer-1
 
-**Also pending on this branch**: Band C add `land_cover_id/name` (GLC2000); Band D add `pasture_extent` (EarthStat); prospectus update; server deploy. See `logs/session_log_20260428.md` for full detail.
+**Note**: Band C `land_cover_id/name` is already in the payload — was there all along, not a pending item.
+
+See `logs/session_log_20260429.md` for full detail.
 
 ## External Dependencies
 
