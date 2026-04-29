@@ -70,6 +70,8 @@ SELECT
 -- D: Anthropocene
   b.crp_pc_sse AS cropland_extent,
   b.crp_pc_use AS cropland_extent_upstream,
+  b.pst_pc_sse AS pasture_extent,
+  b.pst_pc_use AS pasture_extent_upstream,
   b.ppd_pk_sav AS pop_density,
   b.hft_ix_s09 AS human_footprint_09,
   b.hft_ix_u09 AS human_footprint_09_upstream,

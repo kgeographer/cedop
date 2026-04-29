@@ -17,6 +17,8 @@ Resolution note (surfaced in every response):
 
 from typing import Any, Optional
 
+from psycopg.rows import dict_row
+
 from app.db.connection import db_connect
 
 # ---------------------------------------------------------------------------
@@ -52,12 +54,23 @@ steps AS (
 )
 SELECT
     s.year_ce,
-    SUM(bc.cropland [s.step_idx + 1])::float8  AS cropland_km2,
-    SUM(bc.grazing  [s.step_idx + 1])::float8  AS grazing_km2,
-    SUM(bc.pasture  [s.step_idx + 1])::float8  AS pasture_km2,
-    SUM(bc.rangeland[s.step_idx + 1])::float8  AS rangeland_km2,
-    SUM(bc.area_km2)::float8                   AS basin_area_km2,
-    COUNT(*)::int                              AS n_cells
+    -- totals (sum gives km² across all cells in basin)
+    SUM(bc.cropland [s.step_idx + 1])::float8                          AS cropland_km2,
+    SUM(bc.grazing  [s.step_idx + 1])::float8                          AS grazing_km2,
+    SUM(bc.pasture  [s.step_idx + 1])::float8                          AS pasture_km2,
+    SUM(bc.rangeland[s.step_idx + 1])::float8                          AS rangeland_km2,
+    SUM(bc.area_km2)::float8                                           AS basin_area_km2,
+    COUNT(*)::int                                                      AS n_cells,
+    -- within-basin heterogeneity: std across cells (all four variables)
+    STDDEV_POP(bc.cropland [s.step_idx + 1])::float8                   AS cropland_std,
+    STDDEV_POP(bc.grazing  [s.step_idx + 1])::float8                   AS grazing_std,
+    STDDEV_POP(bc.pasture  [s.step_idx + 1])::float8                   AS pasture_std,
+    STDDEV_POP(bc.rangeland[s.step_idx + 1])::float8                   AS rangeland_std,
+    -- p10/p90 for cropland and grazing (primary land-use signals)
+    (percentile_cont(0.1) WITHIN GROUP (ORDER BY bc.cropland[s.step_idx + 1]))::float8  AS cropland_p10,
+    (percentile_cont(0.9) WITHIN GROUP (ORDER BY bc.cropland[s.step_idx + 1]))::float8  AS cropland_p90,
+    (percentile_cont(0.1) WITHIN GROUP (ORDER BY bc.grazing [s.step_idx + 1]))::float8  AS grazing_p10,
+    (percentile_cont(0.9) WITHIN GROUP (ORDER BY bc.grazing [s.step_idx + 1]))::float8  AS grazing_p90
 FROM basin_cells bc
 CROSS JOIN steps s
 GROUP BY s.year_ce
@@ -71,25 +84,37 @@ ORDER BY s.year_ce;
 
 def _build_epochs(rows: list) -> list[dict[str, Any]]:
     epochs = []
-    for year_ce, cropland, grazing, pasture, rangeland, area_km2, n_cells in rows:
-        area = float(area_km2) if area_km2 else None
+    for row in rows:
+        area = float(row['basin_area_km2']) if row['basin_area_km2'] else None
+        n = int(row['n_cells'])
         epoch: dict[str, Any] = {
-            'year_ce':        int(year_ce),
-            'cropland_km2':   round(float(cropland),  3),
-            'grazing_km2':    round(float(grazing),   3),
-            'pasture_km2':    round(float(pasture),   3),
-            'rangeland_km2':  round(float(rangeland), 3),
+            'year_ce':        int(row['year_ce']),
+            'cropland_km2':   round(float(row['cropland_km2']),  3),
+            'grazing_km2':    round(float(row['grazing_km2']),   3),
+            'pasture_km2':    round(float(row['pasture_km2']),   3),
+            'rangeland_km2':  round(float(row['rangeland_km2']), 3),
             'basin_area_km2': round(area, 1) if area else None,
-            'n_cells':        int(n_cells),
+            'n_cells':        n,
         }
+        # pct = total km² as share of basin area
         if area:
-            for var, val in (
-                ('cropland',  cropland),
-                ('grazing',   grazing),
-                ('pasture',   pasture),
-                ('rangeland', rangeland),
-            ):
-                epoch[f'{var}_pct'] = round(float(val) / area * 100, 2)
+            for var in ('cropland', 'grazing', 'pasture', 'rangeland'):
+                epoch[f'{var}_pct'] = round(float(row[f'{var}_km2']) / area * 100, 2)
+
+        # within-basin heterogeneity — only meaningful when n_cells > 1
+        if n > 1:
+            # std for all four variables (km² per cell, gives sense of patchiness)
+            for var in ('cropland', 'grazing', 'pasture', 'rangeland'):
+                val = row.get(f'{var}_std')
+                if val is not None:
+                    epoch[f'{var}_std'] = round(float(val), 3)
+            # p10/p90 for cropland and grazing (primary land-use signals)
+            for var in ('cropland', 'grazing'):
+                for pctile in ('p10', 'p90'):
+                    val = row.get(f'{var}_{pctile}')
+                    if val is not None:
+                        epoch[f'{var}_{pctile}'] = round(float(val), 3)
+
         epochs.append(epoch)
     return epochs
 
@@ -140,10 +165,12 @@ def get_hyde_land_use(
 
         hybas_id = int(row[0])
 
-        rows = conn.execute(
-            _AGG_SQL.format(table=table),
-            {'hybas_id': hybas_id, 'from_year': from_year, 'to_year': to_year},
-        ).fetchall()
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                _AGG_SQL.format(table=table),
+                {'hybas_id': hybas_id, 'from_year': from_year, 'to_year': to_year},
+            )
+            rows = cur.fetchall()
 
     epochs = _build_epochs(rows)
     return {
@@ -166,10 +193,12 @@ def get_hyde_land_use_for_basin(
     table = 'basin08' if level == 8 else 'basin06'
 
     with db_connect() as conn:
-        rows = conn.execute(
-            _AGG_SQL.format(table=table),
-            {'hybas_id': hybas_id, 'from_year': from_year, 'to_year': to_year},
-        ).fetchall()
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                _AGG_SQL.format(table=table),
+                {'hybas_id': hybas_id, 'from_year': from_year, 'to_year': to_year},
+            )
+            rows = cur.fetchall()
 
     epochs = _build_epochs(rows)
     return {

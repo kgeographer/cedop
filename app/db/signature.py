@@ -26,7 +26,7 @@ load_dotenv()  # reads .env from project root
 
 def _load_field_lookup() -> Dict[str, Dict[str, str]]:
     lookup: Dict[str, Dict[str, str]] = {}
-    codebook = Path(__file__).parent.parent.parent / "metadata" / "edops_codebook_v01.tsv"
+    codebook = Path(__file__).parent.parent.parent / "metadata" / "edops_codebook_v02.tsv"
     if not codebook.exists():
         return lookup
     with codebook.open(newline="") as f:
@@ -122,6 +122,8 @@ SELECT
   reservoir_vol,
   cropland_extent,
   cropland_extent_upstream,
+  pasture_extent,
+  pasture_extent_upstream,
   pop_density,
   human_footprint_09,
   human_footprint_09_upstream,
@@ -216,6 +218,8 @@ PROFILE_GROUPS: Dict[str, Dict[str, Any]] = {
             "human_footprint_09_upstream",
             "cropland_extent",
             "cropland_extent_upstream",
+            "pasture_extent",
+            "pasture_extent_upstream",
             "reservoir_vol",
             "gdp_avg",
             "human_dev_idx",
