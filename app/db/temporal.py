@@ -187,8 +187,15 @@ def get_temporal_context(
         ),
         "volcanic_events_note": (
             f"eVolv2k v4 catalog covers {EVOLV2K_MIN}–{EVOLV2K_MAX} CE; "
+            "this period falls outside that range — no volcanic record is available."
+            if year_end < EVOLV2K_MIN or year_start > EVOLV2K_MAX else
+            f"eVolv2k v4 catalog covers {EVOLV2K_MIN}–{EVOLV2K_MAX} CE; "
             "events after 1890 (e.g. Pinatubo, Agung, El Chichón) are not in the record."
             if year_end > EVOLV2K_MAX else None
+        ),
+        "lmr_out_of_range_note": (
+            f"LMR v2.1 covers 0–1998 CE; climate reconstruction is not available for this period."
+            if not lmr_available else None
         ),
         "lmr_fidelity_note": (
             "Climate reconstructions before 700 CE carry greater uncertainty "

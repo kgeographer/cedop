@@ -112,9 +112,9 @@
           <!-- F-band year inputs — shown when F is checked -->
           <div id="f-year-row" class="d-none mb-2">
             <div class="d-flex gap-1 align-items-center">
-              <input type="number" id="f-year-start" class="form-control form-control-sm" style="width:80px" placeholder="from" min="-491" max="1998">
+              <input type="number" id="f-year-start" class="form-control form-control-sm" style="width:80px" placeholder="from" min="-10000" max="2023">
               <span class="text-muted small">–</span>
-              <input type="number" id="f-year-end" class="form-control form-control-sm" style="width:80px" placeholder="to" min="-491" max="1998">
+              <input type="number" id="f-year-end" class="form-control form-control-sm" style="width:80px" placeholder="to" min="-10000" max="2023">
               <input type="number" id="f-vssi-min" class="visually-hidden" value="5" min="0" step="1">
             </div>
           </div>
@@ -135,7 +135,7 @@
                 <li>C - Bioclimatic proxies <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Temperature, precipitation, aridity, biome, ecoregion. Contemporary climate baseline from BasinATLAS; Band T supersedes for period-specific queries."></i></li>
                 <li>D - Anthropocene markers <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Population density, cropland, human footprint, GDP. Present-day only — exclude for pre-modern analyses."></i></li>
                 <li>E - Coastality <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Distance to marine outlet, endorheic flag, outlet type. Captures hydrological connectivity to the sea."></i></li>
-                <li>F - Temporal climate (0–1998 CE) <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Period-specific PDSI drought index, temperature and precipitation anomalies from LMR v2.1, and volcanic events from eVolv2k. Requires a date range."></i></li>
+                <li>T - Temporal context <i class="bi bi-question-circle text-muted" style="cursor:help;" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-content="Period-specific land use from HYDE 3.4 (10000 BCE–2023 CE), climate reconstruction from LMR v2.1 (0–1998 CE), and volcanic events from eVolv2k (491 BCE–1890 CE). Requires a date range."></i></li>
               </ul>
           </div>
           <div class="mt-2">
@@ -147,6 +147,7 @@
               <option value="41.8933,12.4828,Rome,6,0,300">Rome (L6)</option>
               <option value="34.7972,114.3069,Kaifeng,8,1000,1100">Kaifeng (L8)</option>
               <option value="34.7972,114.3069,Kaifeng,6,1000,1100">Kaifeng (L6)</option>
+              <option value="30.9626,46.1029,Tell el-Muqayyar (Ur),8,-3000,-2000">Tell el-Muqayyar / Ur (L8)</option>
             </select>
           </div>
         </div>
@@ -774,13 +775,14 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
   function buildTemporalBody(data) {
     const gc  = data.grid_cell;
     const uid = `tbf-${Date.now()}`;
+    const lmrAvailable = data.lmr_status === 'available';
     const tipIcon = tip =>
       `<i class="bi bi-question-circle text-muted ms-1" style="font-size:0.8rem;cursor:help;"
           data-bs-toggle="tooltip" data-bs-title="${escapeHtml(tip)}"></i>`;
 
     // ── CLIMATE TAB (LMR 2.1) ──
-    const gcStr = gc ? `${gc.lat}°N, ${gc.lon}°E` : 'n/a (LMR out of range)';
-    const tNotes = [data.lmr_fidelity_note, data.lmr_proxy_bias_note].filter(Boolean);
+    const gcStr = gc ? `${gc.lat}°N, ${gc.lon}°E` : 'n/a';
+    const tNotes = [data.lmr_out_of_range_note, data.lmr_fidelity_note, data.lmr_proxy_bias_note].filter(Boolean);
     const tNoteAlerts = tNotes.map(n =>
       `<div class="alert alert-warning py-1 px-2 mb-2" style="font-size:0.78rem">${escapeHtml(n)}</div>`
     ).join('');
@@ -794,7 +796,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
            ${tipIcon('Palmer Drought Severity Index from LMR v2.1. Positive = wetter than average; negative = drier. Anomaly relative to 1951–1980 reference.')}
          </div>
          ${buildClimSvg(pdsiSeries, 'pdsi', '#4e8fbf', '#b05a2f')}`
-      : `<div class="text-muted small">No PDSI data.</div>`;
+      : `<div class="text-muted small">No PDSI data for this period.</div>`;
 
     const airSeries = data.air_series || [];
     const airContent = airSeries.length
@@ -803,7 +805,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
            ${tipIcon('2m air temperature anomaly (K) from LMR v2.1 ensemble mean. Positive = warmer than the 20th-century reference period average (1951–1980).')}
          </div>
          ${buildClimSvg(airSeries, 'air_anom_k', '#c0392b', '#2980b9')}`
-      : `<div class="text-muted small">No temperature data.</div>`;
+      : `<div class="text-muted small">No temperature data for this period.</div>`;
 
     const prateSeries = data.prate_series || [];
     const prateContent = prateSeries.length
@@ -812,15 +814,15 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
            ${tipIcon('Precipitation rate anomaly (mm/day) from LMR v2.1 ensemble mean. Positive = wetter than the 20th-century reference period average (1951–1980).')}
          </div>
          ${buildClimSvg(prateSeries, 'prate_anom_mm_day', '#27ae60', '#8e44ad')}`
-      : `<div class="text-muted small">No precipitation data.</div>`;
+      : `<div class="text-muted small">No precipitation data for this period.</div>`;
 
     const climTabContent = `
-      <div class="small mb-2 text-muted">
+      ${lmrAvailable ? `<div class="small mb-2 text-muted">
         <strong>Grid cell</strong>: ${gcStr} &nbsp;|&nbsp;
         <strong>Period</strong>: ${data.year_start}–${data.year_end} CE
-      </div>
+      </div>` : ''}
       ${tNoteAlerts}
-      <ul class="nav nav-tabs nav-sm mb-0" role="tablist">
+      ${lmrAvailable ? `<ul class="nav nav-tabs nav-sm mb-0" role="tablist">
         <li class="nav-item" role="presentation">
           <button class="nav-link active py-1 px-2" id="${uid}-pdsi-tab"
             data-bs-toggle="tab" data-bs-target="#${uid}-pdsi"
@@ -841,7 +843,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
         <div class="tab-pane fade show active" id="${uid}-pdsi" role="tabpanel">${pdsiContent}</div>
         <div class="tab-pane fade" id="${uid}-air"              role="tabpanel">${airContent}</div>
         <div class="tab-pane fade" id="${uid}-prate"            role="tabpanel">${prateContent}</div>
-      </div>`;
+      </div>` : ''}`;
 
     // ── LAND USE TAB (HYDE 3.4) ──
     const hydeData   = data.hyde_land_use || {};
@@ -891,19 +893,29 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
         </thead><tbody>${rows}</tbody>
       </table>`;
     } else {
-      volcTabContent = `<div class="text-muted small">No volcanic events above threshold in this period.</div>`;
+      const volcNote = data.volcanic_events_note
+        ? `<div class="alert alert-warning py-1 px-2 mt-2 mb-0" style="font-size:0.78rem">${escapeHtml(data.volcanic_events_note)}</div>`
+        : '';
+      volcTabContent = `<div class="text-muted small">No volcanic events above threshold in this period.</div>${volcNote}`;
     }
 
     // ── OUTER 3-TAB STRUCTURE ──
+    // Default active tab: Land use when LMR out of range (HYDE is the only data source),
+    // otherwise Climate.
+    const climActive = lmrAvailable ? 'active' : '';
+    const hydeActive = lmrAvailable ? '' : 'active';
+    const climShow   = lmrAvailable ? 'show active' : '';
+    const hydeShow   = lmrAvailable ? '' : 'show active';
+
     return `
     <ul class="nav nav-tabs mb-0" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active px-3 py-1" id="${uid}-clim-tab"
+        <button class="nav-link ${climActive} px-3 py-1" id="${uid}-clim-tab"
           data-bs-toggle="tab" data-bs-target="#${uid}-clim"
           type="button" role="tab">Climate (LMR 2.1)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link px-3 py-1" id="${uid}-hyde-tab"
+        <button class="nav-link ${hydeActive} px-3 py-1" id="${uid}-hyde-tab"
           data-bs-toggle="tab" data-bs-target="#${uid}-hyde"
           type="button" role="tab">Land use (HYDE 3.4)</button>
       </li>
@@ -914,8 +926,8 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
       </li>
     </ul>
     <div class="tab-content border border-top-0 rounded-bottom p-2" style="min-height:8rem;">
-      <div class="tab-pane fade show active" id="${uid}-clim" role="tabpanel">${climTabContent}</div>
-      <div class="tab-pane fade"             id="${uid}-hyde" role="tabpanel">${hydeTabContent}</div>
+      <div class="tab-pane fade ${climShow}" id="${uid}-clim" role="tabpanel">${climTabContent}</div>
+      <div class="tab-pane fade ${hydeShow}" id="${uid}-hyde" role="tabpanel">${hydeTabContent}</div>
       <div class="tab-pane fade"             id="${uid}-volc" role="tabpanel">${volcTabContent}</div>
     </div>`;
   }
