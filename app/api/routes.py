@@ -484,6 +484,7 @@ def signature(
             "elevation_point": "OpenTopoData (mapzen DEM, ~30m) with Open-Meteo fallback",
             "temporal_climate": "LMR v2.1 (Tardif et al. 2019); 0–1998 CE; 2°×2° grid, annual",
             "volcanic": "eVolv2k v4 (Sigl & Toohey 2024)",
+            "land_use_temporal": "HYDE 3.4 (Klein Goldewijk et al. 2017); 10000 BCE–2023 CE; ~10 km resolution",
         },
     }
 
