@@ -660,28 +660,133 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;margin-bottom:0.75rem;">${bars}${zeroLine}${yLabels}${xLabels}</svg>`;
   }
 
-  function buildTemporalBody(data) {
-    const gc = data.grid_cell;
-    const uid = `tbf-${Date.now()}`;  // unique prefix for tab IDs
+  // Bar chart for a single non-negative HYDE pct variable.
+  // Optional p10/p90 band rendered behind bars (from per-cell km² → inferred basin pct).
+  function buildHydeSvg(epochs, varPct, barColor, p10Key, p90Key) {
+    const vals = epochs.map(e => e[varPct] || 0);
+    if (vals.every(v => v === 0))
+      return `<p class="text-muted small fst-italic mb-1">No ${varPct.replace('_pct','')} recorded for this basin and period.</p>`;
+    const W = 560, H = 90, PL = 42, PB = 18, PT = 6, PR = 6;
+    const w = W - PL - PR, h = H - PB - PT;
+    // include p90 projected values in vMax so bands are never clipped at chart ceiling
+    const p90Vals = p90Key ? epochs.map(e => {
+      const p90 = e[p90Key], area = e.basin_area_km2, n = e.n_cells;
+      return (p90 != null && area && n > 1) ? p90 * n / area * 100 : 0;
+    }) : [];
+    const vMax = Math.max(...vals, ...p90Vals, 0.01);
+    const toY  = v => PT + h * (1 - v / vMax);
+    const botY = PT + h;
+    const bw   = w / epochs.length;
+    let s = '';
+    // p10/p90 bands (behind bars)
+    epochs.forEach((e, i) => {
+      if (!p10Key || !p90Key) return;
+      const p10 = e[p10Key], p90 = e[p90Key];
+      const area = e.basin_area_km2, n = e.n_cells;
+      if (p10 == null || p90 == null || !area || n <= 1) return;
+      const lo = p10 * n / area * 100;
+      const hi = p90 * n / area * 100;
+      if (hi - lo < 0.001) return;
+      s += `<rect x="${(PL+i*bw).toFixed(1)}" y="${toY(hi).toFixed(1)}" width="${bw.toFixed(1)}" height="${(toY(lo)-toY(hi)).toFixed(1)}" fill="${barColor}" opacity="0.18"/>`;
+    });
+    // bars
+    epochs.forEach((e, i) => {
+      const v  = e[varPct] || 0;
+      const bh = Math.max(0.8, botY - toY(v));
+      s += `<rect x="${(PL+i*bw+0.5).toFixed(1)}" y="${toY(v).toFixed(1)}" width="${Math.max(1,bw-1).toFixed(1)}" height="${bh.toFixed(1)}" fill="${barColor}" opacity="0.75"/>`;
+    });
+    // y labels
+    const fmtP = v => v < 0.1 ? v.toFixed(3) : v.toFixed(1);
+    s += `<text x="${PL-3}" y="${(PT+4).toFixed(1)}" font-size="7.5" text-anchor="end" fill="#888">${fmtP(vMax)}%</text>`;
+    s += `<text x="${PL-3}" y="${(botY+3).toFixed(1)}" font-size="7.5" text-anchor="end" fill="#888">0</text>`;
+    // baseline
+    s += `<line x1="${PL}" y1="${botY.toFixed(1)}" x2="${W-PR}" y2="${botY.toFixed(1)}" stroke="#555" stroke-width="0.6"/>`;
+    // x labels
+    const step = Math.max(1, Math.floor(epochs.length / 5));
+    epochs.forEach((e, i) => {
+      if (i % step !== 0 && i !== epochs.length - 1) return;
+      const x = PL + i * bw + bw / 2;
+      const yr = e.year_ce < 0 ? `${Math.abs(e.year_ce)} BCE` : `${e.year_ce}`;
+      s += `<text x="${x.toFixed(1)}" y="${(H-2).toFixed(1)}" font-size="8" text-anchor="middle" fill="#888">${yr}</text>`;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;margin-bottom:0.4rem;">${s}</svg>`;
+  }
 
-    const tipIcon = (tip) =>
+  // Stacked bar chart for two non-negative HYDE pct variables (botPct on bottom, topPct stacked above).
+  // Optional p10/p90 band on the combined total.
+  function buildHydeStackedSvg(epochs, botPct, topPct, botColor, topColor, p10Key, p90Key) {
+    const totals = epochs.map(e => (e[botPct] || 0) + (e[topPct] || 0));
+    if (totals.every(v => v === 0))
+      return `<p class="text-muted small fst-italic mb-1">No grazing land recorded for this basin and period.</p>`;
+    const W = 560, H = 90, PL = 42, PB = 18, PT = 6, PR = 6;
+    const w = W - PL - PR, h = H - PB - PT;
+    // include p90 projected values in vMax so bands are never clipped at chart ceiling
+    const p90Vals = p90Key ? epochs.map(e => {
+      const p90 = e[p90Key], area = e.basin_area_km2, n = e.n_cells;
+      return (p90 != null && area && n > 1) ? p90 * n / area * 100 : 0;
+    }) : [];
+    const vMax = Math.max(...totals, ...p90Vals, 0.01);
+    const toY  = v => PT + h * (1 - v / vMax);
+    const botY = PT + h;
+    const bw   = w / epochs.length;
+    let s = '';
+    // p10/p90 bands on total (behind bars)
+    epochs.forEach((e, i) => {
+      if (!p10Key || !p90Key) return;
+      const p10 = e[p10Key], p90 = e[p90Key];
+      const area = e.basin_area_km2, n = e.n_cells;
+      if (p10 == null || p90 == null || !area || n <= 1) return;
+      const lo = p10 * n / area * 100;
+      const hi = p90 * n / area * 100;
+      if (hi - lo < 0.001) return;
+      s += `<rect x="${(PL+i*bw).toFixed(1)}" y="${toY(hi).toFixed(1)}" width="${bw.toFixed(1)}" height="${(toY(lo)-toY(hi)).toFixed(1)}" fill="${topColor}" opacity="0.18"/>`;
+    });
+    // stacked bars
+    epochs.forEach((e, i) => {
+      const vB = e[botPct] || 0;
+      const vT = e[topPct] || 0;
+      const x  = PL + i * bw + 0.5;
+      const bWidth = Math.max(1, bw - 1);
+      if (vB > 0) {
+        s += `<rect x="${x.toFixed(1)}" y="${toY(vB).toFixed(1)}" width="${bWidth.toFixed(1)}" height="${Math.max(0.8, botY-toY(vB)).toFixed(1)}" fill="${botColor}" opacity="0.85"/>`;
+      }
+      if (vT > 0) {
+        s += `<rect x="${x.toFixed(1)}" y="${toY(vB+vT).toFixed(1)}" width="${bWidth.toFixed(1)}" height="${Math.max(0.8, toY(vB)-toY(vB+vT)).toFixed(1)}" fill="${topColor}" opacity="0.75"/>`;
+      }
+    });
+    // y labels
+    const fmtP = v => v < 0.1 ? v.toFixed(3) : v.toFixed(1);
+    s += `<text x="${PL-3}" y="${(PT+4).toFixed(1)}" font-size="7.5" text-anchor="end" fill="#888">${fmtP(vMax)}%</text>`;
+    s += `<text x="${PL-3}" y="${(botY+3).toFixed(1)}" font-size="7.5" text-anchor="end" fill="#888">0</text>`;
+    // baseline
+    s += `<line x1="${PL}" y1="${botY.toFixed(1)}" x2="${W-PR}" y2="${botY.toFixed(1)}" stroke="#555" stroke-width="0.6"/>`;
+    // x labels
+    const step = Math.max(1, Math.floor(epochs.length / 5));
+    epochs.forEach((e, i) => {
+      if (i % step !== 0 && i !== epochs.length - 1) return;
+      const x = PL + i * bw + bw / 2;
+      const yr = e.year_ce < 0 ? `${Math.abs(e.year_ce)} BCE` : `${e.year_ce}`;
+      s += `<text x="${x.toFixed(1)}" y="${(H-2).toFixed(1)}" font-size="8" text-anchor="middle" fill="#888">${yr}</text>`;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;margin-bottom:0.4rem;">${s}</svg>`;
+  }
+
+  function buildTemporalBody(data) {
+    const gc  = data.grid_cell;
+    const uid = `tbf-${Date.now()}`;
+    const tipIcon = tip =>
       `<i class="bi bi-question-circle text-muted ms-1" style="font-size:0.8rem;cursor:help;"
           data-bs-toggle="tooltip" data-bs-title="${escapeHtml(tip)}"></i>`;
 
-    // --- Header row ---
+    // ── CLIMATE TAB (LMR 2.1) ──
     const gcStr = gc ? `${gc.lat}°N, ${gc.lon}°E` : 'n/a (LMR out of range)';
     const tNotes = [data.lmr_fidelity_note, data.lmr_proxy_bias_note].filter(Boolean);
     const tNoteAlerts = tNotes.map(n =>
       `<div class="alert alert-warning py-1 px-2 mb-2" style="font-size:0.78rem">${escapeHtml(n)}</div>`
     ).join('');
-    let html = `<div class="small mb-2 text-muted">
-      <strong>Grid cell</strong>: ${gcStr} &nbsp;|&nbsp;
-      <strong>Period</strong>: ${data.year_start}–${data.year_end} CE
-    </div>${tNoteAlerts}`;
 
-    // --- PDSI tab content ---
     const pdsiSeries = data.pdsi_series || [];
-    const pdsiTab = pdsiSeries.length
+    const pdsiContent = pdsiSeries.length
       ? `<div class="small mb-1 text-muted">
            Mean <strong>${data.pdsi_mean}</strong> &nbsp;
            Min <strong>${data.pdsi_min}</strong> &nbsp;
@@ -691,9 +796,8 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
          ${buildClimSvg(pdsiSeries, 'pdsi', '#4e8fbf', '#b05a2f')}`
       : `<div class="text-muted small">No PDSI data.</div>`;
 
-    // --- Temperature tab content ---
     const airSeries = data.air_series || [];
-    const airTab = airSeries.length
+    const airContent = airSeries.length
       ? `<div class="small mb-1 text-muted">
            Mean anomaly <strong>${data.air_mean_anom_k} K</strong>
            ${tipIcon('2m air temperature anomaly (K) from LMR v2.1 ensemble mean. Positive = warmer than the 20th-century reference period average (1951–1980).')}
@@ -701,9 +805,8 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
          ${buildClimSvg(airSeries, 'air_anom_k', '#c0392b', '#2980b9')}`
       : `<div class="text-muted small">No temperature data.</div>`;
 
-    // --- Precipitation tab content ---
     const prateSeries = data.prate_series || [];
-    const prateTab = prateSeries.length
+    const prateContent = prateSeries.length
       ? `<div class="small mb-1 text-muted">
            Mean anomaly <strong>${data.prate_mean_anom_mm_day} mm/day</strong>
            ${tipIcon('Precipitation rate anomaly (mm/day) from LMR v2.1 ensemble mean. Positive = wetter than the 20th-century reference period average (1951–1980).')}
@@ -711,51 +814,110 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
          ${buildClimSvg(prateSeries, 'prate_anom_mm_day', '#27ae60', '#8e44ad')}`
       : `<div class="text-muted small">No precipitation data.</div>`;
 
-    // --- Bootstrap tabs ---
-    html += `
-    <ul class="nav nav-tabs nav-sm mb-0" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active py-1 px-2" id="${uid}-pdsi-tab"
-          data-bs-toggle="tab" data-bs-target="#${uid}-pdsi"
-          type="button" role="tab" style="font-size:0.82rem;">PDSI</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link py-1 px-2" id="${uid}-air-tab"
-          data-bs-toggle="tab" data-bs-target="#${uid}-air"
-          type="button" role="tab" style="font-size:0.82rem;">Temperature</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link py-1 px-2" id="${uid}-prate-tab"
-          data-bs-toggle="tab" data-bs-target="#${uid}-prate"
-          type="button" role="tab" style="font-size:0.82rem;">Precipitation</button>
-      </li>
-    </ul>
-    <div class="tab-content border border-top-0 rounded-bottom p-2 mb-3">
-      <div class="tab-pane fade show active" id="${uid}-pdsi" role="tabpanel">${pdsiTab}</div>
-      <div class="tab-pane fade" id="${uid}-air"   role="tabpanel">${airTab}</div>
-      <div class="tab-pane fade" id="${uid}-prate" role="tabpanel">${prateTab}</div>
-    </div>`;
+    const climTabContent = `
+      <div class="small mb-2 text-muted">
+        <strong>Grid cell</strong>: ${gcStr} &nbsp;|&nbsp;
+        <strong>Period</strong>: ${data.year_start}–${data.year_end} CE
+      </div>
+      ${tNoteAlerts}
+      <ul class="nav nav-tabs nav-sm mb-0" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active py-1 px-2" id="${uid}-pdsi-tab"
+            data-bs-toggle="tab" data-bs-target="#${uid}-pdsi"
+            type="button" role="tab" style="font-size:0.82rem;">PDSI</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link py-1 px-2" id="${uid}-air-tab"
+            data-bs-toggle="tab" data-bs-target="#${uid}-air"
+            type="button" role="tab" style="font-size:0.82rem;">Temperature</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link py-1 px-2" id="${uid}-prate-tab"
+            data-bs-toggle="tab" data-bs-target="#${uid}-prate"
+            type="button" role="tab" style="font-size:0.82rem;">Precipitation</button>
+        </li>
+      </ul>
+      <div class="tab-content border border-top-0 rounded-bottom p-2">
+        <div class="tab-pane fade show active" id="${uid}-pdsi" role="tabpanel">${pdsiContent}</div>
+        <div class="tab-pane fade" id="${uid}-air"              role="tabpanel">${airContent}</div>
+        <div class="tab-pane fade" id="${uid}-prate"            role="tabpanel">${prateContent}</div>
+      </div>`;
 
-    // --- Volcanic events (outside tabs) ---
-    html += `<div class="fs-6 fw-semibold mb-1">Volcanic events (VSSI ≥ threshold)
-      ${tipIcon('Stratospheric aerosol injection (VSSI, Tg) from eVolv2k v4. Larger values indicate eruptions with stronger global cooling potential.')}
-    </div>`;
+    // ── LAND USE TAB (HYDE 3.4) ──
+    const hydeData   = data.hyde_land_use || {};
+    const hydeEpochs = hydeData.epochs || [];
+    const hydeNote   = hydeData._note  || '';
+    let hydeTabContent;
+    if (!hydeEpochs.length) {
+      hydeTabContent = `<div class="text-muted small">No HYDE land-use data for this period.</div>`;
+    } else {
+      const ep0    = hydeEpochs[0];
+      const nCells = ep0.n_cells;
+      const areaKm2 = ep0.basin_area_km2;
+      const bandNote = nCells > 1
+        ? ` &nbsp;|&nbsp; ${nCells} cells (band = cell spread)`
+        : ` &nbsp;|&nbsp; Single cell`;
+      hydeTabContent = `
+        <div class="small fw-semibold mb-1">Cropland
+          ${tipIcon('Cropland (HYDE 3.4, ~10 km resolution) as % of basin area. The light band behind each bar shows the p10–p90 spread of individual cell values: a tall band above a short bar means cropland is concentrated in a few cells (patchy); band flush with bar means it is spread evenly across the basin.')}
+        </div>
+        ${buildHydeSvg(hydeEpochs, 'cropland_pct', '#c8963e', 'cropland_p10', 'cropland_p90')}
+        <div class="small fw-semibold mb-1 mt-1">Grazing land
+          <span class="text-muted fw-normal" style="font-size:0.78rem;">
+            &nbsp;<span style="display:inline-block;width:10px;height:10px;background:#7ba05b;opacity:0.85;vertical-align:middle;"></span> Pasture (managed)
+            &nbsp;<span style="display:inline-block;width:10px;height:10px;background:#b5c98a;opacity:0.75;vertical-align:middle;"></span> Rangeland (extensive)
+          </span>
+          ${tipIcon('Total grazing land = managed pasture + extensive rangeland (HYDE 3.4), stacked by type. The light band shows the p10–p90 spread of total grazing across cells: tall band = patchy distribution; band flush with bar = evenly spread.')}
+        </div>
+        ${buildHydeStackedSvg(hydeEpochs, 'pasture_pct', 'rangeland_pct', '#7ba05b', '#b5c98a', 'grazing_p10', 'grazing_p90')}
+        <div class="text-muted" style="font-size:0.76rem;border-top:1px solid #eee;padding-top:0.35rem;margin-top:0.1rem;">
+          Basin area ${areaKm2 ? areaKm2.toFixed(0) : '—'} km²${bandNote}
+          ${hydeNote ? ` &nbsp;|&nbsp; ${escapeHtml(hydeNote)}` : ''}
+        </div>`;
+    }
+
+    // ── VOLCANO TAB (eVolv2k) ──
+    let volcTabContent;
     if (data.volcanic_events && data.volcanic_events.length) {
+      const tipV = tipIcon('Stratospheric aerosol injection (VSSI, Tg) from eVolv2k v4. Larger values indicate eruptions with stronger global cooling potential.');
       const rows = data.volcanic_events.map(e =>
         `<tr><td>${e.year_ad}</td><td>${e.vssi_tg}</td><td>${e.vssi_1sig ?? '—'}</td>
          <td>${e.asymmetry !== null ? e.asymmetry.toFixed(2) : '—'}</td>
          <td>${e.location || 'unknown'}</td><td>${e.tephra ? 'Y' : 'N'}</td></tr>`,
       ).join('');
-      html += `<table class="table table-sm table-bordered mb-2" style="font-size:0.78rem;">
+      volcTabContent = `<table class="table table-sm table-bordered mb-0" style="font-size:0.78rem;">
         <thead class="table-light">
-          <tr><th>Year</th><th>vssi (Tg)</th><th>±1σ</th><th>Asym.</th><th>Location</th><th>Tephra</th></tr>
+          <tr><th>Year</th><th>vssi (Tg) ${tipV}</th><th>±1σ</th><th>Asym.</th><th>Location</th><th>Tephra</th></tr>
         </thead><tbody>${rows}</tbody>
       </table>`;
     } else {
-      html += `<div class="text-muted small mb-2">No volcanic events above threshold in this period.</div>`;
+      volcTabContent = `<div class="text-muted small">No volcanic events above threshold in this period.</div>`;
     }
 
-    return html;
+    // ── OUTER 3-TAB STRUCTURE ──
+    return `
+    <ul class="nav nav-tabs mb-0" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active px-3 py-1" id="${uid}-clim-tab"
+          data-bs-toggle="tab" data-bs-target="#${uid}-clim"
+          type="button" role="tab">Climate (LMR 2.1)</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link px-3 py-1" id="${uid}-hyde-tab"
+          data-bs-toggle="tab" data-bs-target="#${uid}-hyde"
+          type="button" role="tab">Land use (HYDE 3.4)</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link px-3 py-1" id="${uid}-volc-tab"
+          data-bs-toggle="tab" data-bs-target="#${uid}-volc"
+          type="button" role="tab">Volcanic events (eVolv2k)</button>
+      </li>
+    </ul>
+    <div class="tab-content border border-top-0 rounded-bottom p-2" style="min-height:8rem;">
+      <div class="tab-pane fade show active" id="${uid}-clim" role="tabpanel">${climTabContent}</div>
+      <div class="tab-pane fade"             id="${uid}-hyde" role="tabpanel">${hydeTabContent}</div>
+      <div class="tab-pane fade"             id="${uid}-volc" role="tabpanel">${volcTabContent}</div>
+    </div>`;
   }
 
   function renderSignature(sig, temporalData = null, switchTab = true) {
@@ -865,7 +1027,7 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
         first = false;
       });
       if (temporalData && temporalData._status === 'ok') {
-        panels += buildAccordionPanel('T', 'Temporal context (LMR PDSI + eVolv2k)', buildTemporalBody(temporalData), first, accId);
+        panels += buildAccordionPanel('T', 'Temporal context', buildTemporalBody(temporalData), first, accId);
       }
     }
 
