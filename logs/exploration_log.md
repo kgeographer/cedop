@@ -625,6 +625,12 @@ Each entry: **Date · Task · Method · Finding · Implication**
 
 **Dataset note**: Files are labeled HYDE 3.4 (created April 2025), not 3.5. Time axis uses `cftime.DatetimeNoLeap` with `has_year_zero=True` (astronomical year numbering). 128 time steps with variable resolution: millennial BCE, centennial 100–1700 CE, decadal 1710–1950, annual 1951–2025. Grid: 2160 × 4320 cells at 5-arcmin (~9km) resolution. Units: km² for area variables; capita/km² for population_density.
 
+** KG ?s **: 
+- What happens when a request overlaps or spans time steps, e.g. 150-250?
+- the cells cover ocean as well, can those be skipped if a table is row-per-call?
+- a basin may enclose cells with very different values; that info loss seems very problemmatic. is there a way to preserve the detail that HYDE provides?
+- what is meant by "land use anomaly fields"? why bring the analytic step of a baseline into the picture?
+
 ---
 
 ### F8.1 — Grazing land is the first and most spatially extensive anthropogenic signal; cropland follows
@@ -700,9 +706,65 @@ At 1000 BCE, agriculture is established in all core civilizational regions (Fert
 
 **Action**: deferred — open design questions flagged for October 2026 expert meeting
 
-## 2026-04-26 · Task 10 · LMR v2.1 temporal/spatial structure and grid behaviour
+---
 
-**Method**: `notebooks/edop/explore/10_lmr_structure.ipynb` · Variables: PDSI, air temperature (anomaly), precipitation rate (anomaly) · Grid: 2°×2°, 16,380 cells globally (values at all cells including ocean) · Temporal: 0–1998 CE, 2001 annual steps · Ensemble: 20 MCruns × (mean + spread) files
+### F8.8 — HYDE temporal resolution varies by era; BCE queries typically return a single epoch
+
+**Finding**: Confirmed from `temporal.hyde_times` (128 rows). Resolution structure:
+- −10000 to −1000 BCE: 1000-year steps (10 epochs)
+- 0 to 1700 CE: 100-year steps (18 epochs)
+- 1710 to 1950: 10-year steps (25 epochs)
+- 1951 to 2025: annual steps (75 epochs)
+
+A 200-year BCE window (e.g. −1100 to −900) returns exactly 1 epoch (−1000 CE). Mixed-resolution windows are possible: a 1650–1750 query returns centennial steps at the low end and decadal at the high end; the row-per-epoch structure is honest about this but it is not obvious to a consumer.
+
+**Implication**: Band T HYDE payload must carry a temporal resolution note. A user requesting a BCE window must be told they are receiving a single millennium-average, not a trend. Mixed-resolution windows need narrative-layer disclosure. The note is API responsibility — not left to consuming apps.
+
+**Action**: add `hyde_resolution_note` to Band T HYDE payload in `app/db/hyde.py`; surface note in sandbox Band T accordion alongside existing LMR and climate notes.
+
+---
+
+### F8.9 — Spatial join performance: functional centroid index required; cold-cache L8 ~640ms
+
+**Finding**: Query `notebooks/edop/hyde_query_design.ipynb` (2026-04-29), Timbuktu L8 basin (hybas_id=1071469810, 7 cells), L6 basin (basin06, ~30ms warm-cache).
+
+Without functional index on `ST_Centroid(geom)`: 6.7s (full 2.2M-row seq scan — GIST index on `hc.geom` is bypassed by the function wrapper).
+
+After `CREATE INDEX idx_hyde_cells_centroid ON temporal.hyde_cells USING GIST (ST_Centroid(geom))` + `ANALYZE`: 640ms cold-cache, ~300ms warm-cache for L8. L6: ~30ms (warm cache + simpler polygon geometry). Window size (3 vs 38 vs 128 time steps) barely affects total cost — the spatial join dominates; the cross join and array access are cheap at all window sizes.
+
+Alternative predicates (`ST_Intersects`, `ST_Within(hc.geom)`) are within 50ms of centroid method but return different cell counts (17 and 1 respectively vs 7 for centroid). Centroid method retained as correct.
+
+**Implication**: Cold-cache L8 ~640ms is acceptable as a supplementary Band T enrichment query. No pre-materialized basin→cell lookup table needed at current scale.
+
+**Action**: add `idx_hyde_cells_centroid` functional index and `ANALYZE` to `sql/edop/create_hyde_cells.sql` and `scripts/edop/load_hyde_cells.py` so future reloads include them automatically.
+
+---
+
+### F8.10 — Response shape confirmed; notes-in-payload principle applies to HYDE
+
+**Finding**: Per-epoch dict structure validated at Timbuktu 1000–1200 CE (3 epochs, 7 cells):
+```json
+{
+  "year_ce": 1000,
+  "cropland_km2": 0.079,  "grazing_km2": 4.705,
+  "pasture_km2": 0.0,     "rangeland_km2": 4.705,
+  "basin_area_km2": 573.4, "n_cells": 7,
+  "cropland_pct": 0.01,   "grazing_pct": 0.82,
+  "pasture_pct": 0.0,     "rangeland_pct": 0.82
+}
+```
+`grazing_km2 == rangeland_km2` when pasture = 0 (by HYDE definition: grazing_land = pasture + rangeland) — expected for semi-arid Sahel. Cropland ~0.01–0.02% of basin area in medieval Timbuktu basin is geographically plausible.
+
+SQL must use `::float8` (not `::numeric`) to return native Python floats from psycopg3; `::numeric` returns `decimal.Decimal` which breaks downstream arithmetic without explicit casting.
+
+**Implication**: The qualifying-notes-as-first-class-payload principle (established for Bands C, D, T in sigrefine01) extends to HYDE: temporal resolution disclosure, BCE single-epoch caveat, and mixed-resolution window note all belong in the payload as `_note` fields. Consuming apps (sandbox, Federico's API) surface them; they do not generate them.
+
+**Action**: implement `app/db/hyde.py` with this response structure; use `::float8` throughout; include `_note` field carrying resolution disclosure; wire into Band T response in `app/db/temporal.py` or `app/api/routes.py`; add 4 HYDE rows to codebook; surface in sandbox Band T accordion.
+
+---
+## 2026-04-26 · Task 9 · HYDE basin aggregation and s/u characterization
+
+**Method**: `notebooks/edop/explore/09_hyde_basin_aggregation.ipynb` · L8: 500-basin stratified sample (25/cluster × 20 clusters); L6: 500-basin stratified sample from Task 5b clusters · HYDE variables: cropland, grazing_land · Epochs: 1000 BCE, 0 CE, 1000 CE, 2000 CE · Aggregation: polygon-interior mean (shapely vectorized contains) for s values; centroid lookup + sub_area-weighted traversal for u values
 
 ---
 ### F9.1 — Polygon-interior and centroid agree for small basins; diverge meaningfully above ~100 km²
@@ -795,6 +857,10 @@ Kaifeng's 1 CE peak at ~175 km² — the highest value across all epochs and sit
 
 ----
 
+## 2026-04-26 · Task 10 · LMR v2.1 temporal/spatial structure and grid behaviour
+
+**Method**: `notebooks/edop/explore/10_lmr_structure.ipynb` · Variables: PDSI, air temperature (anomaly), precipitation rate (anomaly) · Grid: 2°×2°, 16,380 cells globally (values at all cells including ocean) · Temporal: 0–1998 CE, 2001 annual steps · Ensemble: 20 MCruns × (mean + spread) files
+
 ### F10.1 — LMR time series show an expanding-funnel shape: an artifact of proxy density, not a climate signal
 
 **Finding**: All three variables (PDSI, temperature, precipitation) show compressed year-to-year variance in the early period (0–500 CE) that expands progressively through the record. In the early centuries each line in the time series gallery hugs close to zero with small oscillations; from ~1200 CE onward the same lines swing widely. This pattern is uniform across all latitude bands and locations.
@@ -865,11 +931,6 @@ The negative mean anomaly reflects the LIA signal: 1850–1900 sits at the end o
 
 **Action**: deferred — 2° spatial resolution ceiling flagged for API documentation; ~200 km precision caveat to be added to API guide
 
----
-
-## 2026-04-26 · Task 9 · HYDE basin aggregation and s/u characterization
-
-**Method**: `notebooks/edop/explore/09_hyde_basin_aggregation.ipynb` · L8: 500-basin stratified sample (25/cluster × 20 clusters); L6: 500-basin stratified sample from Task 5b clusters · HYDE variables: cropland, grazing_land · Epochs: 1000 BCE, 0 CE, 1000 CE, 2000 CE · Aggregation: polygon-interior mean (shapely vectorized contains) for s values; centroid lookup + sub_area-weighted traversal for u values
 
 ---
 ## 2026-04-27 · Task 11 · LMR period and event fingerprints

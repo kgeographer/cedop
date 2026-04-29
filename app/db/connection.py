@@ -4,8 +4,14 @@ Centralized database connection for CEDOP app.
 Provides db_connect() function for all database operations.
 """
 import os
+from pathlib import Path
 from typing import Optional
 import psycopg
+from dotenv import load_dotenv
+
+# Resolve .env from project root regardless of working directory
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / '.env'
+load_dotenv(_ENV_FILE)
 
 
 def db_connect(schema: Optional[str] = None) -> psycopg.Connection:

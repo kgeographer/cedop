@@ -5,11 +5,15 @@ Provides centralized database connection management for both EDOP and CDOP modul
 """
 import os
 import json
+from pathlib import Path
 from typing import Any, Dict, Optional
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
-load_dotenv()  # reads .env from project root
+
+# Resolve .env from project root regardless of working directory
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / '.env'
+load_dotenv(_ENV_FILE)
 
 
 def db_connect(schema: Optional[str] = None) -> psycopg.Connection:

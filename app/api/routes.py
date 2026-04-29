@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from app.db.signature import get_signature
 from app.db.temporal import get_temporal_context
+from app.db.hyde import get_hyde_land_use
 from app.db.narrative import get_narrative
 from app.db.connection import db_connect
 from app.settings import settings
@@ -435,6 +436,10 @@ def signature(
             else:
                 temporal["_status"] = "ok"
                 band_t = temporal
+
+            hyde = get_hyde_land_use(lat=lat, lon=lon, from_year=from_year, to_year=to_year, level=level)
+            band_t["hyde_land_use"] = hyde
+
         sig.setdefault("profile_groups", {})["T"] = band_t
 
     # F8.5: Qualifying notes for BCE queries on epoch-sensitive bands.
