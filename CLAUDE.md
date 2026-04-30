@@ -47,7 +47,8 @@ scripts/
 ├── edop/                # EDOP data pipelines, clustering, corpus generation
 │   ├── explore/         # Data exploration phase scripts (see docs/edop/data_exploration.md)
 │   ├── corpus/          # Wikipedia harvesting and summarization
-│   └── polity_basin_overlay.py  # Areal interpolation demo
+│   ├── polity_basin_overlay.py  # Areal interpolation demo (Northern Song, original)
+│   └── edops_polity_maps.py    # Parameterized polity choropleth generator (1–3 years, static + HYDE vars)
 ├── cdop/                # CDOP scripts
 └── shared/              # Shared utilities
     ├── db_utils.py      # Centralized db_connect() for scripts
@@ -196,29 +197,28 @@ Completed Band T (Tasks 7–11): (7) eVolv2k v4 distribution and aggregation des
 
 Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is silently wrong for BCE queries — needs `climate_note` disclosure; (b) population density may not belong in an environmental signature; (c) EarthStat/HYDE spatial divergence at agricultural hotspot sub-basins; (d) Pinatubo calibration text for narrative layer prompt; (e) LMR geographic proxy bias disclosure for API docs — all flagged for October 2026 expert meeting or pre-release documentation.
 
-Next: Task 12 (Anthromes categorical typology — design specifics TBD before notebook). **Do not** start correspondence testing until Task 12 scoped.
+Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until x_polity phase complete.
 
-## Current Work — sigrefine01 branch (as of 2026-04-29)
+## Current Work — main branch, as of 2026-04-30
 
-Signature refinement phase. HYDE 3.4 land-use pipeline complete and live in Band T API (commit 8366f74).
+sigrefine01 complete and merged (2026-04-29). All Band T, Band D pasture_extent, HYDE land use, codebook v02, sandbox accordion redesign deployed to Hetzner.
 
-**HYDE implementation complete**:
-- `temporal.hyde_cells` (2,215,829 rows) + `temporal.hyde_times` (128 steps) loaded and indexed
-- `app/db/hyde.py`: `get_hyde_land_use(lat, lon, from_year, to_year, level)` — per-epoch dicts with `_km2` and `_pct` fields; `_note` carries temporal resolution disclosure
-- `app/db/connection.py` and `scripts/shared/db_utils.py`: explicit `load_dotenv` path; DB on port 5435
-- Wired into `routes.py` → `profile_groups["T"]["hyde_land_use"]`
-- Exploration log F8.8–F8.10 added
+**Next branch: `x_polity`** (after background reading period)
 
-**Remaining on this branch** (in order):
-1. Band D: add `pasture_extent` (EarthStat L09) — codebook entry + `signature.py` query
-2. Codebook (`metadata/edops_codebook_v01.tsv`): 4 new HYDE rows (cropland, grazing, pasture, rangeland)
-3. Sandbox (`app/templates/sandbox.html`): surface HYDE epochs in Band T accordion
-4. Prospectus update: qualifying-notes-as-first-class-content principle; 1000–1850 CE baseline convention
-5. Server deploy: merge sigrefine01 → main → push → `git pull` + restart on kgeographer-1
+Work items:
+- Summary tuples per basin (e.g. [A-3, B-2, ..., T-7]) — compressed environmental typology labels
+- Polity payload management: area-weighted EDOPS signatures for polygon queries (Cliopatria/Seshat)
+- Scale sensitivity studies: L6 vs L8 signature comparison for polity-level queries
+- Tentative D-PLACE correspondence tests
+- `scripts/edop/edops_polity_maps.py`: parameterized choropleth generator created 2026-04-30; extend as needed
 
-**Note**: Band C `land_cover_id/name` is already in the payload — was there all along, not a pending item.
+**Polity map script** (`scripts/edop/edops_polity_maps.py`):
+- `--polity`, `--years` (1–3), `--variable` (static Band A–C or hyde_cropland/grazing/pasture/rangeland)
+- Outputs: individual PNGs + multi-panel comparison + printed summary with weighted means
+- Demonstrated: Northern Song aridity, Kingdom of Denmark cropland, Roman Empire cropland
+- HYDE note: values are already km² in DB — `SUM(hc.field[step])` / `SUM(hc.area_km2)` × 100 (matches `hyde.py`)
 
-See `logs/session_log_20260429.md` for full detail.
+See `logs/session_log_20260430.md` for full detail.
 
 ## External Dependencies
 

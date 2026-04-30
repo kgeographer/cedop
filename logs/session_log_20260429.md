@@ -59,10 +59,50 @@ SQL uses `::float8` throughout — psycopg3 returns native Python floats, no Dec
 - **Band C land_cover_id/name already present** — was not a pending item after all
 - **SQL uses `::float8`** to avoid Decimal type from psycopg3
 
-## Remaining on sigrefine01
+## Completed later in session (sigrefine01 → main, deployed)
 
-1. Band D: `pasture_extent` (EarthStat L09) — codebook + `signature.py` query
-2. Codebook: 4 new HYDE rows
-3. Sandbox: surface HYDE epochs in Band T accordion
-4. Prospectus update
-5. Server deploy
+### 7. Band D — pasture_extent (commit 15459f0)
+- `pst_pc_sse`/`pst_pc_use` added to both persist_rev1 view SQL files
+- Views dropped and recreated in local DB (no dependents)
+- `SIGNATURE_SQL_TMPL` and `PROFILE_GROUPS["D"]` updated in `signature.py`
+- Confirmed in API: Timbuktu `pasture_extent: 3, pasture_extent_upstream: 3`
+
+### 8. HYDE heterogeneity stats added to hyde.py (commit 15459f0)
+- `_AGG_SQL` extended with `STDDEV_POP` for all 4 variables + `percentile_cont(0.1/0.9)` for cropland and grazing
+- `_build_epochs` switched from positional tuple unpacking to `dict_row` cursor
+- Heterogeneity fields (`_std`, `_p10`, `_p90`) emitted only when `n_cells > 1`
+- Kaifeng example: `grazing_std=1.094` vs mean cell 0.67 km² — confirms patchy Sahel signal
+
+### 9. Codebook v02 (commit 15459f0)
+- `metadata/edops_codebook_v02.tsv` created from v01
+- `pasture_pct` → `implemented` + api_key_s/u filled
+- 4 new Band T rows: `hyde_cropland`, `hyde_grazing`, `hyde_pasture`, `hyde_rangeland`
+- `signature.py` codebook pointer updated to v02
+- All 13 tests pass
+
+### 10. Band T accordion redesign (commit 0493ef7)
+Three top-level tabs: **Climate (LMR 2.1)** / **Land use (HYDE 3.4)** / **Volcanic events (eVolv2k)**
+- LMR quality note and grid-cell header moved inside Climate tab
+- Volcano table moved to its own tab
+- HYDE tab: two SVG sparklines — cropland bar chart with p10/p90 band; stacked grazing bar (pasture/rangeland split) with p10/p90 band on total
+- Band interpretation: tall light band above short bar = patchy; band flush with bar = uniform. Kaifeng 1000–1100 CE clearly shows agricultural expansion (patchy → uniform cropland over one century)
+- vMax clipping fix (commit after review): p90 projected values included in vMax so bands are never clipped at chart ceiling
+- Tooltips reworded to explain patchy-vs-uniform interpretation
+
+### 11. data_sources fix (commit c08317b)
+- `land_use_temporal: "HYDE 3.4 (Klein Goldewijk et al. 2017); 10000 BCE–2023 CE; ~10 km resolution"` added to signature payload `data_sources`
+
+### 12. Prospectus v29 Apr (commit b50c953)
+New file `docs/edop/prospectus_20260429.md` (Apr 16 file untouched). Additions flagged `[Rev. 29 Apr]`:
+- HYDE 3.4 as third temporal enrichment dataset
+- LMR implementation status, 1000–1850 CE baseline convention, geographic proxy bias as first-class limitation, eVolv2k/LMR decoupling principle
+- HYDE within-basin heterogeneity design rationale; Kaifeng example
+- New subsection: qualifying notes as first-class payload content
+- Section 7: LMR precision ceiling (~200 km), HYDE/EarthStat divergence, population density status — all deferred to Oct 2026 expert meeting
+- Section 8: HYDE added to temporal enrichment novelty claim
+- Section 10: October 2026 ISHI expert meeting named as formal forum for deferred questions
+
+### 13. Merge and deploy
+- sigrefine01 merged to main (fast-forward), pushed
+- Hetzner: `git pull` → view recreation → hyde_times + hyde_cells pg_dump/restore (2,215,829 rows, both GIST indexes confirmed) → `systemctl restart cedop`
+- Production verified: `pasture_extent: 3`, `pasture_extent_upstream: 3`, `HYDE epochs: 3` at Timbuktu 1000–1200 CE
