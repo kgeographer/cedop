@@ -1,6 +1,5 @@
 # Project docs (not yet ready for public tracking)
 CONTRIBUTING.md
-TODO_sandbox.txt
 
 # Environment / IDE
 .env
@@ -32,8 +31,11 @@ logos/*.afphoto
 logos/*.afphoto~lock~
 logos/favicon.png
 misc/*.qgz
-docs/**/*.docx
-docs/**/*.pdf
+docs/
+#docs/**/*.docx
+#docs/**/*.pdf
+#docs/cdop/
+#docs/blog/
 
 # Office temp/lock files
 ~$*
@@ -54,6 +56,13 @@ watson_log.txt
 sysop/
 
 # Misc
-pitches/
+bibliography/
 biz/
-
+images/
+logos/
+misc/
+pitches/
+prompts/
+sql/
+sysop/
+theory/
