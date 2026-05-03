@@ -559,10 +559,15 @@ document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootst
     document.getElementById('f-year-end').value = toYear;
     updateBandsDisplay();
     setResolved(parseFloat(lat), parseFloat(lon), name);
-    fetchSignature();
+    fetchSignature(false);  // keep user on map tab; sig loads in background
   });
 
   // ── Level switch: re-fetch sig + neighborhood if place already resolved ─
+  // Invalidate Leaflet size whenever map tab becomes visible (fixes L6 blank map)
+  document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => {
+    mapPreview.invalidateSize();
+  });
+
   document.getElementById('sb-level').addEventListener('change', () => {
     if (resolvedLat === null) return;
     bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-map-btn')).show();
