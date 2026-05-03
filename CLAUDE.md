@@ -199,26 +199,46 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until x_polity phase complete.
 
-## Current Work — main branch, as of 2026-04-30
+## Current Work — main branch, as of 2026-05-03
 
-sigrefine01 complete and merged (2026-04-29). All Band T, Band D pasture_extent, HYDE land use, codebook v02, sandbox accordion redesign deployed to Hetzner.
+### Completed this session (2026-05-03)
+- Sandbox example selector bug fixed: all 7 examples now generate basin map + sig and land on Map tab; L6 map blank-on-return fixed via `shown.bs.tab` → `mapPreview.invalidateSize()`
+- GA4 analytics added to `sandbox.html`, `base.html`, `base_cedop.html` (Retirado account, edops.kgeographer.org property)
+- Repo cleanup: `git rm --cached` for docs/, bibliography/, images/, logos/, prompts/, sql/, theory/ (now gitignored; no history rewrite needed)
+- `app/static/api_guide.html`: `bands=ABCF` → `bands=ABCT` (Rome + Kaifeng examples); h3 "Bands A, B, F" → "Bands A, B, T"
+- `tests/test_api_examples.py`: 6 smoke tests mirroring all api_guide curl examples; 19/19 suite passing
 
-**Next branch: `x_polity`** (after background reading period)
+See `logs/session_log_20260503.md` for full detail.
 
-Work items:
-- Summary tuples per basin (e.g. [A-3, B-2, ..., T-7]) — compressed environmental typology labels
-- Polity payload management: area-weighted EDOPS signatures for polygon queries (Cliopatria/Seshat)
-- Scale sensitivity studies: L6 vs L8 signature comparison for polity-level queries
+### Next branch: `x_spatial` — spatial statistics characterization
+
+Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `spatial/spatial_plan.md`.
+
+**Pipeline design** (per variable × scale):
+1. Load basin geometry + variable values; apply codebook transform (log, etc.)
+2. Distributional summaries: mean, median, range, skew, kurtosis, missingness, zero-fraction, bimodality
+3. Global Moran's I — queen-contiguity weights, 999 permutations, fixed random seed
+4. Local Moran's I (LISA) — HH/LL/HL/LH/NS classification at p < 0.05
+5. Spatial summary stats: outlier prevalence (HL+LH %), cluster-core prevalence (HH+LL %), largest contiguous LISA cluster fraction
+6. Persist: `variable_characterization.csv` (one row per variable × scale), `lisa_classifications.parquet` (long-format basin × variable)
+
+**Weights matrices**: `spatial/basin06_queen.gal` exists; `spatial/basin08_queen.gal` to generate.
+
+**Coherence class**: assign *after* seeing distribution of Moran's I across all variables — calibrate thresholds empirically, not in advance.
+
+**Scale notes**: L8 full run (~190k basins × 999 perms) is "kick off and walk away" — budget 1–2 hours. L6 is interactive.
+
+**Then: `x_polity`** (after x_spatial complete)
+- Summary tuples per basin [A-3, B-2, ..., T-7]
+- Polity payload management: area-weighted signatures for polygon queries (Cliopatria/Seshat)
+- Scale sensitivity: L6 vs L8 for polity signatures
 - Tentative D-PLACE correspondence tests
-- `scripts/edop/edops_polity_maps.py`: parameterized choropleth generator created 2026-04-30; extend as needed
+- `scripts/edop/edops_polity_maps.py`: parameterized choropleth generator; extend as needed
 
 **Polity map script** (`scripts/edop/edops_polity_maps.py`):
 - `--polity`, `--years` (1–3), `--variable` (static Band A–C or hyde_cropland/grazing/pasture/rangeland)
-- Outputs: individual PNGs + multi-panel comparison + printed summary with weighted means
 - Demonstrated: Northern Song aridity, Kingdom of Denmark cropland, Roman Empire cropland
-- HYDE note: values are already km² in DB — `SUM(hc.field[step])` / `SUM(hc.area_km2)` × 100 (matches `hyde.py`)
-
-See `logs/session_log_20260430.md` for full detail.
+- HYDE note: values already km² in DB — `SUM(hc.field[step])` / `SUM(hc.area_km2)` × 100
 
 ## External Dependencies
 
