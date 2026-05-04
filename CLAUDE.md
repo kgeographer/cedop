@@ -173,13 +173,11 @@ Key design docs:
 
 ## Session Context Files
 
-- **`logs/CEDOP_LOG.md`** — Development journal with dated entries
-- **`prompts/seed-prompt-ongoing.md`** — Running prompt/context notes
-- **`docs/edop/prospectus_20260416.md`** — Current authoritative research direction document (living prospectus, updated from outline v3 Feb 2026). ISHI-supported program as of Apr 2026. Core conceptual framing: *process-aware environmental characterization* — what a place experiences through directed spatial processes. Key features: (1) local/upstream `s`/`u` duality as first-class signature feature; (2) distance-weighted upstream profiling via `next_down` DAG; (3) coastality (`dist_sink`, outlet type) as first-class signature component; (4) settlement correspondence as external validation objective (Section 9); (5) drainage topology implementation (Section 10); (6) temporal enrichment via LMR v2.1 and eVolv2k v4. Use cases driving design: `docs/edops_use_cases.md`. Prior versions archived as `prospectus_20260402.md`, `prospectus_20260403.md`. Blog post master: `docs/blog/computing_place_prospectus.md`.
+- **`docs/edop/prospectus_20260429.md`** — Current authoritative research direction document (living prospectus, updated from outline v3 Feb 2026). Prior versions archived as `prospectus_20260407.md`, `prospectus_20260419.md`. Blog post master: `docs/blog/computing_place_prospectus.md`.
 
 ## Data Exploration Phase
 
-The next major work phase is systematic characterization of the EDOPS signature dataset before any correspondence testing, PCA, or rubric design. See **`docs/edop/exploration_*.md`** for the full task lists, conventions, and guardrails.
+The next major work phase is systematic characterization of the EDOPS signature dataset before any correspondence testing, PCA, or rubric design. See **`docs/edop/exploration_*.md`** for the full task lists, conventions, and guardrails. Exploration now expanding to spatial-specific measures, External work in GeoDa will inform direction and specifics currently outlined in spatial/spatial_plan.md
 
 Key locations:
 - **Scripts**: `scripts/edop/explore/` — numbered exploration scripts
@@ -210,7 +208,7 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 
 See `logs/session_log_20260503.md` for full detail.
 
-### Next branch: `x_spatial` — spatial statistics characterization
+### Next branch: `spatial` — spatial statistics characterization
 
 Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `spatial/spatial_plan.md`.
 
