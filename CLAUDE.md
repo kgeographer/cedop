@@ -197,16 +197,17 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until x_polity phase complete.
 
-## Current Work — main branch, as of 2026-05-03
+## Current Work — main branch, as of 2026-05-04
 
-### Completed this session (2026-05-03)
-- Sandbox example selector bug fixed: all 7 examples now generate basin map + sig and land on Map tab; L6 map blank-on-return fixed via `shown.bs.tab` → `mapPreview.invalidateSize()`
-- GA4 analytics added to `sandbox.html`, `base.html`, `base_cedop.html` (Retirado account, edops.kgeographer.org property)
-- Repo cleanup: `git rm --cached` for docs/, bibliography/, images/, logos/, prompts/, sql/, theory/ (now gitignored; no history rewrite needed)
-- `app/static/api_guide.html`: `bands=ABCF` → `bands=ABCT` (Rome + Kaifeng examples); h3 "Bands A, B, F" → "Bands A, B, T"
-- `tests/test_api_examples.py`: 6 smoke tests mirroring all api_guide curl examples; 19/19 suite passing
+### Completed 2026-05-03
+- Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
+- See `logs/session_log_20260503.md`
 
-See `logs/session_log_20260503.md` for full detail.
+### Completed 2026-05-04
+- `docs/edop/prospectus_20260503.md`: new draft — worked examples genre, three-phase trajectory, audience scope, spatial characterization report bullet ([Rev. 03 May]); Sections 9–10 renumbered
+- Cliopatria EDA: `data/cliopatria/cliopatria_eda.md` — entity taxonomy, three-level counting (1,522 names / 11,178 configs / 12,987 slices), singleton-self clarification, query design rubric
+- `gaz.clio_polities` schema fixes: empty strings → NULL; `is_component` boolean; `geom_og` archive + `invalid_source_geom` flag (invalid geoms NOT repaired — for Cliopatria team); `memberof`/`components` → `text[]`
+- See `logs/session_log_20260504.md`
 
 ### Next branch: `spatial` — spatial statistics characterization
 
