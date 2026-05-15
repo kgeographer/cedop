@@ -197,7 +197,7 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until x_polity phase complete.
 
-## Current Work — main branch, as of 2026-05-04
+## Current Work — post_move branch, as of 2026-05-14
 
 ### Completed 2026-05-03
 - Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
@@ -209,7 +209,14 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - `gaz.clio_polities` schema fixes: empty strings → NULL; `is_component` boolean; `geom_og` archive + `invalid_source_geom` flag (invalid geoms NOT repaired — for Cliopatria team); `memberof`/`components` → `text[]`
 - See `logs/session_log_20260504.md`
 
-### Next branch: `spatial` — spatial statistics characterization
+### Completed 2026-05-14
+- New machine setup: PGPORT 5435→5432 in `.env` + 20 scripts; 19/19 tests passing; branch `post_move`
+- `notebooks/edop/spatial/01_aridity_l6_moran.ipynb`: first spatial notebook complete — global Moran's I, Moran scatter plot, LISA, cluster map, log-transform sensitivity check
+- **Key result**: aridity at L6, I=0.963 (raw) / 0.973 (log); LL=30.0%, HH=4.6%, HL=1.4%, LH=0%
+- **Critical finding**: weights must be built with `Queen.from_dataframe(gdf, use_index=True)` keyed by hybas_id — GAL files from GeoDa carry wrong row ordering (produced I=0.364, mottled map)
+- See `logs/session_log_20260514.md`
+
+### Next: `spatial` branch — spatial statistics characterization pipeline
 
 Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `spatial/spatial_plan.md`.
 
@@ -221,7 +228,7 @@ Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `
 5. Spatial summary stats: outlier prevalence (HL+LH %), cluster-core prevalence (HH+LL %), largest contiguous LISA cluster fraction
 6. Persist: `variable_characterization.csv` (one row per variable × scale), `lisa_classifications.parquet` (long-format basin × variable)
 
-**Weights matrices**: `spatial/basin06_queen.gal` exists; `spatial/basin08_queen.gal` to generate.
+**Weights matrices**: Build with `Queen.from_dataframe(gdf, use_index=True)` keyed by hybas_id — do NOT use GAL files from GeoDa (carry wrong row ordering; produced I=0.364 vs correct 0.963 for aridity).
 
 **Coherence class**: assign *after* seeing distribution of Moran's I across all variables — calibrate thresholds empirically, not in advance.
 
