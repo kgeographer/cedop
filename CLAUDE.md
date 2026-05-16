@@ -197,7 +197,7 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until x_polity phase complete.
 
-## Current Work — post_move branch, as of 2026-05-14
+## Current Work — `esda` branch, as of 2026-05-15
 
 ### Completed 2026-05-03
 - Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
@@ -211,12 +211,21 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 
 ### Completed 2026-05-14
 - New machine setup: PGPORT 5435→5432 in `.env` + 20 scripts; 19/19 tests passing; branch `post_move`
-- `notebooks/edop/spatial/01_aridity_l6_moran.ipynb`: first spatial notebook complete — global Moran's I, Moran scatter plot, LISA, cluster map, log-transform sensitivity check
+- `notebooks/edop/spatial/01_aridity_l6_moran.ipynb`: global Moran's I, Moran scatter plot, LISA, cluster map, log-transform sensitivity check
 - **Key result**: aridity at L6, I=0.963 (raw) / 0.973 (log); LL=30.0%, HH=4.6%, HL=1.4%, LH=0%
 - **Critical finding**: weights must be built with `Queen.from_dataframe(gdf, use_index=True)` keyed by hybas_id — GAL files from GeoDa carry wrong row ordering (produced I=0.364, mottled map)
 - See `logs/session_log_20260514.md`
 
-### Next: `spatial` branch — spatial statistics characterization pipeline
+### Completed 2026-05-15
+- `notebooks/edop/spatial/02_aridity_l8_moran.ipynb`: scale comparison notebook complete — same routine as L6 at 190k basins
+- **Key results**: aridity at L8, I=0.989; LL=30.9%, HH=3.8%, HL=0.2%, LH=0%; scale effect confirmed (+0.026 vs L6)
+- **M5 benchmarks**: weights build 4m39s, LISA 20s — pipeline is fully interactive at L8 (not "walk away")
+- **Scale findings**: cluster-core % stable across scales; outlier % not comparable (HL absolute count doubles, % collapses due to 11.6× denominator growth); MAUP HH fringe contraction at Pacific NW rain shadow
+- `spatial/esda_findings.md` established — accreting findings log for ESDA phase (parallel to `logs/exploration_log.md`)
+- Branch renamed `spatial01` → `esda`
+- See `logs/session_log_20260515.md`
+
+### Next: `esda` branch — spatial statistics characterization pipeline
 
 Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `spatial/spatial_plan.md`.
 
@@ -232,7 +241,7 @@ Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `
 
 **Coherence class**: assign *after* seeing distribution of Moran's I across all variables — calibrate thresholds empirically, not in advance.
 
-**Scale notes**: L8 full run (~190k basins × 999 perms) is "kick off and walk away" — budget 1–2 hours. L6 is interactive.
+**Scale notes**: On M5 (2026): weights build ~5 min, LISA ~20s at L8 — fully interactive. Earlier estimates of 1–2 hours are obsolete.
 
 **Then: `x_polity`** (after x_spatial complete)
 - Summary tuples per basin [A-3, B-2, ..., T-7]
