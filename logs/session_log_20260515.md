@@ -61,7 +61,22 @@ Maps at L6 and L8 compared side-by-side. Major LL and HH cores visually identica
 
 ### Cross-scale comparison table (Step 8)
 
-Full numeric comparison in Cell 18 output. I, HH%, LL%, HL%, LH%, NS% all populated. Summary: aridity is scale-robust for cluster cores, scale-sensitive for outlier percentage (but not outlier absolute count).
+```
+                                L6          L8         Δ
+Basins                      16,397     190,675
+Global Moran I (raw)        0.9628      0.9889   +0.0261
+HH %                           4.6         3.8      -0.8
+LL %                          30.0        30.9      +0.9
+HL %                           1.4         0.2      -1.2
+LH %                           0.0         0.0      +0.0
+NS %                          64.0        65.2      +1.2
+```
+
+Summary: aridity is scale-robust for cluster cores, scale-sensitive for outlier percentage (but not outlier absolute count).
+
+### Log-transform sensitivity (Step 9)
+
+L8: I_log = 0.9924 vs I_raw = 0.9889, Δ = 0.0035. Compared to L6 (Δ = 0.0103), the transform matters even less at finer resolution — smaller basins are more internally homogeneous, reducing the leverage of the right-skewed wet tail. Raw and log are practically equivalent at L8 for aridity.
 
 ---
 

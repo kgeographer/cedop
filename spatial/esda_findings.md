@@ -15,10 +15,12 @@ Each entry: **Date · Variable/Scale · Method · Finding · Implication**
 **Method**: Queen contiguity weights, row-standardised; 999 permutations; `np.random.seed(42)`
 
 **Finding**:
-| Scale | Basins | Moran's I (raw) | Moran's I (log) | p-value | z-score |
-|-------|--------|-----------------|-----------------|---------|---------|
-| L6    | 16,397 | 0.9628 | 0.9731 | 0.001 | 195.64 |
-| L8    | 190,675 | 0.9889 | — | 0.001 | 754.92 |
+| Scale | Basins | Moran's I (raw) | Moran's I (log) | Δ (raw→log) | p-value | z-score |
+|-------|--------|-----------------|-----------------|-------------|---------|---------|
+| L6    | 16,397  | 0.9628 | 0.9731 | +0.0103 | 0.001 | 195.64 |
+| L8    | 190,675 | 0.9889 | 0.9924 | +0.0035 | 0.001 | 754.92 |
+
+Log transform sensitivity narrows at finer resolution (Δ 0.010 → 0.004): at L8 each basin is more internally homogeneous, so the right-skewed tail exerts less leverage on the spatial correlation structure. The raw-vs-log distinction is practically irrelevant at L8 for aridity.
 
 Both p-values are floored at 0.001 (1/999 permutations). The z-score increase from 196 to 755 is a sample-size artifact (permutation variance narrows as n grows), not a substantive finding — compare I values directly.
 
