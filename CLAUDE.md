@@ -197,7 +197,7 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until polity phase complete.
 
-## Current Work — `esda` branch, as of 2026-05-15
+## Current Work — `esda` branch, as of 2026-05-17
 
 ### Completed 2026-05-03
 - Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
@@ -225,23 +225,21 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - Branch renamed `spatial01` → `esda`
 - See `logs/session_log_20260515.md`
 
-### Next: `esda` branch — spatial statistics characterization pipeline
+### Completed 2026-05-16
+- `notebooks/edop/spatial/03_discharge_l6_l8_moran.ipynb`: both scales in single notebook
+- **Key results**: discharge I_log=0.582 (L6) / 0.563 (L8) — ~0.41 below aridity; scale direction reverses (↓); LH class appears; LH grows 22.5× vs 11.6× basin count (watershed-divide effect)
+- Phase names standardised: `x_spatial` → `esda`, `x_polity` → `polity`; `spatial/esda_findings.md` DIS.1–6 entries added
+- See `logs/session_log_20260516.md`
 
-Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `spatial/spatial_plan.md`.
+### Completed 2026-05-17
+- `scripts/edop/esda/12_spatial_moran.py`: Phase 1 univariate sweep — 40 Band A–D variables × L6+L8
+- **Key outputs**: `spatial/variable_characterization.csv` (80 rows), `output/edop/esda/lisa_classifications.parquet` (7.6M rows L8)
+- **Key findings**: 36/40 variables ↑ with finer resolution; 4 ↓ (discharge annual/min, degree of regulation, silt≈flat); Band C ceiling at L8 (I≥0.992); Band D (HDI, GDP) as autocorrelated as climate; erosion rate largest scale gain (+0.181); dor_pc_pva highest outlier% (5.93%)
+- **Bug fixed**: BasinATLAS -9999 sentinel destroyed snw_pc_syr I (0.021→0.975 after fix); affects 7 columns
+- SW.1–3, METH.4 added to `spatial/esda_findings.md`
+- See `logs/session_log_20260517.md` (to be written)
 
-**Pipeline design** (per variable × scale):
-1. Load basin geometry + variable values; apply codebook transform (log, etc.)
-2. Distributional summaries: mean, median, range, skew, kurtosis, missingness, zero-fraction, bimodality
-3. Global Moran's I — queen-contiguity weights, 999 permutations, fixed random seed
-4. Local Moran's I (LISA) — HH/LL/HL/LH/NS classification at p < 0.05
-5. Spatial summary stats: outlier prevalence (HL+LH %), cluster-core prevalence (HH+LL %), largest contiguous LISA cluster fraction
-6. Persist: `variable_characterization.csv` (one row per variable × scale), `lisa_classifications.parquet` (long-format basin × variable)
-
-**Weights matrices**: Build with `Queen.from_dataframe(gdf, use_index=True)` keyed by hybas_id — do NOT use GAL files from GeoDa (carry wrong row ordering; produced I=0.364 vs correct 0.963 for aridity).
-
-**Coherence class**: assign *after* seeing distribution of Moran's I across all variables — calibrate thresholds empirically, not in advance.
-
-**Scale notes**: On M5 (2026): weights build ~5 min, LISA ~20s at L8 — fully interactive. Earlier estimates of 1–2 hours are obsolete.
+### Next: Phase 2 — spatial typology notebook
 
 **Then: `polity` phase** (after esda complete)
 - Summary tuples per basin [A-3, B-2, ..., T-7]

@@ -185,6 +185,105 @@ For aridity by contrast: HH and LL percentages barely move across scales (large 
 
 ---
 
+## Phase 1 — Univariate sweep, Bands A–D (L6 + L8)
+
+Script: `scripts/edop/esda/12_spatial_moran.py`. Queen contiguity weights, row-standardised, 999 permutations, seed 42. Log transform applied where skewness > 5 and min ≥ 0. BasinATLAS -9999 sentinels masked before all computation (see METH.4).
+
+Outputs: `spatial/variable_characterization.csv` (committed), `output/edop/esda/lisa_classifications.parquet` (gitignored, 655k rows L6 / 7.6M rows L8).
+
+---
+
+### SW.1 — Full I spectrum and summary table
+
+**Date**: 2026-05-17
+
+| band | variable | friendly_name | I_L6 | I_L8 | scale_dir |
+|------|----------|---------------|------|------|-----------|
+| A | ele_mt_sav | Mean elevation | 0.924 | 0.970 | ↑ |
+| A | ele_mt_smn | Elevation minimum | 0.884 | 0.943 | ↑ |
+| A | ele_mt_smx | Elevation maximum | 0.848 | 0.933 | ↑ |
+| A | slp_dg_sav | Slope | 0.805 | 0.879 | ↑ |
+| A | ero_kh_sav | Erosion rate | 0.741 | 0.922 | ↑ |
+| A | sgr_dk_sav | Stream gradient | 0.725 | 0.792 | ↑ |
+| A | kar_pc_sse | Karst % | 0.676 | 0.820 | ↑ |
+| A | gla_pc_sse | Glacier % | 0.663 | 0.820 | ↑ |
+| B | swc_pc_syr | Soil water content | 0.970 | 0.992 | ↑ |
+| B | slt_pc_sav | Silt % | 0.964 | 0.962 | ↓ |
+| B | cly_pc_sav | Clay % | 0.902 | 0.932 | ↑ |
+| B | run_mm_syr | Annual runoff | 0.874 | 0.971 | ↑ |
+| B | snd_pc_sav | Sand % | 0.873 | 0.903 | ↑ |
+| B | soc_th_sav | Soil organic carbon | 0.858 | 0.906 | ↑ |
+| B | gwt_cm_sav | Groundwater depth | 0.824 | 0.857 | ↑ |
+| B | lka_pc_sse | Lake area % | 0.684 | 0.729 | ↑ |
+| B | dis_m3_pmn | Discharge monthly min | 0.614 | 0.573 | ↓ |
+| B | wet_pc_sg2 | Wetland % group 2 | 0.611 | 0.705 | ↑ |
+| B | wet_pc_sg1 | Wetland % group 1 | 0.598 | 0.700 | ↑ |
+| B | inu_pc_smx | Inundation max | 0.589 | 0.625 | ↑ |
+| B | dis_m3_pyr | Discharge annual | 0.582 | 0.563 | ↓ |
+| B | dis_m3_pmx | Discharge monthly max | 0.535 | 0.559 | ↑ |
+| B | ria_ha_ssu | River area (local) | 0.485 | 0.591 | ↑ |
+| B | dor_pc_pva | Degree of regulation | 0.475 | 0.422 | ↓ |
+| C | pet_mm_syr | PET annual | 0.988 | 0.997 | ↑ |
+| C | tmp_dc_syr | Temperature annual | 0.981 | 0.996 | ↑ |
+| C | snw_pc_syr | Snow cover annual | 0.975 | 0.993 | ↑ |
+| C | ari_ix_sav | Aridity index | 0.973 | 0.992 | ↑ |
+| C | aet_mm_syr | AET annual | 0.967 | 0.993 | ↑ |
+| C | prm_pc_sse | Permafrost % | 0.959 | 0.979 | ↑ |
+| C | cmi_ix_syr | Climate moisture index | 0.952 | 0.988 | ↑ |
+| C | pre_mm_syr | Precipitation annual | 0.921 | 0.978 | ↑ |
+| C | for_pc_sse | Forest cover % | 0.858 | 0.892 | ↑ |
+| D | hdi_ix_sav | HDI | 0.987 | 0.995 | ↑ |
+| D | gdp_ud_sav | GDP mean | 0.943 | 0.986 | ↑ |
+| D | ppd_pk_sav | Population density | 0.862 | 0.913 | ↑ |
+| D | pst_pc_sse | Pasture % | 0.860 | 0.897 | ↑ |
+| D | crp_pc_sse | Cropland % | 0.849 | 0.899 | ↑ |
+| D | hft_ix_s09 | Human footprint 2009 | 0.819 | 0.847 | ↑ |
+| D | nli_ix_sav | Nighttime lights | 0.622 | 0.700 | ↑ |
+
+I range at L6: 0.475 (degree of regulation) – 0.988 (PET). All variables show meaningful positive spatial autocorrelation; none are near zero or negative.
+
+---
+
+### SW.2 — Scale direction: 36 ↑, 4 ↓
+
+**Date**: 2026-05-17
+
+The predominant behaviour (36/40 variables) is ↑ — spatial autocorrelation increases with finer resolution, consistent with the climate-gradient mechanism established for aridity. The 4 ↓ variables all share network- or infrastructure-topology structure:
+
+| Variable | L6 | L8 | Δ | Mechanism |
+|---|---|---|---|---|
+| dis_m3_pyr | 0.582 | 0.563 | −0.019 | Watershed-divide effect (established, DIS.4) |
+| dis_m3_pmn | 0.614 | 0.573 | −0.041 | Same mechanism; baseflow more divide-sensitive than annual mean |
+| dor_pc_pva | 0.475 | 0.422 | −0.053 | Dams are point features; at L8 a regulated basin is small and surrounded by many unregulated neighbours — point anomaly character sharpens, coherence drops |
+| slt_pc_sav | 0.964 | 0.962 | −0.002 | Effectively flat; large-scale loess belts and alluvial plains are already well-captured at L6. The ↓ sign is not substantively meaningful at this magnitude |
+
+**Rule**: scale direction ↓ is diagnostic of network/infrastructure topology, not gradient structure. Variables with ↓ direction will show I *decreasing* as resolution increases because finer scale resolves more discontinuities. All other variable types default to ↑.
+
+---
+
+### SW.3 — Notable within-band findings
+
+**Date**: 2026-05-17
+
+**Erosion rate largest absolute scale gain** (Δ+0.181): ero_kh_sav 0.741→0.922, the largest absolute increase of any variable. Erosion is slope-driven; at L8 steep and flat basins are unambiguous rather than averaged.
+
+**Karst and glacier sharpen similarly** (Δ≈+0.16 each): geologically and climatically bounded features — karst limestone outcrops, alpine/polar ice — that are smeared across coarser basin boundaries at L6 but resolve clearly at L8.
+
+**Discharge trio: three variables, three scale directions**:
+- Annual mean ↓ (divide effect on cumulative flow)
+- Monthly min ↓ (baseflow even more divide-sensitive — largest ↓ among discharge variables)
+- Monthly max ↑ (peak flood pulse; at L8 small basins within a river corridor all experience the same flood event simultaneously, sharpening the HH chain along mainstems)
+
+**Band C ceiling at L8**: PET, temperature, snow, aridity, AET all reach I ≥ 0.992 at L8 — effectively maximum spatial autocorrelation. These variables have no meaningful variation left to resolve at finer scale; they are already near-perfectly spatially locked.
+
+**Silt anomaly within soil texture**: clay ↑ (+0.030) and sand ↑ (+0.030) but silt ↓ (−0.002). Silt is associated with large-scale loess deposits and river floodplains that are geomorphic features captured at L6. Clay and sand have more local substrate determinants that resolve sharper at L8.
+
+**Band D as high as Band C**: HDI (0.987/0.995) and GDP (0.943/0.986) reach values comparable to PET and temperature. Wealth and development autocorrelate at continental scale as strongly as climate. The spatial co-clustering of D and C variables at L6 is an empirical fact; its interpretation belongs to the polity phase, not here.
+
+**dor_pc_pva highest outlier%**: 5.93% at L6 — the highest outlier percentage in the sweep. Degree of regulation is a point-feature variable; its HL pattern (one regulated basin surrounded by unregulated neighbours) is more prevalent than for any other variable. Potentially the most spatially locally-specific signal in the dataset.
+
+---
+
 ## Methods and conventions
 
 ### METH.1 — Never use GeoDa GAL files for PySAL weights
@@ -218,3 +317,14 @@ For aridity by contrast: HH and LL percentages barely move across scales (large 
 | LISA cluster map render | ~seconds | not timed |
 
 L8 LISA at 20s is far faster than anticipated (estimated 1–2 hours). The M5 is effectively interactive for all operations in this pipeline. Update any documentation that still refers to L8 as "kick it off and walk away."
+
+---
+
+### METH.4 — BasinATLAS -9999 sentinel destroys Moran's I even in small numbers
+
+**Date**: 2026-05-17
+**Finding**: BasinATLAS stores NoData as integer -9999. In `snw_pc_syr`, only 5 out of 16,397 basins (0.03%) carried this sentinel. Treated as real values, they produced z-scores of ≈ −500, pulling the Moran scatter slope to near zero (I = 0.021 instead of the correct 0.975). The sentinel also blocked the log-transform path (`min ≥ 0` check fails at -9999), compounding the error.
+
+Affected columns confirmed in basin06: `snw_pc_syr`, `slp_dg_sav`, `sgr_dk_sav`, `cly_pc_sav`, `slt_pc_sav`, `snd_pc_sav`, `soc_th_sav` (sentinel counts 5–757).
+
+**Rule**: Mask `vals[vals == -9999] = np.nan` before any computation, before applying scale factors. One sentinel in 16k basins is enough to invalidate a spatial statistic. Previously noted in EDA phase but not carried into ESDA scripts — now enforced in `12_spatial_moran.py`.
