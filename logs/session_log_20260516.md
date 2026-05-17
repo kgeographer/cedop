@@ -84,7 +84,7 @@ L8: individual river corridors visually traceable. NS zones (interfluves) promin
 
 Added to `spatial/esda_findings.md`:
 
-- **DIS.1** — Research question: interfluve NS zones and settlement patterns (flagged for x_polity phase — Karl noted Mesopotamia as the canonical interfluve case; discharge LISA class is a meaningful descriptor for historical place analysis beyond the discharge value itself)
+- **DIS.1** — Research question: interfluve NS zones and settlement patterns (flagged for polity phase — Karl noted Mesopotamia as the canonical interfluve case; discharge LISA class is a meaningful descriptor for historical place analysis beyond the discharge value itself)
 - **DIS.2** — Global I: network topology produces ~0.41 lower I than climate gradients
 - **DIS.3** — Log transform is not cosmetic for discharge: Δ=+0.18 (vs aridity +0.010)
 - **DIS.4** — Scale direction reversal: discharge I ↓ with finer resolution (opposite of aridity)
@@ -98,4 +98,4 @@ Added to `spatial/esda_findings.md`:
 - Commit current state
 - Next variable: likely a climate variable (runoff, precipitation) for further calibration, or a terrain variable (elevation/slope) to contrast with both climate and network-topology structure
 - Scripted pipeline (`scripts/edop/explore/12_spatial_moran.py`) deferred until Karl has seen enough contrasting variables to build intuitions
-- x_polity flag: test LISA discharge class distribution of D-PLACE societies / Cliopatria polity centroids against global basin baseline; subsistence type filter recommended
+- polity flag: test LISA discharge class distribution of D-PLACE societies / Cliopatria polity centroids against global basin baseline; subsistence type filter recommended

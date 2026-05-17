@@ -195,7 +195,7 @@ Completed Band T (Tasks 7–11): (7) eVolv2k v4 distribution and aggregation des
 
 Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is silently wrong for BCE queries — needs `climate_note` disclosure; (b) population density may not belong in an environmental signature; (c) EarthStat/HYDE spatial divergence at agricultural hotspot sub-basins; (d) Pinatubo calibration text for narrative layer prompt; (e) LMR geographic proxy bias disclosure for API docs — all flagged for October 2026 expert meeting or pre-release documentation.
 
-Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until x_polity phase complete.
+Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until polity phase complete.
 
 ## Current Work — `esda` branch, as of 2026-05-15
 
@@ -243,7 +243,7 @@ Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `
 
 **Scale notes**: On M5 (2026): weights build ~5 min, LISA ~20s at L8 — fully interactive. Earlier estimates of 1–2 hours are obsolete.
 
-**Then: `x_polity`** (after x_spatial complete)
+**Then: `polity` phase** (after esda complete)
 - Summary tuples per basin [A-3, B-2, ..., T-7]
 - Polity payload management: area-weighted signatures for polygon queries (Cliopatria/Seshat)
 - Scale sensitivity: L6 vs L8 for polity signatures
