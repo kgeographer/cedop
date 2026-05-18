@@ -554,3 +554,137 @@ These are internally consistent descriptions of the same physical reality (cold 
 **Atacama and Pampas share LL in ari×pre**: both are below the global humid-tropical mean on both aridity index and precipitation. The Atacama is hyperarid; the Pampas is productive temperate grassland. The LL class correctly describes their structural position (outside the humid zone) but says nothing about whether the dryness is ecologically lethal or merely moderate.
 
 **General rule**: LISA class is a necessary but not sufficient descriptor for a place in an EDOPS signature. A researcher seeing `ari×pre: LL` for a polity location should not infer "desert" — only "below global humid average on both metrics." The raw signature values provide the magnitude; the LISA class provides the structural position. Both together enable meaningful environmental characterization.
+
+---
+
+## Phase 4 — Regional stratification (Cells 15–17)
+
+Notebook: `notebooks/edop/spatial/06_bivariate_phase4_l6.ipynb`. Same weights and permutation settings as global Phase 4. Regions: Mediterranean (n=221), Monsoon Asia/Indomalaya (n=1046), Tibetan/cold-arid (n=369). Subset Queen weights rebuilt per region; islands dropped before fitting.
+
+---
+
+### BV.14 — 3×5 I_BV grid: full reference table
+
+**Date**: 2026-05-18
+
+| Pair | Mediterranean | Monsoon Asia | Tibetan/cold-arid | Global |
+|---|---|---|---|---|
+| ari×pre | +0.824 | +0.813 | +0.626 | +0.578 |
+| tmp×snw | −0.470 | −0.217 | **−0.005 NS** | −0.865 |
+| hdi×gdp | +0.688 | +0.422 | +0.620 | +0.581 |
+| ele×slp | **+0.062 NS** | +0.485 | **−0.141** | +0.423 |
+| pre×aet | +0.836 | +0.854 | +0.753 | +0.863 |
+
+NS = not significant (p > 0.05). All other cells p = 0.001–0.002.
+
+**Finding**: Two cells fail significance (ele×slp Mediterranean, tmp×snw Tibetan). One sign reversal (ele×slp Tibetan). The "near-redundant" tier from BV.7 does not hold uniformly across regions: tmp×snw collapses to NS in the cold-arid zone despite being the globally strongest coupled pair.
+
+---
+
+### BV.15 — tmp×snw: progressive regional decoupling; global near-redundancy collapses in Tibetan zone
+
+**Date**: 2026-05-18
+
+| Region | I_BV | p |
+|---|---|---|
+| Global | −0.865 | 0.001 |
+| Mediterranean | −0.470 | 0.001 |
+| Monsoon Asia | −0.217 | 0.001 |
+| Tibetan/cold-arid | −0.005 | 0.459 NS |
+
+**Finding**: The global near-redundancy attenuates monotonically from Mediterranean to Monsoon Asia to Tibetan, where it collapses to NS. Within the cold-arid plateau, all basins are cold — temperature variance is compressed — so temperature does not predict snow cover. Snow distribution is governed by precipitation (monsoon moisture on southern Himalayan flanks vs dry plateau interior), which varies independently of temperature within the region.
+
+The progressive attenuation (−0.865 → −0.470 → −0.217 → −0.005) reflects a range-compression effect: as the regional sample becomes more exclusively cold, the global warm/cold contrast that drives the coupling shrinks. The practical implication — snw non-redundant with tmp at cold sites — is real regardless of mechanism.
+
+**Implication**: The "near-redundant" tier for tmp×snw (BV.7) must be treated as context-dependent. In cold-arid and high-altitude regions, both variables carry independent information. The rubric cannot drop snw from signatures for Tibetan Plateau, Central Asian steppe, or Andean highland sites. This is the strongest single-cell result in the regional grid — a globally dominant coupling becoming locally invisible.
+
+---
+
+### BV.16 — ele×slp: Mediterranean NS, Tibetan sign reversal, Monsoon Asia amplification
+
+**Date**: 2026-05-18
+
+| Region | I_BV | p |
+|---|---|---|
+| Global | +0.423 | 0.001 |
+| Mediterranean | +0.062 | 0.114 NS |
+| Monsoon Asia | +0.485 | 0.001 |
+| Tibetan/cold-arid | −0.141 | 0.002 |
+
+**Finding**: Three structurally distinct patterns from a single pair.
+
+**Mediterranean NS**: ele and slp are spatially independent across the Mediterranean landscape. The realm is a heterogeneous patchwork — coastal plains, river valleys, and upland ranges (Atlas, Apennines, Pyrenees, Balkans) distributed without a systematic continental-gradient structure. The African Plateau HL signal that drives the global coupling is absent; the heterogeneous microgeography cancels within-region at L6.
+
+**Tibetan sign reversal (−0.141)**: High-elevation basins cluster with low-slope neighbours within this region. The plateau interior is elevated but flat, adjacent to other flat plateau basins. This is the within-region expression of the global HL class identified in BV.11 — the sign reversal directly confirms that the plateau mechanism (not mountain-building) governs ele×slp coupling in this zone. Elevation and slope are anti-correlated within the plateau: high ele → low-slp neighbourhood.
+
+**Monsoon Asia amplification (+0.485)**: The Himalayan orogeny creates a coherent HH zone (high ele + steep, actively uplifting fronts) adjacent to a large LL zone (Indo-Gangetic plain, Mekong/Irrawaddy deltas). The mountain-lowland contrast is unambiguous at L6 and exceeds the global average coupling.
+
+**Implication**: For Mediterranean-focused historical signatures, ele and slp must be treated as fully independent variables — neither redundant nor structurally coupled. For Tibetan/highland signatures, the sign reversal warns against applying global-scale redundancy logic. The "genuinely distinct" global tier (BV.7) is correct but masks qualitatively different regional structures.
+
+---
+
+### BV.17 — ari×pre: amplified in all three regions; no reversal (contrast with T×P)
+
+**Date**: 2026-05-18
+
+| Region | I_BV | p |
+|---|---|---|
+| Global | +0.578 | 0.001 |
+| Mediterranean | +0.824 | 0.001 |
+| Monsoon Asia | +0.813 | 0.001 |
+| Tibetan/cold-arid | +0.626 | 0.001 |
+
+**Finding**: All three sampled regions exceed the global I_BV — the global scalar is the floor, not the ceiling. Unlike T×P, which reversed sign in the Mediterranean (BV.3, I_BV = −0.250), ari×pre maintains positive coupling everywhere and is amplified.
+
+The contrast with T×P is physically transparent: the aridity index (P/PET) shares the precipitation signal with the pre variable. Even in the Mediterranean — where summer drought inverts T×P — both aridity index and precipitation vary in the same direction across the regional moisture gradient (wetter Atlantic-influenced margins vs drier Saharan margins). The summer-drought seasonality cannot invert ari×pre because both metrics reflect overall water availability, not seasonal timing.
+
+The Monsoon Asia LISA map (bimodal geographic partition): Indian subcontinent = LL (semi-arid, both metrics below regional mean); equatorial maritime SE Asia = HH (perennially wet, both metrics above mean); mainland SE Asia interior = NS transition zone. This clean split — not a gradient but two coherent sub-environment clusters — drives I_BV = +0.813, and explains why ari×pre here is strongly significant while T×P for this realm was NS in Phase 3 (warm vs wet signals cancelled; moisture vs moisture signals reinforce).
+
+Tibetan +0.626 is the lowest regional value: LL concentration dominates (plateau cold-arid, both metrics consistently low), with less gradient variation than the moisture-gradient realms. The global scalar (0.578) being below all three regional values confirms that heterogeneous transition zones globally pull the aggregate down.
+
+**Implication**: The "genuinely distinct" tier for ari×pre holds in all sampled regions. No context-dependence found. The regional amplification pattern also confirms the global finding (BV.8) that aridity index and precipitation are non-redundant: their structural coupling is regionally coherent but the information each adds beyond the other is geographically specific.
+
+---
+
+### BV.18 — pre×aet: most geographically stable pair; Mediterranean paradox resolved
+
+**Date**: 2026-05-18
+
+| Region | I_BV | p |
+|---|---|---|
+| Global | +0.863 | 0.001 |
+| Mediterranean | +0.836 | 0.001 |
+| Monsoon Asia | +0.854 | 0.001 |
+| Tibetan/cold-arid | +0.753 | 0.001 |
+
+**Finding**: pre×aet maintains strong positive coupling in all three regions — the smallest regional spread of any pair (range 0.101 vs tmp×snw range 0.860). No sign reversal, no NS result. This is the most geographically robust coupling in Phase 4.
+
+**Mediterranean paradox resolved**: BV.12 noted that Mediterranean basins are NS at the global scale because annual totals for both variables place them in the middle of the global distribution. The regional I_BV = +0.836 is not contradictory: global NS reflects distribution position; regional I_BV reflects within-region structure. Within the Mediterranean, the gradient from wet Atlantic margins and Alpine-foreland basins (HH: southern France, northern Italy, Adriatic) to dry Levantine margins (LL: Israel, Lebanon coast, Nile margin) is coherent on both P and AET. The HL patch on the Syria/Lebanon coast (Lebanese mountains, Syrian coastal range) marks high-P orographic basins surrounded by low-AET Syrian semi-arid interior — a sharper topographic boundary than anywhere in western Anatolia at this scale. Most of the Mediterranean heartland (Spain, central Italy, Greece, Turkey) is NS even within the region — both variables are moderate, contributing no spatial lag signal. The historically dense core of the Mediterranean world sits in the NS zone; pre and aet annual totals provide minimal discriminating power for classical-period sites.
+
+**Tibetan attenuation (0.753)**: Cold energy-limitation partially decouples AET from P — temperature controls the growing season length and thus evaporative demand more than precipitation does. Strong but attenuated.
+
+**Implication**: The "near-redundant" tier for pre×aet holds globally and in all sampled regions. This is the most robust redundancy finding of Phase 4.
+
+---
+
+### BV.19 — Cross-regional synthesis: stable vs context-dependent pairs
+
+**Date**: 2026-05-18
+
+| Pair | Global tier | Regional stability |
+|---|---|---|
+| pre×aet (+0.863) | Near-redundant | **Stable** — holds in all regions; smallest spread |
+| tmp×snw (−0.865) | Near-redundant | **Context-dependent** — collapses to NS in Tibetan |
+| hdi×gdp (+0.581) | Genuinely distinct | **Stable** — amplified or comparable in all regions |
+| ari×pre (+0.578) | Genuinely distinct | **Stable** — amplified in all regions; no reversal |
+| ele×slp (+0.423) | Genuinely distinct | **Context-dependent** — NS in Mediterranean, sign reversal in Tibetan |
+
+**Finding**: Two of five pairs are context-dependent rather than globally stable.
+
+**tmp×snw**: Near-redundant globally, independent in cold-arid regions. The "near-redundant" tier is downgraded to context-dependent for high-altitude and cold-arid zones. Both variables carry distinct information for signatures in these regions.
+
+**ele×slp**: Genuinely distinct globally, but the nature of the distinction changes by region. Mediterranean NS means the variables are unrelated at regional scale; Tibetan sign reversal means the structural relationship inverts (plateau vs mountain-building mechanism). The global "genuinely distinct" label is correct but the reason differs by region.
+
+Three pairs are regionally stable (pre×aet, ari×pre, hdi×gdp) — their global tier assignment holds in all sampled regions without modification.
+
+**Methodological extension of BV.6**: Phase 3 established that global I_BV is insufficient as a redundancy filter. Phase 4 regional analysis adds a second layer: the tier assignment itself (near-redundant vs genuinely distinct) can be context-dependent. A pair's global tier describes average behavior across the full variable range; regional analysis reveals where the average obscures locally different structure. For variable selection in polity-phase signatures, tier assignments for tmp×snw and ele×slp should carry a regional qualifier.
