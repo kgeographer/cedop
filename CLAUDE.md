@@ -233,13 +233,14 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 
 ### Completed 2026-05-17
 - `scripts/edop/esda/12_spatial_moran.py`: Phase 1 univariate sweep — 40 Band A–D variables × L6+L8
-- **Key outputs**: `spatial/variable_characterization.csv` (80 rows), `output/edop/esda/lisa_classifications.parquet` (7.6M rows L8)
-- **Key findings**: 36/40 variables ↑ with finer resolution; 4 ↓ (discharge annual/min, degree of regulation, silt≈flat); Band C ceiling at L8 (I≥0.992); Band D (HDI, GDP) as autocorrelated as climate; erosion rate largest scale gain (+0.181); dor_pc_pva highest outlier% (5.93%)
-- **Bug fixed**: BasinATLAS -9999 sentinel destroyed snw_pc_syr I (0.021→0.975 after fix); affects 7 columns
-- SW.1–3, METH.4 added to `spatial/esda_findings.md`
-- See `logs/session_log_20260517.md` (to be written)
+- `notebooks/edop/spatial/04_spatial_typology.ipynb`: Phase 2 typology — OUTLIER_HIGH→3.00; group counts: continental-gradient=21, mixed=15, network-topology=3, local-anomaly=1; `spatial/first_cut_typology.csv`
+- `notebooks/edop/spatial/05_bivariate_TP_l6.ipynb`: Phase 3 bivariate T×P — I_BV=+0.315 global; Mediterranean I_BV=−0.250 (sign reversal); Tibetan I_BV=+0.608 (LL); Monsoon Asia NS (p=0.076)
+- `docs/design/variable_selection_rubric_issues.md`: design doc on typology semantics, historical validity, environment/culture boundary, expert system risk — for Opus 4.7 discussion
+- SW.1–3, METH.4, BV.1–6 added to `spatial/esda_findings.md`
+- **Key methodological finding**: Mediterranean I_BV = −0.25 (sign reversal vs global +0.315) validates Opus argument: global concordance scalar is not a valid redundancy filter
+- See `logs/session_log_20260517.md`
 
-### Next: Phase 2 — spatial typology notebook
+### Next: Phase 4 — selected bivariate pairs (Karl sign-off required)
 
 **Then: `polity` phase** (after esda complete)
 - Summary tuples per basin [A-3, B-2, ..., T-7]
