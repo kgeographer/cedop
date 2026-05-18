@@ -432,3 +432,125 @@ Notebook: `notebooks/edop/spatial/05_bivariate_TP_l6.ipynb`. Queen contiguity we
 **Methodological consequence**: Using global I_BV as a scalar redundancy measure (e.g., "if I_BV(T,P) is high, drop one") would be wrong. The Mediterranean case shows the relationship inverts at the regional scale. Two variables can have positive global co-distribution and locally anti-correlated structure. The appropriate tool for redundancy analysis is local bivariate Moran's I with geographic stratification, not a global scalar.
 
 This finding validates Karl's correction (session log 2026-05-17) against using global concordance as a variable-selection filter — an assumption that had carried over uncorrected from earlier EDA work. Opus 4.7 affirmed it; CC had held the wrong framing. Phase 4 proceeds using stratified local bivariate analysis rather than global I_BV pairs.
+
+---
+
+## Phase 4 — Bivariate: Five continental-gradient pairs (L6)
+
+Notebook: `notebooks/edop/spatial/06_bivariate_phase4_l6.ipynb`. Same weights, seed, permutations as Phase 3. Nine variables loaded: ari_ix_sav (log-transformed, skew 7.87), pre_mm_syr, tmp_dc_syr (×0.1), snw_pc_syr, hdi_ix_sav, gdp_ud_sav, ele_mt_sav, slp_dg_sav, aet_mm_syr. Only ari_ix_sav triggered log transform (skew > 5 threshold).
+
+---
+
+### BV.7 — Phase 4 global I_BV summary and redundancy tiers
+
+**Date**: 2026-05-17
+
+| Pair | I_BV | Dominant LISA | Tier |
+|---|---|---|---|
+| tmp×snw | −0.865 | HL 51.5% / LH 22.6% | Near-redundant |
+| pre×aet | +0.863 | LL 29.4% / HH 22.3% | Near-redundant |
+| hdi×gdp | +0.581 | LL 30.5% / HH 13.9% | Genuinely distinct |
+| ari×pre | +0.578 | LL 24.3% / HH 16.6% | Genuinely distinct |
+| ele×slp | +0.423 | LL 26.2% / HH 10.8% | Genuinely distinct |
+
+**Finding**: Pairs fall into two tiers. Near-redundant (|I_BV| > 0.85): one variable largely derivable from the other globally. Genuinely distinct (I_BV 0.42–0.58): meaningful geographic divergence, both variables carry information a signature needs. No pair has I_BV near zero — all five show real positive or negative spatial coupling.
+
+**Note on I_BV = 0.581 (hdi×gdp) ≈ 0.578 (ari×pre)**: identical coupling strength across two completely unrelated variable domains. The global I_BV scalar carries no information about *which* geography drives the coupling — the maps are entirely different despite the same statistic.
+
+---
+
+### BV.8 — ari×pre: not redundant; subarctic HL is the key signal
+
+**Date**: 2026-05-17
+
+**LISA**: LL=24.3% (global arid belt), HH=16.6% (humid tropics), **HL=7.9%**, LH=0.0%
+
+**Finding**: The 7.9% HL class is the subarctic/arctic zone — basins with high aridity index (humid, because PET is very low in cold climates) but moderate-precipitation surroundings. The aridity index = P/PET; when PET is suppressed by cold, even moderate annual precipitation yields a high aridity index. But the neighbours' raw precipitation is also only moderate. Result: aridity metric says "humid here"; precipitation says "this is not a wet neighbourhood."
+
+Hot-arid zones (Sahara, Arabia) are LL on both metrics. Cold-arid zones (subarctic, high-altitude Asian interior) are LL on precipitation but HL on aridity index. This divergence makes aridity and precipitation non-redundant: precipitation alone cannot distinguish hot-desert arid from cold-steppe arid. The aridity index can.
+
+**Map observation** (Karl, 2026-05-17): Atacama and Pampas share LL class despite being environmentally distinct (hyperarid desert vs productive temperate grassland). Both fall below the global humid-tropical mean on both metrics. This illustrates BV.13 below.
+
+**Implication**: For signatures at high-latitude or high-altitude historical sites (Novgorod, Viking Scandinavia, subarctic Siberian cultures), aridity index and precipitation give qualitatively different environmental characterizations. Both are needed.
+
+---
+
+### BV.9 — tmp×snw: near-redundant; latitude partition map
+
+**Date**: 2026-05-17
+
+**LISA**: **HL=51.5%** (warm/snow-free), **LH=22.6%** (cold/snowy), LL=1.8%, HH=0.0%, NS=24.2%
+
+**Finding**: The strongest coupling (absolute value) in the dataset. The LISA map is essentially a latitude partition — warm=snow-free (HL) below ~55-60°N, cold=snowy (LH) above, with a transition NS band in the temperate zone. HH (warm+snowy neighbourhood) is geometrically impossible and confirms as zero. LL=1.8% = cold-arid interiors (Gobi in winter) where cold coexists with low snow.
+
+The relationship is near-mechanistic: temperature determines whether precipitation falls as snow and whether snow persists. Snow cover is largely derivable from temperature. **snw is near-redundant with tmp** in a global signature.
+
+**Exceptions where snw adds information beyond tmp**:
+1. The NS transition band (35-60°N) — where seasonality creates warm average annual temperature but significant winter snow. Many of the densest historical settlement zones sit here (Rome 42°N, Kaifeng 35°N, Paris 49°N, London 51°N).
+2. Altitude-driven anomalies (Andes spine, Tibetan Plateau margins) — cold/snowy at subtropical latitudes due to elevation. But these are already captured by ele in Band A.
+
+**Rubric implication**: In the default signature, snw provides marginal additional information beyond tmp for most historical locations. However, for the transition band (35-60°N) where medieval and early modern polities are concentrated, annual mean temperature partially masks winter snow conditions relevant to agriculture, mobility, and siege conditions.
+
+---
+
+### BV.10 — hdi×gdp: not redundant; EDOP/CDOP boundary observation
+
+**Date**: 2026-05-17
+
+**LISA**: LL=30.5% (Sub-Saharan Africa, South/SE Asia), HH=13.9% (North America, Russia, Australia), HL=4.0%, LH=0.0%, NS=51.7%
+
+**Finding**: Moderate positive coupling (I_BV=+0.581) despite both variables having individually very high univariate I (HDI=0.987, GDP=0.943). The moderate bivariate I reflects real geographic divergence: Russia is HH (Soviet human capital investment creates high HDI relative to GDP neighbourhood); former Soviet Central Asian states show HL (high education legacy, lower market income); Sub-Saharan Africa is the largest coherent LL zone globally. Western Europe is largely NS — internal variation is too small relative to the global range to produce LISA significance at L6 scale.
+
+**EDOP/CDOP boundary** (Karl, 2026-05-17): The interesting findings from this map — Russia HH explained by Soviet institutional history, HL patches explained by political-economic legacy — are not physical geography findings. They require historical-cultural context that CDOP is designed to provide. Band D variables sit at the EDOP/CDOP boundary: their spatial clustering is an empirical geographic fact (measurable by ESDA), but the explanation belongs to a different analytical domain.
+
+**Rubric implication**: Band D should be opt-in rather than default for historically-framed queries. For contemporary environmental queries it is appropriate; for historical polity analysis it describes the modern world overlaid on where the polity was located, which can mislead.
+
+---
+
+### BV.11 — ele×slp: genuinely distinct; African Plateau as dominant HL signal
+
+**Date**: 2026-05-17
+
+**LISA**: LL=26.2% (flat lowlands), HH=10.8% (mountain ranges), **HL=3.3%** (plateau environments), **LH=4.6%** (piedmont zones), NS=55.1%
+
+**Finding**: The dominant HL signal is the **African Plateau**, not the Tibetan Plateau as predicted. Africa is a "plateau continent" — ancient Precambrian basement rock sitting at 500–2000m elevation with relatively low relief except at escarpment edges. At L6 averaging, African interior basins register as high elevation but surrounded by low-slope neighbours. The Tibetan HL signal exists but is smaller in geographic extent than the African Plateau.
+
+LH (4.6%) > HL (3.3%): more piedmont/foothill basins (low elevation, steep-slope neighbourhood — Gangetic Plain/Himalayan foot, Great Plains/Rocky Mountain front, Amazonian piedmont) than plateau basins. Geographically expected.
+
+Mountain ranges (HH: Rockies, Andes, Himalayan fringe, Alps, Ethiopian escarpment), lowland plains (LL: Amazon, Congo, Siberian plain, Gangetic plain, Central Asian steppe), and plateau environments (HL: African Plateau, Tibetan Plateau, Colorado Plateau) represent three topographic regimes that require **both** elevation and slope to distinguish. A signature containing only elevation would conflate the Tibetan Plateau with the Alps; slope alone would conflate the African Plateau with the Gangetic plain.
+
+**Rubric implication**: ele and slp are non-redundant across the full variable range. For historical polity analysis the distinction matters concretely: a polity on the African Plateau is at altitude but on accessible, agricultural terrain; a polity in the Alps is at altitude with difficult, steep terrain. Different constraints, same elevation value.
+
+---
+
+### BV.12 — pre×aet: near-redundant globally; Mediterranean NS finding
+
+**Date**: 2026-05-17
+
+**LISA**: LL=29.4% (arid zones + cold zones), HH=22.3% (humid tropics), **HL=1.9%** (energy-limited cold maritime), LH=0.0%, NS=46.3%
+
+**Finding**: Near-redundant globally (I_BV=+0.863). Both variables track water availability: in water-limited environments AET ≈ P (almost perfectly coupled); in energy-limited humid tropics both AET and P are high (coupled in the same direction). The 1.9% HL = cold maritime coasts (southern Norway, southern Chile) where energy limitation suppresses AET well below precipitation.
+
+**Mediterranean is NS**: annual totals of precipitation and AET are both moderate in the Mediterranean, placing the region in the middle of the global distribution. The summer-drought pattern — seasonally high P in winter, near-zero in summer; AET constrained year-round by temperature seasonality — is invisible at annual aggregation. For Mediterranean-focused analysis, **seasonal or monthly precipitation and AET are more informative than annual means**.
+
+Cold subarctic is LL for pre×aet (low absolute P AND low AET) — consistent with the ari×pre HL for the same zone. The aridity metric calls the subarctic "humid" (P/PET high); the pre×aet relationship calls it "relatively dry" (both metrics below global mean). Both descriptions are physically accurate; the apparent contradiction reflects different reference frames (see BV.13).
+
+**Rubric implication**: precipitation and AET are largely interchangeable in a Band C signature for tropical through temperate research questions. For Mediterranean-focused queries, neither annual metric is sufficient — seasonal disaggregation is required. This is an argument for including CMI (climate moisture index, which captures seasonality) alongside or instead of annual AET in Mediterranean-region signatures.
+
+---
+
+### BV.13 — Cross-pair insight: LISA class = global structural position, not absolute character
+
+**Date**: 2026-05-17
+
+**Finding**: Two observations from the map review crystallize a general principle.
+
+**Subarctic zone — two different classes from two pairs**:
+- `ari×pre`: **HL** (high aridity index because P/PET is high; moderate-precip neighbourhood)
+- `pre×aet`: **LL** (low absolute precipitation AND low AET, both below global mean)
+
+These are internally consistent descriptions of the same physical reality (cold climate with moderate precipitation and very low evaporative demand). The aridity metric calls it "humid" relative to global PET; the absolute precipitation metric calls it "moderately dry." LISA class is always a statement about position in the global distribution of the variable in question, not a universal environmental classification.
+
+**Atacama and Pampas share LL in ari×pre**: both are below the global humid-tropical mean on both aridity index and precipitation. The Atacama is hyperarid; the Pampas is productive temperate grassland. The LL class correctly describes their structural position (outside the humid zone) but says nothing about whether the dryness is ecologically lethal or merely moderate.
+
+**General rule**: LISA class is a necessary but not sufficient descriptor for a place in an EDOPS signature. A researcher seeing `ari×pre: LL` for a polity location should not infer "desert" — only "below global humid average on both metrics." The raw signature values provide the magnitude; the LISA class provides the structural position. Both together enable meaningful environmental characterization.

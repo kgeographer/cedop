@@ -133,8 +133,46 @@ Validation test: the T×P coupling structure is well-understood before computing
 
 ---
 
+---
+
+## 6. Phase 4 — Five bivariate pairs (`06_bivariate_phase4_l6.ipynb`)
+
+### Pairs and global results
+
+| Pair | I_BV | Tier |
+|---|---|---|
+| tmp×snw | −0.865 | Near-redundant |
+| pre×aet | +0.863 | Near-redundant |
+| hdi×gdp | +0.581 | Genuinely distinct |
+| ari×pre | +0.578 | Genuinely distinct |
+| ele×slp | +0.423 | Genuinely distinct |
+
+### Key findings from global maps
+
+**tmp×snw (−0.865)**: The strongest coupling (absolute value) in the dataset. The LISA map is a latitude partition — HL (warm/snow-free) dominates at 51.5%, LH (cold/snowy) at 22.6%. Snow is near-redundant with temperature. The exception — the NS transition band 35–60°N — is precisely where historical polities are most dense.
+
+**pre×aet (+0.863)**: Near-redundant globally. Mediterranean is NS (annual totals hide the summer drought). Cold subarctic = LL (low absolute P and low AET). The 1.9% HL = cold maritime coasts (energy-limitation boundary). For Mediterranean research, seasonal disaggregation required.
+
+**ari×pre (+0.578)**: Not redundant. The 7.9% HL maps onto the subarctic — cold climates appear "humid" on the aridity index (P/PET high because PET is very low) but sit in moderate-precip surroundings. Hot-arid and cold-arid zones are indistinguishable by precipitation alone.
+
+**hdi×gdp (+0.581)**: Not redundant. Russia HH (Soviet human capital legacy), Sub-Saharan Africa LL, former Soviet Central Asia HL. These explanations cross into CDOP territory — Band D LISA patterns require historical-cultural context beyond physical geography. Band D should be opt-in for historical queries.
+
+**ele×slp (+0.423)**: Genuinely distinct. The dominant HL signal is the **African Plateau** (unexpected — predicted Tibetan). Africa's plateau-continent character produces more HL area than Tibet. Mountain ranges (HH), lowland plains (LL), and plateau environments (HL: Africa, Tibetan, Colorado) are three topographic regimes requiring both variables.
+
+### Cross-pair insight logged
+
+The subarctic zone is classified differently by ari×pre (HL) and pre×aet (LL) — internally consistent, reflecting different reference frames. Atacama and Pampas share LL in ari×pre despite very different environments. LISA class = global structural position, not absolute environmental character. Raw signature values essential alongside class. (BV.13 in esda_findings.md)
+
+### Observation: CDOP↔EDOP boundary
+
+The hdi×gdp map analysis led to the observation that Band D LISA interpretations require historical-institutional context (Soviet human capital, petrostates, etc.) that physical geography cannot provide. This is prospectus material for when CDOP comes online. Noted in esda_findings.md BV.10.
+
+### Regional analysis (Cells 15–17): deferred to next session
+
+---
+
 ## Next
 
-- Phase 4: selected bivariate pairs (Karl sign-off required before starting)
+- Phase 4 regional analysis (Cells 15–17) — deferred
 - Design document discussion with Opus 4.7 (`docs/design/variable_selection_rubric_issues.md`)
 - `polity` branch after ESDA complete

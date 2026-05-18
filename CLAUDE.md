@@ -237,10 +237,15 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - `notebooks/edop/spatial/05_bivariate_TP_l6.ipynb`: Phase 3 bivariate T×P — I_BV=+0.315 global; Mediterranean I_BV=−0.250 (sign reversal); Tibetan I_BV=+0.608 (LL); Monsoon Asia NS (p=0.076)
 - `docs/design/variable_selection_rubric_issues.md`: design doc on typology semantics, historical validity, environment/culture boundary, expert system risk — for Opus 4.7 discussion
 - SW.1–3, METH.4, BV.1–6 added to `spatial/esda_findings.md`
-- **Key methodological finding**: Mediterranean I_BV = −0.25 (sign reversal vs global +0.315) validates Karl's correction: global concordance scalar is not a valid redundancy filter (assumption carried forward incorrectly from EDA; affirmed by Opus 4.7)
+- **Key methodological finding**: Mediterranean I_BV = −0.25 (sign reversal vs global +0.315) validates Karl's correction: global concordance scalar is not a valid redundancy filter
+- `notebooks/edop/spatial/06_bivariate_phase4_l6.ipynb`: Phase 4 — 5 bivariate pairs; global maps complete; regional analysis (Cells 15–17) deferred
+- **Redundancy tiers**: near-redundant (tmp×snw −0.865, pre×aet +0.863); genuinely distinct (hdi×gdp +0.581, ari×pre +0.578, ele×slp +0.423)
+- **Key finding**: African Plateau dominates ele×slp HL class (not Tibetan as predicted); LISA class = global structural position not absolute character (BV.13)
+- **EDOP/CDOP boundary**: Band D (hdi/gdp) LISA patterns require historical-institutional context — opt-in for historical queries
+- BV.7–13 added to `spatial/esda_findings.md`
 - See `logs/session_log_20260517.md`
 
-### Next: Phase 4 — selected bivariate pairs (Karl sign-off required)
+### Next: Phase 4 regional analysis (deferred); Opus 4.7 discussion on `docs/design/variable_selection_rubric_issues.md`; then `polity` branch
 
 **Then: `polity` phase** (after esda complete)
 - Summary tuples per basin [A-3, B-2, ..., T-7]
