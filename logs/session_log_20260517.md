@@ -15,7 +15,7 @@ Karl raised the question: how does ESDA drive the actual research objectives (va
 **Conclusions**:
 - ESDA has two genuine payoffs: (a) a redundancy map — identifying which variables are spatially collinear and informationally interchangeable vs. genuinely distinct; (b) LISA classes as structural position descriptors (HH/LL/HL/LH/NS contextualises a basin's value within the global pattern, enabling questions like DIS.1's interfluve/settlement question)
 - ESDA does not directly drive the rubric — domain knowledge and correspondence tests do more work there
-- Opus 4.7 (consulted separately) correctly argued that global concordance is not a valid redundancy filter: two variables can co-vary globally but decouple meaningfully within specific regions. The right tool is local bivariate Moran's I, not global I_BV as a scalar. CC's earlier "use one, drop the rest" framing was wrong and is not carried forward
+- Karl raised and Opus 4.7 affirmed that global concordance is not a valid redundancy filter: two variables can co-vary globally but decouple meaningfully within specific regions. The right tool is local bivariate Moran's I, not global I_BV as a scalar. CC's earlier "use one, drop the rest" framing was wrong and is not carried forward
 
 **Practical implication**: Phase 1 sweep should be inclusive — exclude only categoricals, monthly arrays, and string fields. "Likely correlated" is not a valid exclusion criterion at the univariate stage.
 

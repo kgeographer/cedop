@@ -237,7 +237,7 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - `notebooks/edop/spatial/05_bivariate_TP_l6.ipynb`: Phase 3 bivariate T×P — I_BV=+0.315 global; Mediterranean I_BV=−0.250 (sign reversal); Tibetan I_BV=+0.608 (LL); Monsoon Asia NS (p=0.076)
 - `docs/design/variable_selection_rubric_issues.md`: design doc on typology semantics, historical validity, environment/culture boundary, expert system risk — for Opus 4.7 discussion
 - SW.1–3, METH.4, BV.1–6 added to `spatial/esda_findings.md`
-- **Key methodological finding**: Mediterranean I_BV = −0.25 (sign reversal vs global +0.315) validates Opus argument: global concordance scalar is not a valid redundancy filter
+- **Key methodological finding**: Mediterranean I_BV = −0.25 (sign reversal vs global +0.315) validates Karl's correction: global concordance scalar is not a valid redundancy filter (assumption carried forward incorrectly from EDA; affirmed by Opus 4.7)
 - See `logs/session_log_20260517.md`
 
 ### Next: Phase 4 — selected bivariate pairs (Karl sign-off required)

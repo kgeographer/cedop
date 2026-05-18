@@ -431,4 +431,4 @@ Notebook: `notebooks/edop/spatial/05_bivariate_TP_l6.ipynb`. Queen contiguity we
 
 **Methodological consequence**: Using global I_BV as a scalar redundancy measure (e.g., "if I_BV(T,P) is high, drop one") would be wrong. The Mediterranean case shows the relationship inverts at the regional scale. Two variables can have positive global co-distribution and locally anti-correlated structure. The appropriate tool for redundancy analysis is local bivariate Moran's I with geographic stratification, not a global scalar.
 
-This finding validates the Opus 4.7 argument (session log 2026-05-17) against using global concordance as a variable-selection filter, and justifies Phase 4 using stratified local bivariate analysis rather than global I_BV pairs.
+This finding validates Karl's correction (session log 2026-05-17) against using global concordance as a variable-selection filter — an assumption that had carried over uncorrected from earlier EDA work. Opus 4.7 affirmed it; CC had held the wrong framing. Phase 4 proceeds using stratified local bivariate analysis rather than global I_BV pairs.
