@@ -197,7 +197,7 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until polity phase complete.
 
-## Current Work — `esda` branch, as of 2026-05-17
+## Current Work — `esda` branch, as of 2026-05-19
 
 ### Completed 2026-05-03
 - Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
@@ -242,10 +242,23 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - **Redundancy tiers**: near-redundant (tmp×snw −0.865, pre×aet +0.863); genuinely distinct (hdi×gdp +0.581, ari×pre +0.578, ele×slp +0.423)
 - **Key finding**: African Plateau dominates ele×slp HL class (not Tibetan as predicted); LISA class = global structural position not absolute character (BV.13)
 - **EDOP/CDOP boundary**: Band D (hdi/gdp) LISA patterns require historical-institutional context — opt-in for historical queries
-- BV.7–13 added to `spatial/esda_findings.md`
+- BV.7–13 added to `logs/esda_findings.md`
 - See `logs/session_log_20260517.md`
 
-### Next: Phase 4 regional analysis (deferred); Opus 4.7 discussion on `docs/design/variable_selection_rubric_issues.md`; then `polity` branch
+### Completed 2026-05-19
+- `notebooks/edop/spatial/06_bivariate_phase4_l6.ipynb` Cells 15–17: Phase 4 regional analysis complete — 3×5 I_BV grid across Mediterranean, Monsoon Asia, Tibetan/cold-arid
+- **Key finding**: tmp×snw near-redundancy collapses to NS in Tibetan (I_BV −0.865 → −0.005); ele×slp sign-reversal in Tibetan; pre×aet and ari×pre stable across all regions
+- **Key finding**: HL patch in pre×aet Mediterranean = Lebanese mountains/Syrian coastal range (not Anatolian highlands as initially labelled)
+- BV.14–19 added to `logs/esda_findings.md`; Cell 18 summary updated
+- CHAR completion plan (`prompts/cc_char_completion_prompt.md`) reviewed; psycopg3 integer-NULL→0 bug documented; path corrections applied
+- `notebooks/edop/spatial/13_categorical_coherence.ipynb`: Phase 1 CHAR — join-count spatial coherence for lith_class (16 cls), pnv_majority (15 cls), wetland_class (12 cls, n=96,884 subset)
+- All 43 class-variable combinations significant at p=0.001; local coherence 90.8%–99.5% across all classes
+- **esda bug**: `Join_Counts_Local` IndexError with islands (Python 3.14); fallback: row-stochastic W·y ≥ 0.5 majority-match
+- `output/edop/spatial/13_categorical_coherence.csv`; `spatial/13_categorical_cluster_maps.png`
+- CAT.1–8 added to `logs/esda_findings.md`
+- See `logs/session_log_20260519.md`
+
+### Next: CHAR Phase 2 (`14_dist_sink_esda.ipynb`) then Phases 3–6 per `prompts/cc_char_completion_prompt.md`
 
 **Then: `polity` phase** (after esda complete)
 - Summary tuples per basin [A-3, B-2, ..., T-7]

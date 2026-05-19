@@ -688,3 +688,62 @@ Tibetan +0.626 is the lowest regional value: LL concentration dominates (plateau
 Three pairs are regionally stable (pre×aet, ari×pre, hdi×gdp) — their global tier assignment holds in all sampled regions without modification.
 
 **Methodological extension of BV.6**: Phase 3 established that global I_BV is insufficient as a redundancy filter. Phase 4 regional analysis adds a second layer: the tier assignment itself (near-redundant vs genuinely distinct) can be context-dependent. A pair's global tier describes average behavior across the full variable range; regional analysis reveals where the average obscures locally different structure. For variable selection in polity-phase signatures, tier assignments for tmp×snw and ele×slp should carry a regional qualifier.
+
+---
+
+## Categorical Spatial Coherence — `lith_class`, `pnv_majority`, `wetland_class`
+
+**Date**: 2026-05-19
+**Notebook**: `notebooks/edop/spatial/13_categorical_coherence.ipynb`
+**Method**: Queen contiguity weights, `use_index=True`; `esda.Join_Counts` per-class binarized (999 perms, seed=42); local coherence via neighbor-class-match fallback (row-stochastic W·y, threshold ≥50%). `Join_Counts_Local` unavailable due to indexing bug in this esda/Python-3.14 environment.
+
+---
+
+### CAT.1 — Variables excluded from join-count analysis (tautological)
+
+`ecoregion`, `biome`, and `freshwater_ecoregion_name` are spatial taxonomy variables — their boundaries *are* the spatial structure they encode. Running join-counts would confirm that classification schemes are spatially contiguous, which is circular, not empirical. The three variables tested (`lith_class`, `wetland_class`, `pnv_majority`) are independent empirical classifications that could in principle be spatially incoherent; the analysis establishes they are not.
+
+---
+
+### CAT.2–3 — lith_class: global and local coherence
+
+All 16 classes significant at p=0.001. Z-scores range 296–723; BB/mean_bb ratios range 2.9× (SU) to 33× (IG). Local coherence 90.8%–99.5%.
+
+Geologically interpretable differentiation:
+- **≥99%**: SU Unconsolidated Sediments (99.2%), MT Metamorphic (99.1%), IG Ice/Glaciers (99.5%) — large sedimentary platforms, metamorphic shields, glaciated regions form continuous geological provinces
+- **91–94%**: PB Basic Plutonic (90.8%), PI Intermediate Plutonic (93.8%) — batholiths and granitic intrusions occur as isolated bodies embedded in country rock; the lower coherence correctly reflects geological structure type, not data quality
+
+The 0.5–9.2% isolated fractions are real transition basins at formation boundaries. No class fails coherence.
+
+---
+
+### CAT.4–5 — pnv_majority: global and local coherence
+
+All 15 valid classes (class 99 Unclassified excluded) significant at p=0.001. Z-scores 448–638; local coherence 93.0%–98.8% — tightest range of the three variables (5.8 pp).
+
+Biome-belt classes (Desert 98.8%, Boreal evergreen 98.3%, Savanna 97.8%) are most coherent; lower tail is Polar/rock/ice (93.0%) and Temperate broadleaf evergreen (95.5%), which occur as geographically fragmented patches (high-altitude ice fields, coastal/montane rainforests) rather than continuous belts.
+
+---
+
+### CAT.6–7 — wetland_class: global and local coherence
+
+Analysis on n=96,884 non-null wetland subset (1,096 w_wet islands). All 12 classes significant at p=0.001. Z-scores 222–519 — lower than lith/pnv, reflecting smaller population and more fragmented wetland geography. Local coherence 91.5%–99.5% — widest range (8.0 pp).
+
+Functional differentiation:
+- **≥98%**: Swamp forest (99.3%), 25-50% wetland (99.5%), Wetland complex (99.2%), Freshwater marsh (98.5%) — continuous landscape features forming large wet zones
+- **91–95%**: Lake (91.5%), Coastal wetland (94.0%), Reservoir (94.4%) — isolated features scattered across non-wetland matrices
+
+Lake (91.5%) is the most isolated wetland type: a lake-class basin surrounded by river or marsh is common. Lowest z (221.7) despite largest class (n=27,528).
+
+---
+
+### CAT.8 — Cross-variable synthesis
+
+**All 43 class-variable combinations are globally significant at p=0.001 with no exceptions, and all produce local coherence >90%.** The three variables are appropriate EDOPS signature fields; none fail the spatial-coherence requirement.
+
+The lower-coherence classes in each variable (plutonic intrusions, fragmented polar/montane patches, isolated water features) are geographically the most interesting basins — transition zones and embedded features where a categorical label diverges from its neighbourhood. They are candidate sites for high-information EDOPS signatures.
+
+**Scale implication**: All three variables are regional-scale descriptors at L8. A basin's categorical class is highly predictive of its neighbourhood's class. The slider/discovery interface should treat categorical variables as region-selectors, not independent per-basin attributes.
+
+**Methodological fallback**: `esda.Join_Counts_Local` has an indexing bug (Python 3.14): `_statistic()` drops islands from LJC array (size 190,107) but `_crand_plus` iterates over full z (size 190,675), raising `IndexError` at index 190107. Fallback: deterministic majority-match classification using row-stochastic W·y ≥ 0.5. Global z-scores (222–723) confirm the class-level signal is real.
+
