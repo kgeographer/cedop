@@ -806,3 +806,56 @@ The near-zero HL fraction is a slider implication: selecting high dist_sink_km i
 Historical validity: stable on geological timescales.
 Typology: continental-gradient (I_L6=0.904, scale ↑, outlier%=0.44%).
 
+
+---
+
+## Phase 3 CHAR — Within-band Bivariate Redundancy (`15_bivariate_redundancy.ipynb`)
+
+All 11 pairs at L8, p=0.001. Outputs: `output/edop/spatial/bivariate_redundancy.parquet` (2,097,425 rows), `bivariate_redundancy_counts.csv`.
+
+### BVR.1 — S/U pairs: global I_BV reference grid
+
+| Pair | I_BV | HH% | LL% | HL% | LH% | NS% |
+|---|---|---|---|---|---|---|
+| T_yr s×u | 0.989 | 35.7 | 26.1 | 0.2 | 0.0 | 38.0 |
+| P_yr s×u | 0.963 | 17.5 | 33.2 | 0.2 | 0.0 | 49.1 |
+| Ari s×u | 0.978 | 20.7 | 18.9 | 0.3 | 0.0 | 60.1 |
+| HFT s×u | 0.826 | 18.4 | 33.0 | 0.3 | 0.3 | 48.1 |
+| Crop s×u | 0.867 | 15.2 | 44.4 | 0.1 | 0.4 | 39.9 |
+
+### BVR.2 — Same-band non-S/U pairs: global I_BV reference grid
+
+| Pair | I_BV | HH% | LL% | HL% | LH% | NS% |
+|---|---|---|---|---|---|---|
+| Dis_yr × Dis_min | 0.525 | 14.5 | 28.0 | 1.9 | 3.5 | 52.1 |
+| Dis_yr × Dis_max | 0.538 | 15.6 | 20.4 | 0.4 | 3.8 | 59.8 |
+| Dis_max × RiverArea_u | 0.455 | 12.0 | 12.2 | 0.4 | 3.6 | 71.8 |
+| HDI × GDP | 0.587 | 13.7 | 31.2 | 4.5 | 0.0 | 50.6 |
+| T_yr × T_min | 0.969 | 33.3 | 27.5 | 0.2 | 0.0 | 39.1 |
+| T_min × T_yr_u | 0.965 | 35.7 | 26.1 | 0.2 | 0.0 | 38.0 |
+
+### BVR.3 — S/U divergence is globally rare; anthropogenic pairs show most
+
+S/U divergence (HL+LH) ranges from 0.2% (T_yr, P_yr) to 0.6% (HFT). The local-vs-upstream duality is real but spatially small — well under 1% of basins in each case. Climate s/u pairs are near-concordant everywhere: catchment-scale smoothing means a basin's temperature and precipitation closely mirrors its upstream catchment. HFT and Crop show the most s/u divergence because anthropogenic land use does not respect catchment flow direction as cleanly as physical climate gradients.
+
+Aridity s×u has the highest NS fraction (60.1%) of all pairs: the aridity index (P/PET) spans humid-to-arid transition zones where no coherent local autocorrelation signal forms.
+
+### BVR.4 — Discharge pairs: attribute-space redundancy ≠ spatial concordance
+
+I_BV for discharge pairs (0.455–0.538) falls below their univariate Moran's I (~0.563 at L8). High Pearson r in attribute space does not imply spatial concordance. The seasonal regime geography that dis_min and dis_max capture independently from dis_yr breaks the spatial lock.
+
+All three discharge pairs show LH >> HL. Dis_yr × Dis_min (LH=6,641 vs HL=3,662): cold-climate/snowmelt transition zones where small headwater basins have low annual flow but neighbor the great boreal perennial rivers. Dis_yr × Dis_max (LH=7,296 vs HL=671): monsoon transition zones where flood-pulse peaks concentrate in neighboring high-maximum systems. The asymmetric LH pattern is the seasonal-regime geography that annual discharge alone does not resolve.
+
+### BVR.5 — Temperature triple is spatially interchangeable
+
+T_yr, T_min, and T_yr_upstream produce nearly identical LISA distributions (HH ~63–68k, LL ~49–52k, HL ~375–413, LH 0–14). The three temperature metrics form one spatial pattern. Documented as characterisation; no variables removed from the signature (see BVR.7).
+
+### BVR.6 — HDI×GDP: asymmetric development geography
+
+HL=8,566 basins (4.5%), LH=7 basins (0.004%). High-HDI enclaves in low-GDP neighborhoods exist at significant scale; the reverse is essentially absent. The HL zone maps onto Eastern Europe and former Soviet states — high HDI (Soviet-legacy education, healthcare) in a below-average-GDP neighborhood. LH≈0 reflects a one-directional relationship: wherever GDP is high, HDI follows; the reverse is rare.
+
+The HDI×GDP spatial pattern traces the temperate/tropical development divide and the modern North-South gradient — the accumulated outcome of environmental endowment, colonial history, and institutional development. For historical queries, Band D is future information relative to the period of interest: opt-in context, not primary environmental characterisation.
+
+### BVR.7 — Design note: global redundancy does not justify variable removal
+
+Global bivariate concordance characterises the *typical* spatial relationship between paired variables. It does not license removing variables from L8 basin signatures. At the basin scale, variables that covary globally may carry distinct local information — particularly in HL/LH divergence zones, which are often the ecologically and historically most interesting configurations. Phase 3 findings are documentation of co-variation structure for interpretive use, not a pruning pass.
