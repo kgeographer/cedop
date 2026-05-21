@@ -747,3 +747,62 @@ The lower-coherence classes in each variable (plutonic intrusions, fragmented po
 
 **Methodological fallback**: `esda.Join_Counts_Local` has an indexing bug (Python 3.14): `_statistic()` drops islands from LJC array (size 190,107) but `_crand_plus` iterates over full z (size 190,675), raising `IndexError` at index 190107. Fallback: deterministic majority-match classification using row-stochastic W·y ≥ 0.5. Global z-scores (222–723) confirm the class-level signal is real.
 
+
+---
+
+## dist_sink_km — Band E (coastality)
+
+**Date**: 2026-05-21
+**Notebook**: `notebooks/edop/spatial/14_dist_sink_esda.ipynb`
+**Method**: Queen contiguity weights, `use_index=True`, row-standardised; 999 perms, seed=42; raw transform (skewness < 5 at both scales); global Moran's I + Moran_Local LISA.
+
+---
+
+### DSK.1 — Global Moran's I: high, raw preferred
+
+| Scale | I_raw | I_log | I_canonical | skewness |
+|---|---|---|---|---|
+| L6 | 0.9041 | 0.8017 | 0.9041 | 1.52 |
+| L8 | 0.9633 | 0.8764 | 0.9633 | 1.40 |
+
+Both p=0.001. Raw I > log I at both scales — unusual. `log1p` compresses the interior-to-coastal gradient, making it appear less steep. Moderate skewness (1.4–1.5) means raw spatial structure is stronger than log, so canonical = raw per METH.3.
+
+---
+
+### DSK.2 — Scale comparison: continental-gradient tier, most scale-stable in sweep
+
+Δ = +0.059 (↑). Consistent with continental-gradient typology group. LISA maps are geographically indistinguishable at L6 and L8 — the spatial pattern is fixed at the continental scale already captured by L6. NS shrinks 45.4% → 42.9%; no new geographic structure appears. This is the most scale-stable variable in the 40-variable sweep: dist_sink is a geometric coordinate, not an environmental process variable.
+
+For comparison: aridity Δ=+0.026 (also ↑ but with visible MAUP effects); discharge Δ=−0.019 (↓, network-topology character).
+
+---
+
+### DSK.3 — LISA: LL-dominant, HL near-absent, low outlier fraction
+
+| Class | L6 % | L8 % |
+|---|---|---|
+| HH | 19.24 | 19.87 |
+| LL | 34.90 | 37.03 |
+| HL | 0.01 | 0.00 |
+| LH | 0.43 | 0.17 |
+| NS | 45.42 | 42.93 |
+
+HH = deep continental interiors (Amazon, Congo, Siberia, Central Asia, N. American Great Plains). LL = all coastal margins globally, SE Asian archipelago, Western Europe.
+
+HL near-zero (2 at L6, 1 at L8): physically near-impossible — a far-interior basin cannot be surrounded by coastal basins. The spatial gradient is monotonically coast-to-interior. Near-zero HL is itself a diagnostic: dist_sink has no spatial anomalies in the interior direction.
+
+LH small and decreasing (0.43% → 0.17%): near-sink basins embedded in interior terrain — fjord-fed inlets, river mouths penetrating plateaus. LH% shrinks at L8 as coastal tessellation tightens.
+
+Cluster core (HH+LL) = 54.1% / 56.9% — among the highest in the sweep alongside climate variables. Outlier fraction = 0.44% / 0.17% — lowest in the dataset.
+
+---
+
+### DSK.4 — Implication for EDOPS
+
+dist_sink_km encodes continental position relative to ocean, not a physical environmental process. This explains its orthogonality to all Band A–D variables (F4.8). It adds independent geographic context that no physical variable captures.
+
+The near-zero HL fraction is a slider implication: selecting high dist_sink_km is implicitly selecting deep-continental basins with no ambiguity. The variable functions as a continent-interior / coastal-margin switch.
+
+Historical validity: stable on geological timescales.
+Typology: continental-gradient (I_L6=0.904, scale ↑, outlier%=0.44%).
+
