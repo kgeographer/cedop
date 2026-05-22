@@ -197,7 +197,7 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until polity phase complete.
 
-## Current Work — `esda` branch, as of 2026-05-19
+## Current Work — `esda` branch, as of 2026-05-21
 
 ### Completed 2026-05-03
 - Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
@@ -258,7 +258,28 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - CAT.1–8 added to `logs/esda_findings.md`
 - See `logs/session_log_20260519.md`
 
-### Next: CHAR Phase 2 (`14_dist_sink_esda.ipynb`) then Phases 3–6 per `prompts/cc_char_completion_prompt.md`
+### Completed 2026-05-21
+- `notebooks/edop/spatial/15_bivariate_redundancy.ipynb`: Phase 3 CHAR — bivariate LISA for 11 high-r pairs (5 s/u + 6 same-band non-s/u) at L8
+- **Key finding**: s/u divergence <1% globally; anthropogenic pairs (HFT, Crop) show most
+- **Key finding**: discharge I_BV (0.45–0.54) < univariate I — seasonal regime geography is independent spatial signal; LH >> HL in all discharge pairs
+- **Key finding**: temperature triple (T_yr, T_min, T_yr_u) spatially interchangeable
+- **Key finding**: HDI×GDP HL=8,566 vs LH=7 — development geography one-directional
+- **Design decision**: no variables removed from signature based on global co-variation — see `memory/project_no_variable_pruning.md`
+- BVR.1–7 added to `logs/esda_findings.md`
+- `output/edop/spatial/bivariate_redundancy.parquet` (2,097,425 rows), `bivariate_redundancy_counts.csv`
+- Phase 4 CHAR re-framed with Opus: Band T characterized at native resolution (not basin-aggregated)
+- `prompts/cc_band_t_native_prompt.md`: operational Phase 4 prompt (supersedes Phase 4 of `cc_char_completion_prompt.md`)
+- `docs/design/lmr_hyde_esda_design.md` **not created** — new prompt resolves all design questions in operational form
+- See `logs/session_log_20260521.md`
+
+### Next: Phase 4 CHAR — Band T native-unit characterization (fresh CC session)
+- Execution prompt: `prompts/cc_band_t_native_prompt.md`
+- 4a: `16a_band_t_native_choropleths.ipynb` — visual EDA choropleth series (LMR + HYDE)
+- 4b: `16b_band_t_native_esda.ipynb` — spatial autocorrelation at native grids
+- 4c: `16c_band_t_native_cross_temporal.ipynb` — HYDE persistence map + LMR MCA–LIA dipole
+- Key conventions: LMR at 2° native grid (not basin-aggregated); HYDE at 0.5° coarsened from 5-arcmin; longitude wrap in Queen weights; no cross-band Moran's I comparison
+
+**Then: Phases 5–6 CHAR** (position attribute spec, CHAR appendix) per `prompts/cc_char_completion_prompt.md`
 
 **Then: `polity` phase** (after esda complete)
 - Summary tuples per basin [A-3, B-2, ..., T-7]
