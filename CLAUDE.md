@@ -272,12 +272,18 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - `docs/design/lmr_hyde_esda_design.md` **not created** — new prompt resolves all design questions in operational form
 - See `logs/session_log_20260521.md`
 
-### Next: Phase 4 CHAR — Band T native-unit characterization (fresh CC session)
-- Execution prompt: `prompts/cc_band_t_native_prompt.md`
-- 4a: `16a_band_t_native_choropleths.ipynb` — visual EDA choropleth series (LMR + HYDE)
-- 4b: `16b_band_t_native_esda.ipynb` — spatial autocorrelation at native grids
-- 4c: `16c_band_t_native_cross_temporal.ipynb` — HYDE persistence map + LMR MCA–LIA dipole
-- Key conventions: LMR at 2° native grid (not basin-aggregated); HYDE at 0.5° coarsened from 5-arcmin; longitude wrap in Queen weights; no cross-band Moran's I comparison
+### Completed 2026-05-22
+- `notebooks/edop/spatial/16a_band_t_native_choropleths.ipynb`: Phase 4a CHAR — LMR + HYDE choropleth series (Mollweide), epoch stats CSVs, findings BT4A.1–BT4A.5
+- `notebooks/edop/spatial/16b_band_t_native_esda.ipynb`: Phase 4b CHAR — Moran's I + LISA at native grids
+  - LMR (4,924 land cells, 2° grid): temperature I=0.931–0.974; PDSI I=0.856–0.888; all p=0.001; 59,088 LISA rows
+  - HYDE (2.2M cells, 5-arcmin): Moran's I sweep complete; LISA intractable (2,247s/epoch); pilot LISA retained
+  - **Headline**: cropland I 0.59→0.92 over 6,000 years; grazing starts at 0.91 (biome-constrained from outset)
+- Outputs: `band_t_native_moran.csv` (26 rows), `band_t_native_lmr_lisa.parquet` (59,088 rows), `band_t_native_hyde_lisa_pilot.csv`
+- BT4B.1–BT4B.3 added to `logs/esda_findings.md`; see `logs/session_log_20260522.md`
+
+### Next: Phase 4c CHAR — Band T cross-temporal (paused)
+- `16c_band_t_native_cross_temporal.ipynb` — HYDE persistence map + LMR MCA–LIA dipole structure
+- Key conventions: LMR at 2° native grid; HYDE at 5-arcmin native; longitude wrap in queen weights
 
 **Then: Phases 5–6 CHAR** (position attribute spec, CHAR appendix) per `prompts/cc_char_completion_prompt.md`
 

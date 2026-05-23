@@ -859,3 +859,83 @@ The HDI×GDP spatial pattern traces the temperate/tropical development divide an
 ### BVR.7 — Design note: global redundancy does not justify variable removal
 
 Global bivariate concordance characterises the *typical* spatial relationship between paired variables. It does not license removing variables from L8 basin signatures. At the basin scale, variables that covary globally may carry distinct local information — particularly in HL/LH divergence zones, which are often the ecologically and historically most interesting configurations. Phase 3 findings are documentation of co-variation structure for interpretive use, not a pruning pass.
+
+---
+
+## Phase 4 CHAR — Band T native-unit characterization (`16a`, `16b`)
+
+---
+
+### BT4B.1 — LMR spatial autocorrelation: temperature and PDSI
+
+**Date**: 2026-05-22  
+**Notebook**: `16b_band_t_native_esda.ipynb`  
+**Method**: Global Moran's I and LISA at 2° native LMR grid, restricted to 4,924 land cells (L8-basin-bearing). Queen contiguity with longitude wrap, row-standardized. Raw anomaly values (log not applicable for symmetric fields). 999 permutations, seed 42. Outputs: `band_t_native_moran.csv`, `band_t_native_lmr_lisa.parquet`.
+
+**LMR-as-reanalysis caveat (first-class)**: All I values reflect the LMR Bayesian reanalysis with its CCSM4-LME model prior, which imposes spatial covariance independent of proxy signal. LMR Moran's I measures "spatial structure of the reanalysis field," not "spatial structure of past climate" directly.
+
+**Temperature anomaly Moran's I** (all p = 0.001):
+
+| Epoch | I |
+|-------|------|
+| 0 CE (early-LMR) | 0.9616 |
+| 1000 CE | 0.9640 |
+| 1500 CE | 0.9502 |
+| 1900 CE | 0.9741 |
+| MCA 950–1250 | 0.9700 |
+| LIA 1450–1850 | 0.9306 |
+
+- LIA is the lowest (0.9306) — regionally concentrated NH cooling breaks global spatial coherence relative to smooth prior-dominated epochs.
+- 1900 CE highest (0.9741) — model prior + industrial warming both impose large-scale smooth structure.
+- MCA high (0.9700) despite being a period of interest: near-zero anomaly field is prior-dominated, not proxy-driven.
+- **Temperature LH = 0 in all epochs** — no isolated cold cells surrounded by warm anywhere across six epochs. Temperature anomaly fields are too spatially smooth for local sign-reversals at 2° resolution.
+- 0 CE LISA: LL = 1,950 (39.6%), anomalously high — model prior artifact at sparse proxy coverage; cold clustering in non-proxy regions, not a climate signal.
+- LIA LISA: HH = 1,431 (29.1%) > LL = 790 (16.0%) despite being a cooling epoch. Concentrated NH/subarctic cooling produces few LL clusters; tropical and SH cells remain relatively warm → HH dominates.
+
+**PDSI anomaly Moran's I** (all p = 0.001):
+
+| Epoch | I |
+|-------|------|
+| 0 CE (early-LMR) | 0.8833 |
+| 1000 CE | 0.8813 |
+| 1500 CE | 0.8846 |
+| 1900 CE | 0.8875 |
+| MCA 950–1250 | 0.8561 |
+| LIA 1450–1850 | 0.8789 |
+
+- Consistently 0.04–0.09 below temperature across all epochs. Moisture fields have shorter spatial correlation length scales than thermal fields — orography, storm tracks, and ENSO teleconnections fragment precipitation patterns at scales temperature spans smoothly. This reflects a known property of real climate independent of LMR methodology.
+- MCA PDSI is the outlier low (0.8561), with highest NS% (60.8%) — spatial structure of the moisture field most diffuse during MCA.
+- PDSI HL peaks at LIA (50) and 1900 CE (44); all other epochs ≤ 5. Slightly more local moisture outliers in industrial-era and LIA fields.
+
+---
+
+### BT4B.2 — HYDE spatial autocorrelation: pilot timing and tractability
+
+**Date**: 2026-05-22  
+**Notebook**: `16b_band_t_native_esda.ipynb`  
+**Method**: Queen weights via vectorized 8-direction grid-topology enumeration. Land mask from `area_raster` NaN pattern (2,213,836 cells, mean_neighbors=7.88, 76 islands). Pilot: cropland 1000 CE, log1p transform (skew 8.84 → 7.17).
+
+**Timing**: weights 9s; Moran's I 31s; LISA 2,247s (~37 min, permutation matrix ~17 GB → disk swap). Projected full sweep incl. LISA: 8.9 h — intractable. **Decision**: Moran's I sweep only; pilot LISA retained as structural sample.
+
+**Pilot LISA** (cropland 1000 CE, log1p, n = 2,213,836): LL=59.1%, NS=34.1%, HH=5.7%, LH=1.0%, HL=0.04%.
+
+- **LL=59.1% is a zero-inflation artifact** — with 73.9% of cells having zero cropland, LL identifies contiguous non-agricultural zones (boreal, arid, tropical forest), not an agricultural finding.
+- **HH=5.7% (~126k cells) is the substantive class** — the genuine agricultural cluster cores (Fertile Crescent, Ganges-Indus, Yellow River, Mediterranean).
+- LH=1.0%: non-farmed pockets within agricultural zones are rare — zones already spatially compact at 1000 CE. HL=0.04%: isolated farmed cells in wilderness essentially absent at 5-arcmin.
+- For HYDE, LISA composition percentages are dominated by zero-inflation at any epoch. Moran's I trajectory is the informative tool; LISA is useful only for mapping the HH geographic footprint.
+
+---
+
+### BT4B.3 — HYDE spatial autocorrelation: Moran's I sweep
+
+**Date**: 2026-05-22  
+**Notebook**: `16b_band_t_native_esda.ipynb`  
+**Method**: Moran's I only (LISA intractable). Log1p where skewness > 5; raw otherwise. 8000 BCE skipped (< 5% non-zero). All p = 0.001. Output: `band_t_native_moran.csv`.
+
+**Transform note**: Cropland switches log1p → raw between 1500 CE and 1900 CE; grazing between 0 CE and 1000 CE. I values across the switch are not directly comparable. Trajectory shape robust; apparent jump magnitude at switch point should not be taken at face value.
+
+**Cropland**: 0.5895 (4000 BCE, log1p) → 0.6696 → 0.7372 → 0.7431 → 0.7702 (1500 CE, log1p) → 0.9113 → 0.9173 (2000 CE, raw). Gradual consolidation from scattered pioneer patches to regional zones; sharp rise post-1500 CE to fully consolidated industrial-era mosaic.
+
+**Grazing**: 0.9087 (4000 BCE, log1p) → slight dip to 0.8921 (0 CE) → 0.9195 → 0.9172 → 0.9127 → 0.9287 (2000 CE, raw). Starts already high — pastoral land use follows biome gradients from the outset. Slight dip at 0 CE possibly reflects pastoral-to-arable transition in classical-era cores.
+
+**Headline finding**: At 4000 BCE cropland I=0.59, grazing I=0.91 — gap ~0.32. At 2000 CE both ~0.92–0.93 — gap closed. Cropland required ~6,000 years to achieve the spatial coherence pastoral land use had from early antiquity. Grazing follows ecological structure immediately; cropland built its spatial structure through millennial-scale intensification.
