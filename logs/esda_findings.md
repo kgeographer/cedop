@@ -1072,3 +1072,58 @@ Global bivariate concordance characterises the *typical* spatial relationship be
 - **LMR temperature results (Cells 6–8)**: characterization, not finding. The non-dipole result and LISA reorganisation are expected given what was known about LMR methodology (model prior, proxy network bias). Worth documenting but not paper-figure level.
 
 **Overall**: 4c produced two reportable findings (PDSI partial dipole; HYDE Old World/New World cropland-vs-grazing contrast) and confirmed expected characterization results for LMR temperature. The Phase 4 CHAR record is complete.
+
+---
+
+## CHAR Phase 5 — Per-variable global-position attribute specification
+
+**Date**: 2026-05-23
+**Notebook**: `notebooks/edop/explore/16_position_attribute_spec.ipynb`
+**Artifact**: `metadata/edops_codebook_v03_draft.tsv` — v02 + 7 new columns
+
+### CHAR-P5.1 — Scalar position method assignments
+
+Rule: |skewness| > 5 → `log_percentile`; else → `percentile`. Applied to all implemented
+scalar variables using `output/edop/explore/01_scalar_summary.csv`. Variables assigned
+`log_percentile`: discharge_annual, discharge_min, discharge_max, pop_density, river_area,
+river_area_upstream, aridity_index, aridity_upstream, reservoir_vol (9 variables).
+Log1p transform used for all log_percentile variables with zeros present. All others:
+`percentile` on non-null basins. 6 planned/unimplemented variables have null position_method
+(integer-typed and array-typed scalars, plus `narrative`); all implemented variables covered.
+
+### CHAR-P5.2 — Categorical and compositional position methods
+
+Categorical variables (lith_class, wetland_class, pnv_majority, climate_zone,
+climate_stratum, biome, terrestrial_ecoregion, freshwater_habitat, freshwater_ecoregion,
+land_cover, outlet_type, coast_flag): `rarity_rank` — percentage of non-null L8 basins
+in the class, computed from public.basin08 at query time.
+
+Compositional (pnv_shares): `dominance_class` — within-basin maximum share across
+all PNV classes. Distribution bimodal: large monoculture spike (>95%) and left tail of
+genuine mixtures (<60%). 60% and 95% thresholds documented from Cell 6 distribution.
+
+Band T variables (lmr_*, evolv2k_*, hyde_*): `deferred-phase4`. Position attribute
+depends on the temporal query window; specified in Phase 4 LMR/HYDE design memo follow-up.
+
+### CHAR-P5.3 — Historical validity
+
+Assigned manually from `docs/design/variable_selection_rubric_issues.md` §2.
+Distribution across 97 schema_keys (narrative excluded):
+- `full-record` (22): Band A topography/terrain/geology; Band B stable soils + runoff + groundwater; Band E coastality
+- `pre-1500 valid` (43): Band C climate (pattern-stable proxy); Band B hydrology/cryosphere/wetlands; PNV/ecoregion/biome categoricals
+- `modern-only` (18): Band D human geography; forest cover; land cover; dam regulation
+- `period-specific` (14): Band T (validity defined by temporal query, not the variable)
+
+### CHAR-P5.4 — High-r partners (global correlation structure)
+
+11 pairs at |r| ≥ 0.90 from F4.9. Recorded in codebook column `redundancy_partner`.
+No variables are removed or demoted based on this — the column documents global correlation
+structure only. Phase 3 CHAR (bivariate_redundancy.ipynb) showed bivariate I ≈ 0.45–0.54
+even for the highest-r pairs, confirming local spatial independence is preserved.
+8 schema_keys have partners: discharge cluster (discharge_annual, discharge_max,
+discharge_min, river_area), socioeconomic pair (gdp_mean ↔ hdi), temperature pair
+(temperature_annual ↔ temperature_min).
+
+**⚠ Phase 6 action required:** rename column `redundancy_partner` → `high_r_partner` in
+`edops_codebook_v03_draft.tsv` before promotion, and add an explicit clarifying sentence
+in `CHAR_appendix.md`. See memory: `project_high_r_partner_rename.md`.
