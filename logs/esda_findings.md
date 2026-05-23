@@ -939,3 +939,136 @@ Global bivariate concordance characterises the *typical* spatial relationship be
 **Grazing**: 0.9087 (4000 BCE, log1p) → slight dip to 0.8921 (0 CE) → 0.9195 → 0.9172 → 0.9127 → 0.9287 (2000 CE, raw). Starts already high — pastoral land use follows biome gradients from the outset. Slight dip at 0 CE possibly reflects pastoral-to-arable transition in classical-era cores.
 
 **Headline finding**: At 4000 BCE cropland I=0.59, grazing I=0.91 — gap ~0.32. At 2000 CE both ~0.92–0.93 — gap closed. Cropland required ~6,000 years to achieve the spatial coherence pastoral land use had from early antiquity. Grazing follows ecological structure immediately; cropland built its spatial structure through millennial-scale intensification.
+
+---
+
+### BT4C.1 — LMR temperature: MCA and LIA are not a dipole
+
+**Date**: 2026-05-22
+**Notebook**: `16c_band_t_native_cross_temporal.ipynb`
+**Method**: Per-cell comparison of MCA (950–1250 CE) and LIA (1450–1850 CE) temperature anomaly fields at 2° land grid (4,924 cells), anomalies relative to full 0–1998 CE mean. Percentile-based color scale (98th pct ≈ ±0.4 K) used for maps; `nanmax` scale was suppressed by Arctic outlier cells.
+
+**Results**:
+- Pearson r(MCA, LIA temperature) = **+0.116** (slope = 0.26) — weakly *positive*, not anticorrelated. No dipole.
+- A symmetric dipole would give r ≈ −1, slope ≈ −1. This result is close to zero.
+- Quadrant breakdown: 78% of land cells have both MCA and LIA **negative** relative to the 0–1998 mean — an artifact of the 20th-century industrial warming inflating the baseline, not a climate signal. Only **9%** show the canonical pattern (MCA positive, LIA negative).
+- Spatial variance asymmetry: LIA anomaly spread ≈ 6× MCA anomaly spread (vertical cigar shape in scatter). LIA left a stronger, more coherent spatial imprint in LMR than MCA did.
+- Dipole sum (MCA + LIA): positive over much of NH land — the MCA warm signal at those cells exceeds the LIA cooling signal, confirming asymmetry. The model prior damps the weaker, more contested MCA signal more than the LIA signal.
+
+**LMR-as-reanalysis caveat (first-class)**: all values include CCSM4-LME model prior spatial covariance. r = +0.116 and the asymmetry described above are properties of the LMR reanalysis field, not directly of past climate.
+
+---
+
+### BT4C.2 — LMR LISA cross-epoch: spatial cluster structure substantially reorganises MCA → LIA
+
+**Date**: 2026-05-22
+**Notebook**: `16c_band_t_native_cross_temporal.ipynb`
+**Method**: Per-cell LISA class transition (temperature) from `band_t_native_lmr_lisa.parquet`. n = 4,924 land cells.
+
+**Transition counts** (MCA → LIA):
+| Category | Count | % of land cells |
+|----------|-------|-----------------|
+| Stable (same class) | 1,994 | 40.5% |
+| Declustered (→ NS) | 1,487 | 30.2% |
+| Newly-clustered (NS →) | 1,166 | 23.7% |
+| Sign-reversed (HH ↔ LL) | 266 | 5.4% |
+| Other change | 11 | 0.2% |
+
+- Only 40% of cells hold the same LISA class across both periods — the spatial cluster structure is not stable.
+- The dominant transition is **declustering**: cells that had significant spatial structure in MCA (mostly the NH LL cool-cluster band) lost significance in LIA. LIA cooling is too spatially uniform in the NH for LISA to identify local cold outliers — neighbours cool together.
+- **Sign-reversal is rare (5.4%)**: the spatial geography of warm vs. cool clustering does not simply invert between periods.
+- Together with BT4C.1 (r = +0.12), these results confirm that MCA and LIA do not form a symmetric dipole in LMR at the spatial-clustering level either.
+
+---
+
+### BT4C.3 — LMR PDSI: partial dipole between MCA and LIA
+
+**Date**: 2026-05-22
+**Notebook**: `16c_band_t_native_cross_temporal.ipynb`
+**Method**: Same as BT4C.1 for PDSI anomaly.
+
+**Results**:
+- Pearson r(MCA, LIA PDSI) = **−0.382** (slope = −0.73) — genuinely anticorrelated. A partial dipole.
+- Scatter cloud is roughly circular: MCA and LIA PDSI anomaly variance are comparable (contrast with temperature where LIA >> MCA).
+- Slope −0.73: the anticorrelation is real but not perfect (a clean dipole would give slope ≈ −1).
+
+**Contrast with temperature**: PDSI r = −0.382 vs. temperature r = +0.116. Moisture geography reorganised more coherently between MCA and LIA than thermal geography did. This reflects the physical difference: temperature in LMR is dominated by large-scale model-prior smoothing; PDSI reflects local moisture balance driven by circulation patterns (monsoon, ENSO, NAO) that can genuinely reverse between climate regimes.
+
+**Implication**: for EDOPS Band T, LMR climate anomalies at a specific query location carry more interpretable period-to-period moisture information than temperature information. Temperature anomalies at 2° resolution are structurally near-identical across MCA and LIA; PDSI anomalies are meaningfully different.
+
+---
+
+### BT4C.4 — HYDE cropland: presence persistence and agricultural leading edge
+
+**Date**: 2026-05-22
+**Notebook**: `16c_band_t_native_cross_temporal.ipynb`
+**Method**: Per 5-arcmin land cell, count of 7 non-degenerate epochs (4000 BCE–2000 CE) with cropland fraction > 0. First-epoch map: earliest epoch with presence. n = 2,213,836 land cells. *Presence persistence ≠ cluster-core persistence; HH LISA was intractable — see BT4B.2.*
+
+**Persistence distribution**:
+
+| Epochs present | Cells | % |
+|---|---|---|
+| 0/7 (never farmed) | 1,075,208 | 48.57% |
+| 1/7 | 223,915 | 10.11% |
+| 2/7 | 303,954 | 13.73% |
+| 3/7 | 63,430 | 2.87% |
+| 4/7 | 126,097 | 5.70% |
+| 5/7 | 108,568 | 4.90% |
+| 6/7 | 190,375 | 8.60% |
+| 7/7 (all epochs) | 122,289 | 5.52% |
+
+**Key patterns**:
+- 7/7 cores (farmed all 7 epochs, 5.52% of land): narrow but continuous corridors along the Fertile Crescent and Levant, Nile Valley, Ganges-Indus plain, North China Plain — the canonical Neolithic agricultural origins. River-valley alignment is clearly visible at native 5-arcmin in the regional zoom.
+- Nearly half of land cells (48.57%) show zero cropland presence across all 7 epochs — Himalayas, Sahara, Australian outback, boreal zones. Not missing data; genuinely uncultivated in HYDE's reconstruction.
+- First-epoch map: darkest viridis (4000 BCE) concentrated at those same 7/7 cores; gradient diffuses outward. Consistent with an agricultural diffusion pattern, though HYDE derives this from population estimates rather than direct archaeological evidence.
+- Americas: almost entirely late (1500–2000 CE first epoch). The Old World / New World contrast is the sharpest visual signal in the maps.
+- **Black = never farmed**: cells with crop_first == −1 (NaN) render as transparent against dark figure background. Distinct from 4000 BCE cells, which appear as darkest viridis.
+
+**HYDE methodology caveat**: spatial allocation uses environmental suitability, making HYDE land use *not independent* of EDOPS environmental variables. Any downstream correspondence test between EDOPS signatures and HYDE cropland must acknowledge this circularity.
+
+---
+
+### BT4C.5 — HYDE grazing: pastoral persistence and cropland contrast
+
+**Date**: 2026-05-22
+**Notebook**: `16c_band_t_native_cross_temporal.ipynb`
+
+**Persistence distribution**:
+
+| Epochs present | Cells | % |
+|---|---|---|
+| 0/7 (no grazing) | 657,073 | 29.68% |
+| 1/7 | 132,922 | 6.00% |
+| 2/7 | 505,558 | 22.84% |
+| 3/7 | 63,135 | 2.85% |
+| 4/7 | 94,679 | 4.28% |
+| 5/7 | 144,058 | 6.51% |
+| 6/7 | 275,999 | 12.47% |
+| 7/7 (all epochs) | 340,412 | 15.38% |
+
+**Key patterns**:
+- Grazing spatial extent is vastly larger than cropland: 15.38% of land cells show 7/7 grazing persistence vs. 5.52% for cropland. The entire Old World grassland/savanna/steppe belt (Central Asia, Arabia, sub-Saharan Africa, South Asia) shows 7/7 persistence. Pastoral land use follows biome structure (BT4B.3 confirmed: grazing I ≈ 0.91 even at 4000 BCE).
+- Only 29.68% of cells are grazing-free across all epochs (vs. 48.57% for cropland) — pastoralism occupies a much larger portion of the land surface than cultivation.
+- First-epoch map: most of Eurasia and Africa is 4000 BCE (darkest) — the pastoral belt was effectively fully established at our earliest HYDE epoch.
+- **Americas grazing**: overwhelmingly orange to yellow (1500–2000 CE) — a clean cartographic signature of the Columbian Exchange. Indigenous pre-contact Americas had negligible livestock in HYDE's model.
+- **Mesoamerica contrast** (Cell 13 regional zoom): cropland shows substantial persistence (indigenous agriculture pre-dates contact); grazing shows near-zero persistence (no livestock pre-contact). The two variables tell directly opposing historical stories at this region.
+- Grazing first-epoch map over Africa and Asia is consistent with reading as a **diffusion map** of pastoral spread from early centres, with the important caveat that HYDE derives this from population/suitability models, not direct archaeological tracking of pastoral diffusion.
+
+---
+
+### BT4C.6 — Phase 4c: paper-figure assessment
+
+**Date**: 2026-05-22
+**Notebook**: `16c_band_t_native_cross_temporal.ipynb`
+
+**Assessment**:
+
+- **PDSI scatter (Cell 9)**: the most surprising result of 4c — moisture geography shows a partial dipole (r = −0.38) while temperature does not (r = +0.12). This is a reportable finding about LMR's period structure with a clear physical interpretation. Candidate as a supplementary figure in a methods/characterization paper.
+
+- **HYDE cropland persistence map (Cell 11)**: the most visually readable output of the entire CHAR phase. The 7/7 cores, the first-epoch gradient, and the Old World / New World contrast are all historically intelligible without statistical explanation. Paper-figure candidate, with HYDE methodology caveat.
+
+- **Mesoamerica cropland vs. grazing contrast (Cell 13)**: the side-by-side regional zoom showing indigenous agriculture (cropland) vs. Columbian Exchange livestock (grazing) in the same region is the sharpest single illustration of what the two HYDE variables mean historically. Worth keeping as a standalone inset.
+
+- **LMR temperature results (Cells 6–8)**: characterization, not finding. The non-dipole result and LISA reorganisation are expected given what was known about LMR methodology (model prior, proxy network bias). Worth documenting but not paper-figure level.
+
+**Overall**: 4c produced two reportable findings (PDSI partial dipole; HYDE Old World/New World cropland-vs-grazing contrast) and confirmed expected characterization results for LMR temperature. The Phase 4 CHAR record is complete.
