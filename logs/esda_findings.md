@@ -1116,14 +1116,11 @@ Distribution across 97 schema_keys (narrative excluded):
 
 ### CHAR-P5.4 — High-r partners (global correlation structure)
 
-11 pairs at |r| ≥ 0.90 from F4.9. Recorded in codebook column `redundancy_partner`.
-No variables are removed or demoted based on this — the column documents global correlation
-structure only. Phase 3 CHAR (bivariate_redundancy.ipynb) showed bivariate I ≈ 0.45–0.54
-even for the highest-r pairs, confirming local spatial independence is preserved.
-8 schema_keys have partners: discharge cluster (discharge_annual, discharge_max,
+11 pairs at |r| ≥ 0.90 from F4.9. Recorded in codebook column `high_r_partner` (renamed
+from `redundancy_partner` at Phase 6 — "redundancy" implied variable pruning, which is not
+the intent). No variables are removed or demoted based on this — the column documents global
+correlation structure only. Phase 3 CHAR (bivariate_redundancy.ipynb) showed bivariate
+I ≈ 0.45–0.54 even for the highest-r pairs, confirming local spatial independence is
+preserved. 8 schema_keys have partners: discharge cluster (discharge_annual, discharge_max,
 discharge_min, river_area), socioeconomic pair (gdp_mean ↔ hdi), temperature pair
 (temperature_annual ↔ temperature_min).
-
-**⚠ Phase 6 action required:** rename column `redundancy_partner` → `high_r_partner` in
-`edops_codebook_v03_draft.tsv` before promotion, and add an explicit clarifying sentence
-in `CHAR_appendix.md`. See memory: `project_high_r_partner_rename.md`.
