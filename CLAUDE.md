@@ -169,7 +169,7 @@ Key design docs:
 - **`docs/design/scenarios.md`** — User profiles (user00=Karl, user01=humanities researcher, user02=Federico) and scenarios driving design. **Read before any sandbox UI work.**
 - **`docs/design/prelim_notes.md`** — Earlier screen requirement notes (superseded by scenarios.md)
 - **`docs/edop/edops_schema.json`** — Signature schema: current API output (status=implemented) + planned fields. Real Timbuktu values as examples. Note: `app/static/api_guide.html` is a narrative guide for external API users (Federico et al.) — needs update after 2026-04-16 payload changes.
-- **`metadata/edops_codebook_v02.tsv`** — Field reference: schema_key, friendly_name, units, basin08_col_s/u, **api_key_s/u** (added 2026-04-12), notes. Loaded at startup by `signature.py` to generate accordion labels. Versioned: v01, v02 in `metadata/`; next draft will be `v03_draft.tsv`.
+- **`metadata/edops_codebook_v03_draft.tsv`** — Augmented field reference: v02 + 7 new CHAR columns (position_method, position_notes, high_r_partner, typology_cluster, scale_sensitivity_flag, historical_validity, informative_or_degenerate). Loaded at startup by `signature.py` to generate accordion labels (reads whichever codebook version is in `metadata/`). Do not promote from `_draft` until Karl reviews. Prior versions: v01, v02 archived in `metadata/`.
 
 ## Session Context Files
 
@@ -197,7 +197,7 @@ Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is
 
 Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until polity phase complete.
 
-## Current Work — `esda` branch, as of 2026-05-21
+## Current Work — `esda` branch, as of 2026-05-23
 
 ### Completed 2026-05-03
 - Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
@@ -281,13 +281,20 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - Outputs: `band_t_native_moran.csv` (26 rows), `band_t_native_lmr_lisa.parquet` (59,088 rows), `band_t_native_hyde_lisa_pilot.csv`
 - BT4B.1–BT4B.3 added to `logs/esda_findings.md`; see `logs/session_log_20260522.md`
 
-### Next: Phase 4c CHAR — Band T cross-temporal (paused)
-- `16c_band_t_native_cross_temporal.ipynb` — HYDE persistence map + LMR MCA–LIA dipole structure
-- Key conventions: LMR at 2° native grid; HYDE at 5-arcmin native; longitude wrap in queen weights
+### Completed 2026-05-23
+- `notebooks/edop/explore/16_position_attribute_spec.ipynb`: Phase 5 CHAR — per-variable global-position attribute specification; all implemented variables covered
+- `metadata/edops_codebook_v03_draft.tsv`: v02 augmented with 7 new columns; column `redundancy_partner` renamed `high_r_partner` (name implied pruning, which is explicitly forbidden per `memory/project_no_variable_pruning.md`)
+- `docs/design/CHAR_appendix.md`: Phase 6 CHAR — ~4,500-word synthesis document; per-band sections A–T, cross-cutting themes (s/u duality, scale sensitivity, spatial ≠ attribute redundancy), deferred scope, codebook pointer
+- See `logs/session_log_20260523.md`
 
-**Then: Phases 5–6 CHAR** (position attribute spec, CHAR appendix) per `prompts/cc_char_completion_prompt.md`
+### CHAR status: synthesis review (not closed)
+CHAR is in "synthesis and review" status. The appendix draft exists; Karl, Opus, and CC will review it together to build a shared understanding of the findings and their implications for EDOPS signature design — especially position attributes, s/u duality presentation, Band D opt-in behavior, and Band T disclosure. Polity phase follows after that review; the two may interleave.
 
-**Then: `polity` phase** (after esda complete)
+**Key CHAR vocabulary**: CHAR = umbrella phase; EDA and ESDA = strands within it; Tasks 1–11 = EDA; univariate sweep / bivariate pairs / etc. = ESDA studies. "Phase" should not be applied below strand level going forward.
+
+**Codebook**: `edops_codebook_v03_draft.tsv` stays `_draft` until Karl reviews. On promotion, remove the `_draft` suffix.
+
+**Next: `polity` phase** (after CHAR review, on a new branch)
 - Summary tuples per basin [A-3, B-2, ..., T-7]
 - Polity payload management: area-weighted signatures for polygon queries (Cliopatria/Seshat)
 - Scale sensitivity: L6 vs L8 for polity signatures
