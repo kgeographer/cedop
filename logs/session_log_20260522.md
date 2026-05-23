@@ -119,6 +119,54 @@ Notebook executed in full. LMR Moran's I + LISA complete; HYDE Moran's I sweep c
 
 ---
 
+---
+
+## 3. Phase 4c CHAR — `16c_band_t_native_cross_temporal.ipynb`
+
+Notebook executed in full across two CC sessions (context boundary during session). Findings BT4C.1–BT4C.6 written to notebook cell and appended to `logs/esda_findings.md`. Phase 4 CHAR complete.
+
+### Technical issues and decisions
+
+**HYDE persistence via raw grids (not LISA HH-count)**: Full HYDE LISA was intractable (BT4B.2). Persistence maps built from raw-grid presence/absence: per land cell, count of 7 non-degenerate epochs (4000 BCE–2000 CE) with fraction > 0. Disclosed as adaptation in notebook header and findings cell.
+
+**Blank dipole maps — nanmax color scale bug**: LMR anomaly maps (Cell 6, Cell 9) initially appeared blank. `np.nanmax` was picking a single Arctic outlier cell, stretching the color scale to ±1.5 K — 90%+ of cells fell within ±0.2 K and appeared white. Fixed by replacing with `np.nanpercentile(np.abs(all_land_vals), 98)` ≈ ±0.4 K for temperature, ±1.5 for PDSI.
+
+**Cell 13 title ambiguity**: Regional zoom figure title did not say which row was cropland and which was grazing. Y-axis labels were also too small (fontsize=8). Fixed: suptitle updated to include "Top row: cropland | Bottom row: grazing"; y-axis labels → fontsize=10, fontweight='bold'.
+
+**Persistence distribution numbers**: Cell 11 and 12 print outputs were not captured in the notebook (Jupyter sent to kernel stdout only; figure was the only saved output). Numbers recomputed from DB in a standalone script: cropland 48.57% never farmed, 5.52% all-7-epoch; grazing 29.68% never grazed, 15.38% all-7-epoch.
+
+**Black ≠ earliest epoch in first-epoch map**: In the cropland first-epoch map, Karl observed that black regions (Himalayas, Australian outback) were not 4000 BCE — they are cells where crop_first == −1 (never farmed), rendered as NaN → transparent against the dark figure background. Darkest viridis = 4000 BCE. Clarified in findings cell.
+
+### Outputs produced
+
+- `output/edop/spatial/bt4c_lmr_temp_dipole_maps.png` — MCA, LIA, MCA+LIA sum (temperature)
+- `output/edop/spatial/bt4c_lmr_temp_scatter.png` — per-cell MCA vs LIA scatter, latitude-coloured
+- `output/edop/spatial/bt4c_lmr_lisa_crossepoch.png` — LISA class transition maps (MCA→LIA temperature)
+- `output/edop/spatial/bt4c_lmr_pdsi_dipole_maps.png` — PDSI dipole maps
+- `output/edop/spatial/bt4c_lmr_pdsi_scatter.png` — PDSI MCA vs LIA scatter
+- `output/edop/spatial/bt4c_hyde_cropland_persistence.png` — global Mollweide persistence + first-epoch
+- `output/edop/spatial/bt4c_hyde_grazing_persistence.png` — global Mollweide persistence + first-epoch
+- `output/edop/spatial/bt4c_hyde_persistence_regional.png` — regional zooms (Fertile Crescent, N China Plain, Mesoamerica), 2×3 grid
+
+### Key findings (BT4C.1–BT4C.6, full text in notebook cell and esda_findings.md)
+
+**BT4C.1 — LMR temperature: no dipole**: r(MCA, LIA temperature) = +0.116. Not anticorrelated. 78% of cells negative in both periods (20th-century-warming baseline artifact). LIA spread ≈ 6× MCA spread — LIA left a stronger spatial imprint in LMR.
+
+**BT4C.2 — LISA cross-epoch**: Only 40.5% of cells stable class MCA→LIA. Dominant transition: declustering (30.2% → NS) — LIA NH cooling too uniform for LISA to resolve local cold clusters. Sign-reversal rare (5.4%).
+
+**BT4C.3 — LMR PDSI: partial dipole**: r(MCA, LIA PDSI) = −0.382, slope = −0.73. Genuinely anticorrelated but not a clean mirror. Moisture geography reorganised more coherently than thermal geography; circulation-driven patterns (monsoon, ENSO, NAO) can reverse between regimes where model-prior-dominated temperature cannot.
+
+**BT4C.4 — HYDE cropland**: 48.57% of land cells never farmed; 5.52% (122k cells) farmed all 7 epochs = ancient agricultural cores (Fertile Crescent, Nile, Ganges-Indus, N China). Americas almost entirely post-1500 CE.
+
+**BT4C.5 — HYDE grazing**: 15.38% (340k cells) grazed all 7 epochs vs. 5.52% for cropland. Pastoral belt effectively established at 4000 BCE; Americas grazed overwhelmingly post-1500 CE (Columbian Exchange signature). Mesoamerica shows cropland persistence but near-zero grazing persistence — directly opposing historical stories from the two variables in the same region.
+
+**BT4C.6 — Paper-figure assessment**: PDSI scatter (Cell 9) and HYDE cropland persistence map (Cell 11) are paper-figure candidates. Mesoamerica cropland-vs-grazing contrast (Cell 13) worth as standalone inset. LMR temperature results are characterization, not finding.
+
+---
+
 ## Next
 
-- **Phase 4c** (paused): `16c_band_t_native_cross_temporal.ipynb` — HYDE persistence map + LMR MCA–LIA dipole structure.
+**Phase 4 CHAR complete.** Remaining CHAR work from `prompts/cc_char_completion_prompt.md`:
+
+- **Phase 5**: Per-variable global-position attribute specification → augmented codebook draft (`notebooks/edop/explore/16_position_attribute_spec.ipynb`, `data/edops_codebook_v0X+1_draft.tsv`)
+- **Phase 6**: `CHAR_appendix.md` — synthesised narrative of EDA + ESDA findings, organised by band
