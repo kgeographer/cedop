@@ -169,7 +169,7 @@ Key design docs:
 - **`docs/design/scenarios.md`** — User profiles (user00=Karl, user01=humanities researcher, user02=Federico) and scenarios driving design. **Read before any sandbox UI work.**
 - **`docs/design/prelim_notes.md`** — Earlier screen requirement notes (superseded by scenarios.md)
 - **`docs/edop/edops_schema.json`** — Signature schema: current API output (status=implemented) + planned fields. Real Timbuktu values as examples. Note: `app/static/api_guide.html` is a narrative guide for external API users (Federico et al.) — needs update after 2026-04-16 payload changes.
-- **`metadata/edops_codebook.tsv`** — Field reference: schema_key, friendly_name, units, basin08_col_s/u, **api_key_s/u** (added 2026-04-12), notes. Loaded at startup by `signature.py` to generate accordion labels.
+- **`metadata/edops_codebook_v03_draft.tsv`** — Augmented field reference: v02 + 7 new CHAR columns (position_method, position_notes, high_r_partner, typology_cluster, scale_sensitivity_flag, historical_validity, informative_or_degenerate). Loaded at startup by `signature.py` to generate accordion labels (reads whichever codebook version is in `metadata/`). Do not promote from `_draft` until Karl reviews. Prior versions: v01, v02 archived in `metadata/`.
 
 ## Session Context Files
 
@@ -195,9 +195,9 @@ Completed Band T (Tasks 7–11): (7) eVolv2k v4 distribution and aggregation des
 
 Key open design questions logged (F8.5, F8.6, F9.6, F11.4, F11.6): (a) Band C is silently wrong for BCE queries — needs `climate_note` disclosure; (b) population density may not belong in an environmental signature; (c) EarthStat/HYDE spatial divergence at agricultural hotspot sub-basins; (d) Pinatubo calibration text for narrative layer prompt; (e) LMR geographic proxy bias disclosure for API docs — all flagged for October 2026 expert meeting or pre-release documentation.
 
-Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until x_polity phase complete.
+Task 12 (Anthromes categorical typology) deferred indefinitely — not a current goal. Correspondence testing deferred until polity phase complete.
 
-## Current Work — main branch, as of 2026-05-04
+## Current Work — `esda` branch, as of 2026-05-23
 
 ### Completed 2026-05-03
 - Sandbox example selector bug fixed; GA4 analytics added; repo cleanup; api_guide fixes; 19/19 tests passing
@@ -209,35 +209,112 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - `gaz.clio_polities` schema fixes: empty strings → NULL; `is_component` boolean; `geom_og` archive + `invalid_source_geom` flag (invalid geoms NOT repaired — for Cliopatria team); `memberof`/`components` → `text[]`
 - See `logs/session_log_20260504.md`
 
-### Next branch: `spatial` — spatial statistics characterization
+### Completed 2026-05-14
+- New machine setup: PGPORT 5435→5432 in `.env` + 20 scripts; 19/19 tests passing; branch `post_move`
+- `notebooks/edop/spatial/01_aridity_l6_moran.ipynb`: global Moran's I, Moran scatter plot, LISA, cluster map, log-transform sensitivity check
+- **Key result**: aridity at L6, I=0.963 (raw) / 0.973 (log); LL=30.0%, HH=4.6%, HL=1.4%, LH=0%
+- **Critical finding**: weights must be built with `Queen.from_dataframe(gdf, use_index=True)` keyed by hybas_id — GAL files from GeoDa carry wrong row ordering (produced I=0.364, mottled map)
+- See `logs/session_log_20260514.md`
 
-Per-variable characterization pipeline using PySAL/libpysal/esda. Full plan in `spatial/spatial_plan.md`.
+### Completed 2026-05-15
+- `notebooks/edop/spatial/02_aridity_l8_moran.ipynb`: scale comparison notebook complete — same routine as L6 at 190k basins
+- **Key results**: aridity at L8, I=0.989; LL=30.9%, HH=3.8%, HL=0.2%, LH=0%; scale effect confirmed (+0.026 vs L6)
+- **M5 benchmarks**: weights build 4m39s, LISA 20s — pipeline is fully interactive at L8 (not "walk away")
+- **Scale findings**: cluster-core % stable across scales; outlier % not comparable (HL absolute count doubles, % collapses due to 11.6× denominator growth); MAUP HH fringe contraction at Pacific NW rain shadow
+- `spatial/esda_findings.md` established — accreting findings log for ESDA phase (parallel to `logs/exploration_log.md`)
+- Branch renamed `spatial01` → `esda`
+- See `logs/session_log_20260515.md`
 
-**Pipeline design** (per variable × scale):
-1. Load basin geometry + variable values; apply codebook transform (log, etc.)
-2. Distributional summaries: mean, median, range, skew, kurtosis, missingness, zero-fraction, bimodality
-3. Global Moran's I — queen-contiguity weights, 999 permutations, fixed random seed
-4. Local Moran's I (LISA) — HH/LL/HL/LH/NS classification at p < 0.05
-5. Spatial summary stats: outlier prevalence (HL+LH %), cluster-core prevalence (HH+LL %), largest contiguous LISA cluster fraction
-6. Persist: `variable_characterization.csv` (one row per variable × scale), `lisa_classifications.parquet` (long-format basin × variable)
+### Completed 2026-05-16
+- `notebooks/edop/spatial/03_discharge_l6_l8_moran.ipynb`: both scales in single notebook
+- **Key results**: discharge I_log=0.582 (L6) / 0.563 (L8) — ~0.41 below aridity; scale direction reverses (↓); LH class appears; LH grows 22.5× vs 11.6× basin count (watershed-divide effect)
+- Phase names standardised: `x_spatial` → `esda`, `x_polity` → `polity`; `spatial/esda_findings.md` DIS.1–6 entries added
+- See `logs/session_log_20260516.md`
 
-**Weights matrices**: `spatial/basin06_queen.gal` exists; `spatial/basin08_queen.gal` to generate.
+### Completed 2026-05-17
+- `scripts/edop/esda/12_spatial_moran.py`: Phase 1 univariate sweep — 40 Band A–D variables × L6+L8
+- `notebooks/edop/spatial/04_spatial_typology.ipynb`: Phase 2 typology — OUTLIER_HIGH→3.00; group counts: continental-gradient=21, mixed=15, network-topology=3, local-anomaly=1; `spatial/first_cut_typology.csv`
+- `notebooks/edop/spatial/05_bivariate_TP_l6.ipynb`: Phase 3 bivariate T×P — I_BV=+0.315 global; Mediterranean I_BV=−0.250 (sign reversal); Tibetan I_BV=+0.608 (LL); Monsoon Asia NS (p=0.076)
+- `docs/design/variable_selection_rubric_issues.md`: design doc on typology semantics, historical validity, environment/culture boundary, expert system risk — for Opus 4.7 discussion
+- SW.1–3, METH.4, BV.1–6 added to `spatial/esda_findings.md`
+- **Key methodological finding**: Mediterranean I_BV = −0.25 (sign reversal vs global +0.315) validates Karl's correction: global concordance scalar is not a valid redundancy filter
+- `notebooks/edop/spatial/06_bivariate_phase4_l6.ipynb`: Phase 4 — 5 bivariate pairs; global maps complete; regional analysis (Cells 15–17) deferred
+- **Redundancy tiers**: near-redundant (tmp×snw −0.865, pre×aet +0.863); genuinely distinct (hdi×gdp +0.581, ari×pre +0.578, ele×slp +0.423)
+- **Key finding**: African Plateau dominates ele×slp HL class (not Tibetan as predicted); LISA class = global structural position not absolute character (BV.13)
+- **EDOP/CDOP boundary**: Band D (hdi/gdp) LISA patterns require historical-institutional context — opt-in for historical queries
+- BV.7–13 added to `logs/esda_findings.md`
+- See `logs/session_log_20260517.md`
 
-**Coherence class**: assign *after* seeing distribution of Moran's I across all variables — calibrate thresholds empirically, not in advance.
+### Completed 2026-05-19
+- `notebooks/edop/spatial/06_bivariate_phase4_l6.ipynb` Cells 15–17: Phase 4 regional analysis complete — 3×5 I_BV grid across Mediterranean, Monsoon Asia, Tibetan/cold-arid
+- **Key finding**: tmp×snw near-redundancy collapses to NS in Tibetan (I_BV −0.865 → −0.005); ele×slp sign-reversal in Tibetan; pre×aet and ari×pre stable across all regions
+- **Key finding**: HL patch in pre×aet Mediterranean = Lebanese mountains/Syrian coastal range (not Anatolian highlands as initially labelled)
+- BV.14–19 added to `logs/esda_findings.md`; Cell 18 summary updated
+- CHAR completion plan (`prompts/cc_char_completion_prompt.md`) reviewed; psycopg3 integer-NULL→0 bug documented; path corrections applied
+- `notebooks/edop/spatial/13_categorical_coherence.ipynb`: Phase 1 CHAR — join-count spatial coherence for lith_class (16 cls), pnv_majority (15 cls), wetland_class (12 cls, n=96,884 subset)
+- All 43 class-variable combinations significant at p=0.001; local coherence 90.8%–99.5% across all classes
+- **esda bug**: `Join_Counts_Local` IndexError with islands (Python 3.14); fallback: row-stochastic W·y ≥ 0.5 majority-match
+- `output/edop/spatial/13_categorical_coherence.csv`; `spatial/13_categorical_cluster_maps.png`
+- CAT.1–8 added to `logs/esda_findings.md`
+- See `logs/session_log_20260519.md`
 
-**Scale notes**: L8 full run (~190k basins × 999 perms) is "kick off and walk away" — budget 1–2 hours. L6 is interactive.
+### Completed 2026-05-21
+- `notebooks/edop/spatial/15_bivariate_redundancy.ipynb`: Phase 3 CHAR — bivariate LISA for 11 high-r pairs (5 s/u + 6 same-band non-s/u) at L8
+- **Key finding**: s/u divergence <1% globally; anthropogenic pairs (HFT, Crop) show most
+- **Key finding**: discharge I_BV (0.45–0.54) < univariate I — seasonal regime geography is independent spatial signal; LH >> HL in all discharge pairs
+- **Key finding**: temperature triple (T_yr, T_min, T_yr_u) spatially interchangeable
+- **Key finding**: HDI×GDP HL=8,566 vs LH=7 — development geography one-directional
+- **Design decision**: no variables removed from signature based on global co-variation — see `memory/project_no_variable_pruning.md`
+- BVR.1–7 added to `logs/esda_findings.md`
+- `output/edop/spatial/bivariate_redundancy.parquet` (2,097,425 rows), `bivariate_redundancy_counts.csv`
+- Phase 4 CHAR re-framed with Opus: Band T characterized at native resolution (not basin-aggregated)
+- `prompts/cc_band_t_native_prompt.md`: operational Phase 4 prompt (supersedes Phase 4 of `cc_char_completion_prompt.md`)
+- `docs/design/lmr_hyde_esda_design.md` **not created** — new prompt resolves all design questions in operational form
+- See `logs/session_log_20260521.md`
 
-**Then: `x_polity`** (after x_spatial complete)
-- Summary tuples per basin [A-3, B-2, ..., T-7]
-- Polity payload management: area-weighted signatures for polygon queries (Cliopatria/Seshat)
-- Scale sensitivity: L6 vs L8 for polity signatures
-- Tentative D-PLACE correspondence tests
-- `scripts/edop/edops_polity_maps.py`: parameterized choropleth generator; extend as needed
+### Completed 2026-05-22
+- `notebooks/edop/spatial/16a_band_t_native_choropleths.ipynb`: Phase 4a CHAR — LMR + HYDE choropleth series (Mollweide), epoch stats CSVs, findings BT4A.1–BT4A.5
+- `notebooks/edop/spatial/16b_band_t_native_esda.ipynb`: Phase 4b CHAR — Moran's I + LISA at native grids
+  - LMR (4,924 land cells, 2° grid): temperature I=0.931–0.974; PDSI I=0.856–0.888; all p=0.001; 59,088 LISA rows
+  - HYDE (2.2M cells, 5-arcmin): Moran's I sweep complete; LISA intractable (2,247s/epoch); pilot LISA retained
+  - **Headline**: cropland I 0.59→0.92 over 6,000 years; grazing starts at 0.91 (biome-constrained from outset)
+- Outputs: `band_t_native_moran.csv` (26 rows), `band_t_native_lmr_lisa.parquet` (59,088 rows), `band_t_native_hyde_lisa_pilot.csv`
+- BT4B.1–BT4B.3 added to `logs/esda_findings.md`; see `logs/session_log_20260522.md`
 
-**Polity map script** (`scripts/edop/edops_polity_maps.py`):
-- `--polity`, `--years` (1–3), `--variable` (static Band A–C or hyde_cropland/grazing/pasture/rangeland)
-- Demonstrated: Northern Song aridity, Kingdom of Denmark cropland, Roman Empire cropland
-- HYDE note: values already km² in DB — `SUM(hc.field[step])` / `SUM(hc.area_km2)` × 100
+### Completed 2026-05-23
+- `notebooks/edop/explore/16_position_attribute_spec.ipynb`: Phase 5 CHAR — per-variable global-position attribute specification; all implemented variables covered
+- `metadata/edops_codebook_v03_draft.tsv`: v02 augmented with 7 new columns; column `redundancy_partner` renamed `high_r_partner`
+- CHAR appendix drafted (moved to `docs/char/` for co-editing with Opus; gitignored as draft)
+- See `logs/session_log_20260523.md`
+
+### CHAR status: review in progress (not a CC task)
+Karl is co-editing a CHAR review document in `docs/char/` (gitignored — drafts only). No CC involvement until Karl signals otherwise.
+
+**Key CHAR vocabulary** (for future sessions): CHAR = umbrella characterization phase; EDA and ESDA = strands within it; Tasks 1–11 = EDA numbered tasks; "phase" should not be applied below strand level.
+
+**Codebook**: `metadata/edops_codebook_v03_draft.tsv` stays `_draft` until Karl reviews and promotes it (remove `_draft` suffix when ready).
+
+---
+
+## Next Dev Task — Sandbox Choropleth Page
+
+A new page in the sandbox app to expose all EDOPS signature variables as interactive choropleth maps — a visual companion to the CHAR report. Significant new dev task; branch TBD, created from `main`.
+
+**Goal**: Allow a researcher to browse the global spatial distribution of every implemented signature variable on a Leaflet map, one variable at a time. No place-query required — global map first. Complements CHAR findings by making spatial structure visible without running notebooks.
+
+**Context**:
+- The sandbox (`/sandbox`, `app/templates/sandbox.html`) is currently a single complex page for place-lookup → basin → signature. The choropleth view is a different interaction mode and will likely be a separate route/page.
+- `metadata/edops_codebook_v03_draft.tsv` is the variable registry: bands A–E + T, with `friendly_name`, `position_method`, `historical_validity`, `typology_cluster` columns that can drive the variable-selector UI.
+- Band T variables require a time window; v1 will likely cover static bands A–E only, with Band T deferred.
+- `docs/design/scenarios.md` has user profiles — read before any sandbox UI work.
+
+**Key open design questions** (to resolve at task start, with Karl):
+- Separate route + template, or tab added to existing sandbox?
+- Tile delivery: pre-generated vector tiles, server-side PostGIS MVT, or chunked GeoJSON? (190k L8 basins is too large for a single GeoJSON payload.)
+- Variable selector UI shape: band-grouped dropdown, codebook-driven accordion, or something else?
+- Color scale: per-variable quantile breaks, or percentile bins derived from `position_method`?
+
+**Do not start implementation without Karl's answers to these questions.**
 
 ## External Dependencies
 
