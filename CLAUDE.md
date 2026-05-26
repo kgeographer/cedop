@@ -283,28 +283,38 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 
 ### Completed 2026-05-23
 - `notebooks/edop/explore/16_position_attribute_spec.ipynb`: Phase 5 CHAR — per-variable global-position attribute specification; all implemented variables covered
-- `metadata/edops_codebook_v03_draft.tsv`: v02 augmented with 7 new columns; column `redundancy_partner` renamed `high_r_partner` (name implied pruning, which is explicitly forbidden per `memory/project_no_variable_pruning.md`)
-- `docs/design/CHAR_appendix.md`: Phase 6 CHAR — ~4,500-word synthesis document; per-band sections A–T, cross-cutting themes (s/u duality, scale sensitivity, spatial ≠ attribute redundancy), deferred scope, codebook pointer
+- `metadata/edops_codebook_v03_draft.tsv`: v02 augmented with 7 new columns; column `redundancy_partner` renamed `high_r_partner`
+- CHAR appendix drafted (moved to `docs/char/` for co-editing with Opus; gitignored as draft)
 - See `logs/session_log_20260523.md`
 
-### CHAR status: synthesis review (not closed)
-CHAR is in "synthesis and review" status. The appendix draft exists; Karl, Opus, and CC will review it together to build a shared understanding of the findings and their implications for EDOPS signature design — especially position attributes, s/u duality presentation, Band D opt-in behavior, and Band T disclosure. Polity phase follows after that review; the two may interleave.
+### CHAR status: review in progress (not a CC task)
+Karl is co-editing a CHAR review document in `docs/char/` (gitignored — drafts only). No CC involvement until Karl signals otherwise.
 
-**Key CHAR vocabulary**: CHAR = umbrella phase; EDA and ESDA = strands within it; Tasks 1–11 = EDA; univariate sweep / bivariate pairs / etc. = ESDA studies. "Phase" should not be applied below strand level going forward.
+**Key CHAR vocabulary** (for future sessions): CHAR = umbrella characterization phase; EDA and ESDA = strands within it; Tasks 1–11 = EDA numbered tasks; "phase" should not be applied below strand level.
 
-**Codebook**: `edops_codebook_v03_draft.tsv` stays `_draft` until Karl reviews. On promotion, remove the `_draft` suffix.
+**Codebook**: `metadata/edops_codebook_v03_draft.tsv` stays `_draft` until Karl reviews and promotes it (remove `_draft` suffix when ready).
 
-**Next: `polity` phase** (after CHAR review, on a new branch)
-- Summary tuples per basin [A-3, B-2, ..., T-7]
-- Polity payload management: area-weighted signatures for polygon queries (Cliopatria/Seshat)
-- Scale sensitivity: L6 vs L8 for polity signatures
-- Tentative D-PLACE correspondence tests
-- `scripts/edop/edops_polity_maps.py`: parameterized choropleth generator; extend as needed
+---
 
-**Polity map script** (`scripts/edop/edops_polity_maps.py`):
-- `--polity`, `--years` (1–3), `--variable` (static Band A–C or hyde_cropland/grazing/pasture/rangeland)
-- Demonstrated: Northern Song aridity, Kingdom of Denmark cropland, Roman Empire cropland
-- HYDE note: values already km² in DB — `SUM(hc.field[step])` / `SUM(hc.area_km2)` × 100
+## Next Dev Task — Sandbox Choropleth Page
+
+A new page in the sandbox app to expose all EDOPS signature variables as interactive choropleth maps — a visual companion to the CHAR report. Significant new dev task; branch TBD, created from `main`.
+
+**Goal**: Allow a researcher to browse the global spatial distribution of every implemented signature variable on a Leaflet map, one variable at a time. No place-query required — global map first. Complements CHAR findings by making spatial structure visible without running notebooks.
+
+**Context**:
+- The sandbox (`/sandbox`, `app/templates/sandbox.html`) is currently a single complex page for place-lookup → basin → signature. The choropleth view is a different interaction mode and will likely be a separate route/page.
+- `metadata/edops_codebook_v03_draft.tsv` is the variable registry: bands A–E + T, with `friendly_name`, `position_method`, `historical_validity`, `typology_cluster` columns that can drive the variable-selector UI.
+- Band T variables require a time window; v1 will likely cover static bands A–E only, with Band T deferred.
+- `docs/design/scenarios.md` has user profiles — read before any sandbox UI work.
+
+**Key open design questions** (to resolve at task start, with Karl):
+- Separate route + template, or tab added to existing sandbox?
+- Tile delivery: pre-generated vector tiles, server-side PostGIS MVT, or chunked GeoJSON? (190k L8 basins is too large for a single GeoJSON payload.)
+- Variable selector UI shape: band-grouped dropdown, codebook-driven accordion, or something else?
+- Color scale: per-variable quantile breaks, or percentile bins derived from `position_method`?
+
+**Do not start implementation without Karl's answers to these questions.**
 
 ## External Dependencies
 
