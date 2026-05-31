@@ -287,8 +287,25 @@ Task 12 (Anthromes categorical typology) deferred indefinitely — not a current
 - CHAR appendix drafted (moved to `docs/char/` for co-editing with Opus; gitignored as draft)
 - See `logs/session_log_20260523.md`
 
-### CHAR status: review in progress (not a CC task)
-Karl is co-editing a CHAR review document in `docs/char/` (gitignored — drafts only). No CC involvement until Karl signals otherwise.
+### CHAR status: report figures in progress
+
+Karl is co-authoring a CHAR report in `docs/char/` (gitignored — drafts only) with Opus 4.7. CC generates supporting figures from existing ESDA results. Figure notebooks live in `notebooks/edop/spatial/` (prefix `17_`+); outputs go to `docs/char/figures/`.
+
+**Figures complete**:
+- `fig_6_1_pnw_aridity_L6_L8.png` — PNW aridity LISA L6 vs L8 side-by-side (notebook 17, session 29 May)
+- `fig_3_X_lisa_scatterplot_dis_yr_L8.png` — LISA scatter plot, annual discharge L8 (notebook 18, session 30 May)
+- `spatial/basin08_queen_lisa_dis_python.png` — LISA cluster map, annual discharge L8 (notebook 03 Cell 30, fixed 30 May)
+
+**Matplotlib dark-theme fix** (apply to every future figure cell): the kernel defaults to a dark style — text and axes render white. Fix:
+```python
+plt.rcParams.update({
+    "text.color": "black", "axes.labelcolor": "black",
+    "xtick.color": "black", "ytick.color": "black",
+    "axes.edgecolor": "black", "figure.facecolor": "white",
+    "axes.facecolor": "white",
+})
+```
+Also set `facecolor='white'` in `savefig` and `fig.patch.set_facecolor("white")` after `plt.subplots`.
 
 **Key CHAR vocabulary** (for future sessions): CHAR = umbrella characterization phase; EDA and ESDA = strands within it; Tasks 1–11 = EDA numbered tasks; "phase" should not be applied below strand level.
 
