@@ -2010,6 +2010,15 @@ def _load_codebook() -> List[Dict]:
             # queryable = has a single DB column, OR is a monthly series (column resolved per month)
             rec["queryable"] = bool(col_s) and (".." not in col_s or is_monthly)
             rows.append(rec)
+    # Second pass: hide _id vars whose _name or _code partner exists in the same codebook
+    all_keys = {r["schema_key"] for r in rows}
+    for rec in rows:
+        key = rec.get("schema_key") or ""
+        if key.endswith("_id"):
+            base = key[:-3]
+            rec["hide_in_explorer"] = (base + "_name" in all_keys) or (base + "_code" in all_keys)
+        else:
+            rec["hide_in_explorer"] = False
     _codebook_cache = rows
     return rows
 

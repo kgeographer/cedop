@@ -686,6 +686,7 @@
   function filteredVars() {
     const term = filterSearch.toLowerCase();
     return allVars.filter(v => {
+      if (v.hide_in_explorer) return false;
       if (filterStatus !== 'all' && v.status !== filterStatus) return false;
       if (filterClass && v.typology_cluster !== filterClass) return false;
       if (term) {
