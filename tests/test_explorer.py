@@ -60,10 +60,11 @@ def test_codebook_queryable_flag(codebook):
 
 
 def test_codebook_range_notation_not_queryable(codebook):
-    # Variables with '..' range notation in basin08_col_s must be non-queryable
+    # Variables with '..' range notation must be non-queryable UNLESS they are
+    # monthly_series (s01..s12 pattern), which resolve per month
     for rec in codebook:
         col_s = rec.get("basin08_col_s") or ""
-        if ".." in col_s:
+        if ".." in col_s and not rec.get("monthly_series"):
             assert not rec["queryable"], (
                 f"{rec['schema_key']}: has range notation '{col_s}' but queryable=True"
             )
@@ -266,8 +267,8 @@ def test_lisa_counts_sum_equals_n(client):
 
 
 def test_lisa_no_data_returns_404(client):
-    # Most variables have no L6 LISA data yet — should 404
-    r = client.get("/api/explorer/lisa", params={"var": "elevation_mean", "level": 6})
+    # Categorical variables have no LISA data (join-count only) — should always 404
+    r = client.get("/api/explorer/lisa", params={"var": "lithology_name", "level": 8})
     assert r.status_code == 404
 
 

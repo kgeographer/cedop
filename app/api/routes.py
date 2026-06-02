@@ -2003,9 +2003,12 @@ def _load_codebook() -> List[Dict]:
             if not band or band == "output":
                 continue
             rec = {k: (row.get(k) or None) for k in _CODEBOOK_FIELDS}
-            # queryable = has a single DB column we can fetch ('..' range notation = not queryable)
             col_s = rec.get("basin08_col_s") or ""
-            rec["queryable"] = bool(col_s) and ".." not in col_s
+            # monthly_series: range notation ending in s01..s12 (12-month seasonal columns)
+            is_monthly = col_s.endswith("s01..s12")
+            rec["monthly_series"] = is_monthly
+            # queryable = has a single DB column, OR is a monthly series (column resolved per month)
+            rec["queryable"] = bool(col_s) and (".." not in col_s or is_monthly)
             rows.append(rec)
     _codebook_cache = rows
     return rows
@@ -2083,11 +2086,12 @@ def explorer_lisa(var: str, level: int = 8):
 
 
 @router.get("/explorer/values", include_in_schema=False)
-def explorer_values(var: str, level: int = 6, su: str = "s"):
+def explorer_values(var: str, level: int = 6, su: str = "s", month: Optional[int] = None):
     """Return GeoJSON FeatureCollection + summary stats for one variable at one level.
 
     su: 's' = local (basin08_col_s), 'u' = upstream (basin08_col_u),
         'delta' = s minus u (diverging render regardless of var type).
+    month: 1–12 for monthly-series variables (temperature_monthly, precipitation_monthly).
     Geometry simplified server-side; NoData (-9999) masked to null.
     Temperature cols (tmp_dc_*) divided by 10 to convert from stored °C×10.
     """
@@ -2098,6 +2102,16 @@ def explorer_values(var: str, level: int = 6, su: str = "s"):
 
     col_s = row.get("basin08_col_s")
     col_u = row.get("basin08_col_u")
+
+    # Resolve monthly-series column: 'tmp_dc_s01..s12' + month=3 → 'tmp_dc_s03'
+    if row.get("monthly_series"):
+        if month is None:
+            month = 1
+        if not (1 <= month <= 12):
+            raise HTTPException(status_code=400, detail="month must be 1–12")
+        prefix = col_s.split("..")[0][:-2]   # 'tmp_dc_s01..s12' → 'tmp_dc_s'
+        col_s = f"{prefix}{month:02d}"        # → 'tmp_dc_s03'
+        su = "s"  # monthly vars have no upstream
 
     if su not in ("s", "u", "delta"):
         raise HTTPException(status_code=400, detail="su must be 's', 'u', or 'delta'")

@@ -198,6 +198,19 @@
               <label class="btn btn-outline-secondary" for="ex-su-delta">Δ</label>
             </div>
 
+            <!-- Month selector (shown only for monthly-series variables) -->
+            <div id="ex-month-wrap" class="d-none d-flex align-items-center gap-1">
+              <span class="text-muted">Month:</span>
+              <select id="ex-month" class="form-select form-select-sm" style="width:auto;">
+                <option value="1">Jan</option><option value="2">Feb</option>
+                <option value="3">Mar</option><option value="4">Apr</option>
+                <option value="5">May</option><option value="6">Jun</option>
+                <option value="7">Jul</option><option value="8">Aug</option>
+                <option value="9">Sep</option><option value="10">Oct</option>
+                <option value="11">Nov</option><option value="12">Dec</option>
+              </select>
+            </div>
+
             <!-- Values/LISA toggle -->
             <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
               <input type="radio" class="btn-check" name="ex-view" id="ex-view-values" value="values" checked autocomplete="off">
@@ -441,11 +454,15 @@
     if (!selectedKey) return;
     const su    = document.querySelector('input[name="ex-su"]:checked')?.value || 's';
     const level = document.querySelector('input[name="ex-level"]:checked')?.value || '6';
+    const v     = allVars.find(v => v.schema_key === selectedKey);
+    const month = v?.monthly_series ? document.getElementById('ex-month').value : null;
     const strip = document.getElementById('ex-var-header');
     strip.innerHTML = '<span class="text-muted fst-italic small">Loading…</span>';
     showSpinner();
     try {
-      const resp = await fetch(`/api/explorer/values?var=${encodeURIComponent(selectedKey)}&level=${level}&su=${su}`);
+      const params = new URLSearchParams({ var: selectedKey, level, su });
+      if (month) params.set('month', month);
+      const resp = await fetch(`/api/explorer/values?${params}`);
       if (!resp.ok) { const e = await resp.json(); throw new Error(e.detail); }
       const data = await resp.json();
       lastNumericData = data;
@@ -457,6 +474,8 @@
       url.searchParams.set('var', selectedKey);
       url.searchParams.set('level', level);
       url.searchParams.set('su', su);
+      if (month) url.searchParams.set('month', month);
+      else url.searchParams.delete('month');
       window.history.replaceState({}, '', url);
       // If LISA mode is active, apply LISA styling over the freshly rendered choropleth
       if (currentViewMode === 'lisa') await fetchLISA();
@@ -784,12 +803,25 @@
       document.getElementById('ex-su-s').checked = true;
     }
 
-    // LISA toggle: disable for categoricals; reset to Values on new variable
+    // Month selector: show only for monthly-series variables
+    const monthWrap = document.getElementById('ex-month-wrap');
+    if (v?.monthly_series) {
+      monthWrap.classList.remove('d-none');
+    } else {
+      monthWrap.classList.add('d-none');
+    }
+
+    // LISA toggle: disable for categoricals and monthly-series (no LISA data for either)
     const lisaRadio = document.getElementById('ex-view-lisa');
     const lisaLabel = lisaRadio.nextElementSibling;
     if (v?.type === 'string') {
       lisaRadio.disabled = true;
       lisaLabel.title = 'LISA not available for categorical variables';
+      document.getElementById('ex-view-values').checked = true;
+      currentViewMode = 'values';
+    } else if (v?.monthly_series) {
+      lisaRadio.disabled = true;
+      lisaLabel.title = 'LISA not available for monthly series';
       document.getElementById('ex-view-values').checked = true;
       currentViewMode = 'values';
     } else {
@@ -846,12 +878,15 @@
     });
   });
 
-  // ── s/u/Δ and level change → re-fetch ──
+  // ── s/u/Δ, level, and month change → re-fetch ──
   document.querySelectorAll('input[name="ex-su"]').forEach(el => {
     el.addEventListener('change', () => { if (selectedKey) fetchAndRender(); });
   });
   document.querySelectorAll('input[name="ex-level"]').forEach(el => {
     el.addEventListener('change', () => { if (selectedKey) fetchAndRender(); });
+  });
+  document.getElementById('ex-month').addEventListener('change', () => {
+    if (selectedKey) fetchAndRender();
   });
 
   // ── Restore from URL ──
@@ -860,8 +895,10 @@
     const varKey = params.get('var');
     const su     = params.get('su');
     const level  = params.get('level');
-    if (su    && document.getElementById(`ex-su-${su}`))    document.getElementById(`ex-su-${su}`).checked    = true;
-    if (level && document.getElementById(`ex-level-${level}`)) document.getElementById(`ex-level-${level}`).checked = true;
+    if (su    && document.getElementById(`ex-su-${su}`))        document.getElementById(`ex-su-${su}`).checked        = true;
+    if (level && document.getElementById(`ex-level-${level}`)) document.getElementById(`ex-level-${level}`).checked   = true;
+    const month = params.get('month');
+    if (month) document.getElementById('ex-month').value = month;
     if (varKey) {
       const v = allVars.find(v => v.schema_key === varKey);
       if (v) {
