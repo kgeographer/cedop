@@ -133,3 +133,35 @@ Three runs required due to stale checkpoint state:
 - L8: 43 variables × 190,675 basins = 8,199,025 rows
 
 LISA toggle now works for all 43 variables at both scales. `spatial/variable_characterization.csv` committed (86 rows: 43 L6 + 43 L8).
+
+---
+
+## 7. Monthly variable support
+
+`temperature_monthly` and `precipitation_monthly` were non-clickable in the accordion (range notation `tmp_dc_s01..s12`, `pre_mm_s01..s12` blocked the queryable flag). Fix: detect the `s01..s12` pattern as `monthly_series=True` and mark those variables queryable.
+
+`/api/explorer/values` gains a `month=1–12` parameter. When `monthly_series=True`, resolves the column before querying: `tmp_dc_s01..s12` + month=7 → `tmp_dc_s07`. Temperature ÷10 scaling applies automatically. `su` is forced to `s` (no upstream monthly data).
+
+Frontend: compact month dropdown (Jan–Dec) added inline to the control strip, hidden until a monthly variable is selected (same reveal pattern as the s/u/Δ toggle). LISA radio disabled for monthly vars. Month included in URL state.
+
+---
+
+## 8. Accordion cleanup — hide redundant `_id` variables
+
+9 `_id` variables have a `_name` or `_code` partner in the codebook (e.g., `biome_id` / `biome_name`). These are raw integer keys with no display value — the categorical renderer already does the lookup join. A second pass in `_load_codebook()` sets `hide_in_explorer=True` for these; `filteredVars()` in the JS skips them. `wetland_class_id` (no partner, no lookup table) remains visible but non-queryable.
+
+---
+
+## 9. Choropleth sliver fix
+
+White slivers appeared between basin polygons in dark color ranges — sub-pixel rendering gaps where adjacent canvas paths don't quite meet. Fix: set stroke `color` equal to `fillColor` for all three render paths (numeric, categorical, LISA). Any sub-pixel gap then shows the polygon's own fill color rather than a contrasting edge. Basin boundaries remain visible where neighboring values differ. Effect diminishes further when zoomed in.
+
+---
+
+## Open / deferred
+
+- Band T temporal: HYDE (epoch dropdown) and LMR (year/period selector) undesigned — largest remaining feature
+- Diagnostics and Compare tabs — disabled placeholders
+- L8 choropleth performance — 190k basins over GeoJSON is slow; MapLibre/MVT deferred
+- Deploy to server — pending temporal design decisions
+- Aridity direction note in header strip (low priority)

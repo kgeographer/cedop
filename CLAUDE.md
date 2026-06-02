@@ -325,25 +325,23 @@ A new `/sandbox/explorer` page exposing all EDOPS signature variables as interac
 - `/sandbox/explorer` → `explorer.html` (new)
 
 **Status — completed 2026-06-02** (see `logs/session_log_20260602.md`):
-- Codebook API (`/api/explorer/codebook`): 97 vars, computed `queryable` flag, output band filtered
-- Values API (`/api/explorer/values?var&level&su`): GeoJSON + stats, s/u/delta modes, NoData masking, tmp_dc_* ÷10
+- Codebook API (`/api/explorer/codebook`): computed `queryable`, `monthly_series`, `hide_in_explorer` flags; output band filtered
+- Values API (`/api/explorer/values?var&level&su&month`): GeoJSON + stats, s/u/delta modes, NoData masking, tmp_dc_* ÷10, monthly column resolution
 - Categorical API (`/api/explorer/categorical?var&level`): top-20 + Other collapse, qualitative palette, 9 lookup tables
 - LISA API (`/api/explorer/lisa?var&level`): parquet-backed, no geometry, `{meta:{counts}, classes:{hybas_id:class}}`
-- Frontend: accordion (Band→Dim→Var), choropleth, histogram, category bars, s/u/Δ toggle, Values/LISA toggle, spinner, URL state
-- LISA frontend: `LISA_COLORS`, `fetchLISA()`, `applyLISAStyle()`, `renderLISAHistogram()`, 404 graceful fallback, mouseout fix
+- Frontend: accordion (Band→Dim→Var, `_id` vars with name partners hidden), choropleth, histogram, category bars, s/u/Δ toggle, month dropdown, Values/LISA toggle, spinner, URL state
+- LISA frontend: `fetchLISA()`, `applyLISAStyle()`, `renderLISAHistogram()`, 404 graceful fallback
+- Sliver fix: stroke color = fill color on all render paths (eliminates sub-pixel white gaps)
 - `tests/test_explorer.py`: 30 tests, 49/49 suite passing
-- `scripts/edop/esda/12_spatial_moran.py`: merge bug fixed (partial runs no longer destroy other scales); `tmp_dc_smn`/`tmp_dc_smx` added
-- LISA parquet complete: 43 variables × L6 (16,397 basins) + L8 (190,675 basins) = 8,904,096 rows
-
-**LISA parquet** (`output/edop/esda/lisa_classifications.parquet`, gitignored):
-- L6: 43 vars × 16,397 basins = 705,071 rows
-- L8: 43 vars × 190,675 basins = 8,199,025 rows
-- Checkpoint: `spatial/variable_characterization.csv` (86 rows, committed)
+- `scripts/edop/esda/12_spatial_moran.py`: merge-destroy bug fixed; `tmp_dc_smn`/`tmp_dc_smx` added; VARIABLES 40 → 42
+- LISA parquet: 43 vars × L6 (16,397) + L8 (190,675) = 8,904,096 rows; checkpoint `spatial/variable_characterization.csv` (86 rows)
 
 **Open / deferred**:
-- Aridity direction note in header strip (P/PET increases with humidity) — low priority
-- L8 choropleth performance: 190k basins over GeoJSON is slow; MapLibre/MVT tiles deferred
+- **Band T temporal** — HYDE epoch dropdown + LMR period/year selector; largest remaining feature, undesigned
 - Diagnostics and Compare tabs — disabled placeholders, not yet designed
+- L8 choropleth performance — 190k basins over GeoJSON is slow; MapLibre/MVT deferred
+- Deploy to server — pending temporal design decisions
+- Aridity direction note in header strip — low priority
 
 ## External Dependencies
 
