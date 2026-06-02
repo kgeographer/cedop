@@ -85,5 +85,51 @@ Semi-transparent white overlay with Bootstrap spinner injected into Leaflet map 
 
 - **Aridity direction**: `aridity_index` (P/PET) increases with humidity — labelling in header strip could note this; currently no code change
 - **L6 response time** suggests L8 will require tile-based delivery (MapLibre/MVT) — deferred
-- **LISA view** — not yet started; parquet has L8 complete (41 vars), L6 needs sweep
-- **L6 LISA sweep** — `12_spatial_moran.py --l6-only` still needed for `tmp_dc_smn`, `tmp_dc_smx` additions
+
+---
+
+## 5. LISA view (Values/LISA toggle)
+
+### API endpoint
+`GET /api/explorer/lisa?var=X&level=6|8` added to `app/api/routes.py`. Loads `output/edop/esda/lisa_classifications.parquet` into a module-level cache (`_lisa_df_cache`). Filters by `basin08_col_s` column name + scale (`L6`/`L8`). Returns `{meta: {var, col, level, n, counts}, classes: {str(hybas_id): lisa_class}}` — no geometry; client reuses the existing choropleth layer. Returns 404 if no data for the requested variable/level.
+
+### Frontend
+Added to `app/templates/explorer.html`:
+
+- `LISA_COLORS` constant: `{ HH: '#d32f2f', HL: '#ef9a9a', LH: '#90caf9', LL: '#1565c0', NS: '#e0e0e0' }`
+- State variables: `lisaClasses`, `lastNumericData`, `currentViewMode`
+- `fetchLISA()`: calls API; on 404 reverts toggle to Values and appends ⚠ note to header strip; on success calls `applyLISAStyle()` + `renderLISAHistogram()`
+- `applyLISAStyle()`: `choroplethLayer.eachLayer()` restyle using `lisaClasses[String(hybas_id)]`; gray for basins without LISA data
+- `renderLISAHistogram()`: SVG with 5 fixed bars (HH/HL/LH/LL/NS) showing count and percentage
+- Values/LISA toggle listener: LISA → `fetchLISA()`; Values → restore from `lastNumericData` cache (no extra round-trip)
+- `fetchAndRender()` saves `lastNumericData`; auto-calls `fetchLISA()` if already in LISA mode (handles level and variable changes)
+- LISA radio disabled for categorical variables; `lisaClasses` cleared on variable change
+- Mouseout fix: in LISA mode, `resetStyle()` replaced with explicit LISA fill restore to prevent flicker
+
+### Tests (`tests/test_explorer.py`)
+30 new tests covering all four Explorer endpoints (codebook, values, categorical, LISA); 49/49 suite passing.
+
+---
+
+## 6. L6 LISA sweep
+
+### Pre-run fixes to `scripts/edop/esda/12_spatial_moran.py`
+
+**Merge bug (critical)**: `merge_staging()` previously only merged staging files, overwriting the entire parquet. A `--l6-only` run would have silently destroyed all L8 data. Fix: seed merge with existing parquet, then append staging, then `drop_duplicates(subset=['variable','scale','hybas_id'], keep='last')`. Re-runs of any (var, scale) pair also self-heal.
+
+**Missing variables**: `tmp_dc_smn` and `tmp_dc_smx` were absent from `VARIABLES`. Added with `scale_factor=0.1`. VARIABLES count: 40 → 42.
+
+### Sweep execution
+
+Three runs required due to stale checkpoint state:
+
+1. First `--l6-only`: ran correctly but 38 of 40 L6 variables were already in `spatial/variable_characterization.csv` from a prior incomplete run (staging had been lost). Checkpoint skipped those 38; only `tmp_dc_smn` and `tmp_dc_smx` actually staged and merged → parquet had only 5 L6 vars.
+2. `--l8-only`: added `tmp_dc_smn` and `tmp_dc_smx` at L8. Both scales now have 43 variables.
+3. Stale CSV rows removed (38 L6 rows not backed by parquet data). Second `--l6-only` ran all 38 missing variables.
+
+### Final parquet state
+`output/edop/esda/lisa_classifications.parquet`: **8,904,096 rows**
+- L6: 43 variables × 16,397 basins = 705,071 rows
+- L8: 43 variables × 190,675 basins = 8,199,025 rows
+
+LISA toggle now works for all 43 variables at both scales. `spatial/variable_characterization.csv` committed (86 rows: 43 L6 + 43 L8).

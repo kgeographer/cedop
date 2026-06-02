@@ -319,31 +319,31 @@ A new `/sandbox/explorer` page exposing all EDOPS signature variables as interac
 
 **Spec**: `docs/design/EDOPS_explorer_cc_prompt.md` (authoritative) + wireframe `docs/design/images/explorer_wireframe_v0.3.png`.
 
-**Routes** (as of 2026-06-01):
+**Routes**:
 - `/sandbox` → 301 → `/sandbox/lookup` (existing sandbox, backward-compatible)
 - `/sandbox/lookup` → `sandbox.html`
 - `/sandbox/explorer` → `explorer.html` (new)
 
-**Status — completed 2026-06-01**:
-- Route changes in `app/web/pages.py`; Lookup|Explorer nav in both headers; Explorer cross-link in sandbox
-- `app/templates/explorer.html`: skeleton with 25/75 layout, left column (search, status filter, class filter, accordion placeholder), right column (Map/Diagnostics/Compare tabs, control strip, variable header strip, Leaflet map, histogram placeholder)
+**Status — completed 2026-06-02** (see `logs/session_log_20260602.md`):
+- Codebook API (`/api/explorer/codebook`): 97 vars, computed `queryable` flag, output band filtered
+- Values API (`/api/explorer/values?var&level&su`): GeoJSON + stats, s/u/delta modes, NoData masking, tmp_dc_* ÷10
+- Categorical API (`/api/explorer/categorical?var&level`): top-20 + Other collapse, qualitative palette, 9 lookup tables
+- LISA API (`/api/explorer/lisa?var&level`): parquet-backed, no geometry, `{meta:{counts}, classes:{hybas_id:class}}`
+- Frontend: accordion (Band→Dim→Var), choropleth, histogram, category bars, s/u/Δ toggle, Values/LISA toggle, spinner, URL state
+- LISA frontend: `LISA_COLORS`, `fetchLISA()`, `applyLISAStyle()`, `renderLISAHistogram()`, 404 graceful fallback, mouseout fix
+- `tests/test_explorer.py`: 30 tests, 49/49 suite passing
+- `scripts/edop/esda/12_spatial_moran.py`: merge bug fixed (partial runs no longer destroy other scales); `tmp_dc_smn`/`tmp_dc_smx` added
+- LISA parquet complete: 43 variables × L6 (16,397 basins) + L8 (190,675 basins) = 8,904,096 rows
 
-**LISA data gap**: `output/edop/esda/lisa_classifications.parquet` has L8 complete (41 vars) but L6 only has 3 vars. Full L6 sweep needed — rerun `scripts/edop/esda/12_spatial_moran.py --l6-only`. Add `tmp_dc_smn` and `tmp_dc_smx` (missed in original sweep) to both scales.
+**LISA parquet** (`output/edop/esda/lisa_classifications.parquet`, gitignored):
+- L6: 43 vars × 16,397 basins = 705,071 rows
+- L8: 43 vars × 190,675 basins = 8,199,025 rows
+- Checkpoint: `spatial/variable_characterization.csv` (86 rows, committed)
 
-**Immediate next steps**:
-1. Codebook API endpoint (`/api/explorer/codebook`) — serves variable metadata for accordion
-2. Populate left-column accordion from codebook (Band → Dimension → Variable)
-3. Basin values API endpoint (`/api/explorer/values?var=X&level=6|8`) — for choropleth data
-4. Choropleth rendering (GeoJSON at L6 first; L8 performance TBD)
-5. Run L6 LISA sweep to fill parquet gap
-
-**Design decisions resolved**:
-- Separate route + template (not a tab on existing sandbox) ✓
-- L6 GeoJSON for first pass; L8 performance to be evaluated during build ✓
-- Codebook-driven accordion (Band → Dimension → Variable) ✓
-- Color scale: per variable type (sequential/diverging/qualitative/zero-inflated) per spec ✓
-
-**Categorical variable rendering**: 10 categorical variables not in LISA parquet (join-count stats only). Left-column legend cardinality (up to 16 classes for lithology) is a design decision to resolve when we reach categorical rendering — not a blocker now.
+**Open / deferred**:
+- Aridity direction note in header strip (P/PET increases with humidity) — low priority
+- L8 choropleth performance: 190k basins over GeoJSON is slow; MapLibre/MVT tiles deferred
+- Diagnostics and Compare tabs — disabled placeholders, not yet designed
 
 ## External Dependencies
 
