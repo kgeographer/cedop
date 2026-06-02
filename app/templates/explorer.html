@@ -351,29 +351,36 @@
     const lo = meta.p10 ?? meta.min, hi = meta.p90 ?? meta.max;
     const step = (hi - lo) / N_BINS || 1;
 
-    // Bin the values (clip outliers into first/last bin)
+    // Bin values strictly within [lo, hi]; count under/overflow separately
     const counts = new Array(N_BINS).fill(0);
+    let nUnder = 0, nOver = 0;
     for (const v of values) {
-      const i = Math.min(N_BINS - 1, Math.max(0, Math.floor((v - lo) / step)));
+      if (v < lo)      { nUnder++; continue; }
+      if (v > hi)      { nOver++;  continue; }
+      const i = Math.min(N_BINS - 1, Math.floor((v - lo) / step));
       counts[i]++;
     }
     const maxCount = Math.max(...counts) || 1;
 
     const W = el.clientWidth || 600, H = 90;
     const bw = (W - 4) / N_BINS;
-    const meanX  = ((meta.mean   - lo) / (hi - lo)) * (W - 4) + 2;
-    const medX   = ((meta.median - lo) / (hi - lo)) * (W - 4) + 2;
+    const clamp = x => Math.max(2, Math.min(W - 2, x));
+    const meanX = clamp(((meta.mean   - lo) / (hi - lo)) * (W - 4) + 2);
+    const medX  = clamp(((meta.median - lo) / (hi - lo)) * (W - 4) + 2);
 
     const bars = counts.map((c, i) => {
-      const x    = 2 + i * bw;
+      const x      = 2 + i * bw;
       const binMid = lo + (i + 0.5) * step;
-      const fill = currentColorFn(binMid);
-      const barH = (c / maxCount) * (H - 14);
-      const y    = H - 14 - barH;
+      const fill   = currentColorFn(binMid);
+      const barH   = (c / maxCount) * (H - 14);
+      const y      = H - 14 - barH;
       return `<rect class="histo-bar" data-bin="${i}" x="${x.toFixed(1)}" y="${y.toFixed(1)}"
                     width="${(bw - 0.5).toFixed(1)}" height="${barH.toFixed(1)}"
                     fill="${fill}" stroke="none" opacity="0.85"/>`;
     }).join('');
+
+    const underNote = nUnder ? `<tspan> ◂${nUnder}</tspan>` : '';
+    const overNote  = nOver  ? `<tspan> ${nOver}▸</tspan>`  : '';
 
     el.innerHTML = `
       <svg id="ex-histo-svg" width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
@@ -383,8 +390,8 @@
         <line x1="${medX.toFixed(1)}"   y1="0" x2="${medX.toFixed(1)}"   y2="${H-14}" stroke="#888" stroke-width="1"   stroke-dasharray="2,2"/>
         <text x="${meanX.toFixed(1)}"  y="${H-3}" text-anchor="middle" font-size="9" fill="#333">mean</text>
         <text x="${medX.toFixed(1)}"   y="${H-3}" text-anchor="middle" font-size="9" fill="#888">med</text>
-        <text x="2"    y="${H-3}" font-size="9" fill="#aaa">${lo.toFixed(1)}</text>
-        <text x="${W-2}" y="${H-3}" text-anchor="end" font-size="9" fill="#aaa">${hi.toFixed(1)}</text>
+        <text x="2"    y="${H-3}" font-size="9" fill="#aaa">${lo.toFixed(1)}${underNote}</text>
+        <text x="${W-2}" y="${H-3}" text-anchor="end" font-size="9" fill="#aaa">${overNote}${hi.toFixed(1)}</text>
       </svg>`;
   }
 
