@@ -2030,6 +2030,58 @@ def explorer_codebook():
     return _load_codebook()
 
 
+_lisa_df_cache = None
+
+def _load_lisa_df():
+    global _lisa_df_cache
+    if _lisa_df_cache is not None:
+        return _lisa_df_cache
+    import pandas as pd
+    p = Path(__file__).resolve().parents[2] / "output" / "edop" / "esda" / "lisa_classifications.parquet"
+    if not p.exists():
+        return None
+    _lisa_df_cache = pd.read_parquet(p)
+    return _lisa_df_cache
+
+
+@router.get("/explorer/lisa", include_in_schema=False)
+def explorer_lisa(var: str, level: int = 8):
+    """Return per-basin LISA class assignments for one variable at one scale.
+
+    Returns a flat dict {str(hybas_id): lisa_class} for O(1) JS lookup.
+    No geometry — client reuses the already-loaded choropleth layer.
+    """
+    cb = _load_codebook()
+    row = next((r for r in cb if r["schema_key"] == var), None)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Variable '{var}' not found")
+
+    col_s = row.get("basin08_col_s")
+    if not col_s:
+        raise HTTPException(status_code=404, detail=f"No basin column for '{var}'")
+    if level not in (6, 8):
+        raise HTTPException(status_code=400, detail="level must be 6 or 8")
+
+    df = _load_lisa_df()
+    if df is None:
+        raise HTTPException(status_code=503, detail="LISA parquet not found")
+
+    scale = f"L{level}"
+    sub = df[(df["variable"] == col_s) & (df["scale"] == scale)][["hybas_id", "lisa_class"]]
+    if sub.empty:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No LISA data for '{var}' at L{level} — run the L{level} sweep first"
+        )
+
+    counts = sub["lisa_class"].value_counts().to_dict()
+    classes = dict(zip(sub["hybas_id"].astype(int).astype(str), sub["lisa_class"]))
+    return {
+        "meta": {"var": var, "col": col_s, "level": level, "n": len(sub), "counts": counts},
+        "classes": classes,
+    }
+
+
 @router.get("/explorer/values", include_in_schema=False)
 def explorer_values(var: str, level: int = 6, su: str = "s"):
     """Return GeoJSON FeatureCollection + summary stats for one variable at one level.
