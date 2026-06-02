@@ -339,13 +339,10 @@
     currentColorFn = makeColorFn(meta, su);
 
     choroplethLayer = L.geoJSON(geojson, {
-      style: f => ({
-        fillColor: currentColorFn(f.properties.value),
-        fillOpacity: 0.75,
-        weight: 0.2,
-        color: '#666',
-        opacity: 0.4,
-      }),
+      style: f => {
+        const fill = currentColorFn(f.properties.value);
+        return { fillColor: fill, fillOpacity: 0.85, weight: 0.4, color: fill, opacity: 1 };
+      },
       onEachFeature: (f, layer) => {
         const v = f.properties.value;
         const disp = v != null ? `${Number(v.toFixed(4))} ${meta.units || ''}`.trim() : 'No data';
@@ -357,7 +354,8 @@
           if (currentViewMode === 'lisa' && lisaClasses) {
             const id  = String(layer.feature.properties.hybas_id);
             const cls = lisaClasses[id];
-            this.setStyle({ fillColor: LISA_COLORS[cls] ?? '#d3d3d3', fillOpacity: 0.8, weight: 0.2, color: '#666', opacity: 0.4 });
+            const fill = LISA_COLORS[cls] ?? '#d3d3d3';
+            this.setStyle({ fillColor: fill, fillOpacity: 0.8, weight: 0.4, color: fill, opacity: 1 });
           } else {
             choroplethLayer.resetStyle(this);
             clearHistoHighlight();
@@ -520,13 +518,10 @@
     const idToName  = Object.fromEntries(categories.map(c => [c.id, c.name]));
 
     choroplethLayer = L.geoJSON(geojson, {
-      style: f => ({
-        fillColor: idToColor[f.properties.cat_id] ?? '#aaa',
-        fillOpacity: 0.8,
-        weight: 0.2,
-        color: '#666',
-        opacity: 0.4,
-      }),
+      style: f => {
+        const fill = idToColor[f.properties.cat_id] ?? '#aaa';
+        return { fillColor: fill, fillOpacity: 0.85, weight: 0.4, color: fill, opacity: 1 };
+      },
       onEachFeature: (f, layer) => {
         const name = idToName[f.properties.cat_id] ?? `Class ${f.properties.raw_id}`;
         layer.on('mouseover', function () {
@@ -605,13 +600,8 @@
     choroplethLayer.eachLayer(layer => {
       const id  = String(layer.feature?.properties?.hybas_id);
       const cls = lisaClasses[id];
-      layer.setStyle({
-        fillColor:   LISA_COLORS[cls] ?? '#d3d3d3',
-        fillOpacity: 0.8,
-        weight:      0.2,
-        color:       '#666',
-        opacity:     0.4,
-      });
+      const fill = LISA_COLORS[cls] ?? '#d3d3d3';
+      layer.setStyle({ fillColor: fill, fillOpacity: 0.8, weight: 0.4, color: fill, opacity: 1 });
     });
   }
 
