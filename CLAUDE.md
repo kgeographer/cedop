@@ -313,25 +313,37 @@ Also set `facecolor='white'` in `savefig` and `fig.patch.set_facecolor("white")`
 
 ---
 
-## Next Dev Task — Sandbox Choropleth Page
+## Current Dev Task — Explorer page (`explorer` branch)
 
-A new page in the sandbox app to expose all EDOPS signature variables as interactive choropleth maps — a visual companion to the CHAR report. Significant new dev task; branch TBD, created from `main`.
+A new `/sandbox/explorer` page exposing all EDOPS signature variables as interactive choropleth maps — a visual companion to the CHAR report. Branch `explorer` created 2026-06-01 from `main`.
 
-**Goal**: Allow a researcher to browse the global spatial distribution of every implemented signature variable on a Leaflet map, one variable at a time. No place-query required — global map first. Complements CHAR findings by making spatial structure visible without running notebooks.
+**Spec**: `docs/design/EDOPS_explorer_cc_prompt.md` (authoritative) + wireframe `docs/design/images/explorer_wireframe_v0.3.png`.
 
-**Context**:
-- The sandbox (`/sandbox`, `app/templates/sandbox.html`) is currently a single complex page for place-lookup → basin → signature. The choropleth view is a different interaction mode and will likely be a separate route/page.
-- `metadata/edops_codebook_v03_draft.tsv` is the variable registry: bands A–E + T, with `friendly_name`, `position_method`, `historical_validity`, `typology_cluster` columns that can drive the variable-selector UI.
-- Band T variables require a time window; v1 will likely cover static bands A–E only, with Band T deferred.
-- `docs/design/scenarios.md` has user profiles — read before any sandbox UI work.
+**Routes** (as of 2026-06-01):
+- `/sandbox` → 301 → `/sandbox/lookup` (existing sandbox, backward-compatible)
+- `/sandbox/lookup` → `sandbox.html`
+- `/sandbox/explorer` → `explorer.html` (new)
 
-**Key open design questions** (to resolve at task start, with Karl):
-- Separate route + template, or tab added to existing sandbox?
-- Tile delivery: pre-generated vector tiles, server-side PostGIS MVT, or chunked GeoJSON? (190k L8 basins is too large for a single GeoJSON payload.)
-- Variable selector UI shape: band-grouped dropdown, codebook-driven accordion, or something else?
-- Color scale: per-variable quantile breaks, or percentile bins derived from `position_method`?
+**Status — completed 2026-06-01**:
+- Route changes in `app/web/pages.py`; Lookup|Explorer nav in both headers; Explorer cross-link in sandbox
+- `app/templates/explorer.html`: skeleton with 25/75 layout, left column (search, status filter, class filter, accordion placeholder), right column (Map/Diagnostics/Compare tabs, control strip, variable header strip, Leaflet map, histogram placeholder)
 
-**Do not start implementation without Karl's answers to these questions.**
+**LISA data gap**: `output/edop/esda/lisa_classifications.parquet` has L8 complete (41 vars) but L6 only has 3 vars. Full L6 sweep needed — rerun `scripts/edop/esda/12_spatial_moran.py --l6-only`. Add `tmp_dc_smn` and `tmp_dc_smx` (missed in original sweep) to both scales.
+
+**Immediate next steps**:
+1. Codebook API endpoint (`/api/explorer/codebook`) — serves variable metadata for accordion
+2. Populate left-column accordion from codebook (Band → Dimension → Variable)
+3. Basin values API endpoint (`/api/explorer/values?var=X&level=6|8`) — for choropleth data
+4. Choropleth rendering (GeoJSON at L6 first; L8 performance TBD)
+5. Run L6 LISA sweep to fill parquet gap
+
+**Design decisions resolved**:
+- Separate route + template (not a tab on existing sandbox) ✓
+- L6 GeoJSON for first pass; L8 performance to be evaluated during build ✓
+- Codebook-driven accordion (Band → Dimension → Variable) ✓
+- Color scale: per variable type (sequential/diverging/qualitative/zero-inflated) per spec ✓
+
+**Categorical variable rendering**: 10 categorical variables not in LISA parquet (join-count stats only). Left-column legend cardinality (up to 16 classes for lithology) is a design decision to resolve when we reach categorical rendering — not a blocker now.
 
 ## External Dependencies
 

@@ -43,8 +43,17 @@ def workbench(request: Request):
     return templates.TemplateResponse("workbench.html", {"request": request})
 
 @router.get("/sandbox")
-def sandbox(request: Request):
+def sandbox_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/sandbox/lookup", status_code=301)
+
+@router.get("/sandbox/lookup")
+def sandbox_lookup(request: Request):
     return templates.TemplateResponse("sandbox.html", {"request": request})
+
+@router.get("/sandbox/explorer")
+def sandbox_explorer(request: Request):
+    return templates.TemplateResponse("explorer.html", {"request": request})
 
 @router.get("/edops")
 def edops(request: Request):
