@@ -2008,7 +2008,6 @@ def _load_codebook() -> List[Dict]:
             is_monthly = col_s.endswith("s01..s12")
             rec["monthly_series"] = is_monthly
             # queryable = has a single DB column, OR is a monthly series (column resolved per month)
-            rec["queryable"] = bool(col_s) and (".." not in col_s or is_monthly)
             # Band T subsystem: lmr | evolv2k | hyde (drives Explorer rendering mode)
             key = rec.get("schema_key") or ""
             if key.startswith("lmr_"):
@@ -2019,6 +2018,12 @@ def _load_codebook() -> List[Dict]:
                 rec["t_subsystem"] = "hyde"
             else:
                 rec["t_subsystem"] = None
+            is_band_t_active = (
+                rec.get("band") == "T" and
+                rec.get("status") == "implemented" and
+                rec.get("t_subsystem") is not None
+            )
+            rec["queryable"] = (bool(col_s) and (".." not in col_s or is_monthly)) or is_band_t_active
             rows.append(rec)
     # Second pass: hide _id vars whose _name or _code partner exists in the same codebook
     all_keys = {r["schema_key"] for r in rows}

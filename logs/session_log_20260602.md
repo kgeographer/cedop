@@ -158,10 +158,67 @@ White slivers appeared between basin polygons in dark color ranges — sub-pixel
 
 ---
 
+---
+
+## Session 2 (evening) — Band T frontend + LMR rendering fixes
+
+### 10. Band T queryable fix
+
+`_load_codebook()` in `app/api/routes.py` extended with `is_band_t_active` flag: implemented Band T vars with a non-null `t_subsystem` are now `queryable=True`. Previously all Band T vars had no `basin08_col_s`, so the existing logic marked them as `no-data` (gray, non-clickable). Fix applied before `queryable` is assigned:
+
+```python
+is_band_t_active = (
+    rec.get("band") == "T" and
+    rec.get("status") == "implemented" and
+    rec.get("t_subsystem") is not None
+)
+rec["queryable"] = (bool(col_s) and (".." not in col_s or is_monthly)) or is_band_t_active
+```
+
+Result: 13 implemented Band T vars (3 LMR, 6 eVolv2k, 4 HYDE) are now clickable; `lmr_slp` (planned) correctly excluded.
+
+### 11. LMR choropleth rendering
+
+The LMR map had several issues resolved in sequence:
+
+**Opacity**: `fillOpacity` reduced from 0.85 → 0.70; added `weight: 0.2, color: '#888'` border so base map shows through.
+
+**Color direction (baseline)**: Raw LMR values are anomalies vs 1951–1980. All pre-industrial periods showed blue (cold vs. modern), making MCA look like a cooling period. Fix: compute per-cell pre-industrial mean (notches 0–3: Early → LIA, excluding Industrial) and display each notch relative to that. MCA now reads warm (red), LIA cold (blue), Industrial strongly positive. The per-cell subtraction happens entirely client-side from the already-loaded 5-notch GeoJSON.
+
+**Percentile clipping**: `absMax` previously used absolute min/max across all 16k cells. For `prate` (kg/m²/s), ITCZ cells had extreme values blowing out the scale. Fixed with 3rd/97th percentile clip (`lmrPercentile(sorted, 0.03/0.97)`).
+
+**Legend precision**: `toFixed(3)` produced "0.000" for prate (values ~1e-5). Added `formatLMRVal()` which uses `toFixed(3)` for magnitudes ≥ 0.01 and `toExponential(2)` for smaller values.
+
+**Legend text updated**: "cooler/warmer than pre-industrial mean" replacing the prior "− (blue) / + (red)" labels.
+
+### 12. Country borders overlay
+
+Generated `app/static/explorer/countries_110m.geojson` (184 features, 283 KB) from `gaz.admin0` with `scalerank <= 3` filter and `ST_Simplify(geom, 0.1)`. Stored as static asset (excluded from git with existing `app/static/explorer/` gitignore rule).
+
+Frontend:
+- `map.createPane('bordersPane')` with `zIndex: 450`, `pointerEvents: none`
+- `countriesData` / `countriesLayer` state variables
+- `loadCountriesOverlay()`: fetches once, caches, adds `L.geoJSON` (weight 0.8, color #555, no fill) to borders pane
+- Called from `loadAndRenderLMR()` after choropleth renders
+- Layer removed when switching back to Band A–E variables
+
+### 13. Legend / histogram text size
+
+All SVG `font-size="9"` bumped to `font-size="12"`; `font-size="8"` → `font-size="11"`. SVG heights increased (H: 90 → 110) with bar/label coordinates adjusted. Category bar rows: `0.68rem` → `0.80rem`, swatch 10px → 12px. `resetHistogramEl` container: 110px → 130px. LMR legend container set to `height: auto` to accommodate trailing caveat paragraph.
+
+### 14. LMR caveat note
+
+Text paragraph appended below LMR gradient bar:
+
+> "Anomaly relative to each cell's pre-industrial mean (Early–LIA notches). Shown at native 2°×2° grid resolution — not aggregated to basins. LMR cells cover ocean as well as land; ocean values reflect data-assimilation infill, not direct proxy evidence. Proxy coverage is sparser in Asia, the Southern Hemisphere, and the tropics; signals in those regions carry greater reconstruction uncertainty. Source: LMR v2.1 (Tardif et al. 2019)."
+
+---
+
 ## Open / deferred
 
-- Band T temporal: HYDE (epoch dropdown) and LMR (year/period selector) undesigned — largest remaining feature
+- **Precip rate (LMR)** — rendering looks noisy but plausible; needs expert review; no code changes needed
+- **eVolv2k chart + HYDE tile rendering** — not yet tested in browser; next session
 - Diagnostics and Compare tabs — disabled placeholders
 - L8 choropleth performance — 190k basins over GeoJSON is slow; MapLibre/MVT deferred
-- Deploy to server — pending temporal design decisions
+- Deploy to server — pending Band T testing + stability
 - Aridity direction note in header strip (low priority)

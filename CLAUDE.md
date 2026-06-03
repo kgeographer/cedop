@@ -324,7 +324,7 @@ A new `/sandbox/explorer` page exposing all EDOPS signature variables as interac
 - `/sandbox/lookup` → `sandbox.html`
 - `/sandbox/explorer` → `explorer.html` (new)
 
-**Status — completed 2026-06-02** (see `logs/session_log_20260602.md`):
+**Status — completed 2026-06-02 session 1** (see `logs/session_log_20260602.md`):
 - Codebook API (`/api/explorer/codebook`): computed `queryable`, `monthly_series`, `hide_in_explorer` flags; output band filtered
 - Values API (`/api/explorer/values?var&level&su&month`): GeoJSON + stats, s/u/delta modes, NoData masking, tmp_dc_* ÷10, monthly column resolution
 - Categorical API (`/api/explorer/categorical?var&level`): top-20 + Other collapse, qualitative palette, 9 lookup tables
@@ -336,11 +336,21 @@ A new `/sandbox/explorer` page exposing all EDOPS signature variables as interac
 - `scripts/edop/esda/12_spatial_moran.py`: merge-destroy bug fixed; `tmp_dc_smn`/`tmp_dc_smx` added; VARIABLES 40 → 42
 - LISA parquet: 43 vars × L6 (16,397) + L8 (190,675) = 8,904,096 rows; checkpoint `spatial/variable_characterization.csv` (86 rows)
 
+**Status — completed 2026-06-02 session 2** (see `logs/session_log_20260602.md`):
+- Band T `queryable` fix: `is_band_t_active` extension in `_load_codebook()`; 13 implemented Band T vars now clickable
+- Band T backend: `t_subsystem` detection (lmr/evolv2k/hyde); `/api/explorer/evolv2k` endpoint; pre-computation scripts for LMR notches + HYDE tiles
+- LMR choropleth: opacity 0.70, pre-industrial-mean baseline (client-side, notches 0–3), percentile clipping at 3/97%, `formatLMRVal()` for scientific notation
+- Country borders overlay: `app/static/explorer/countries_110m.geojson` from `gaz.admin0`; `bordersPane` (z=450); loaded once per session, removed on A–E switch
+- Legend/histogram text: SVG `font-size` 9→12, 8→11; heights H 90→110; category rows 0.68→0.80rem; container 110→130px
+- LMR caveat note: ocean infill, native grid (not basin-aggregated), proxy coverage sparsity, source citation
+- Pre-computed static assets (gitignored): `lmr_notches.geojson` (6.2 MB), HYDE tile pyramid (332 MB, 64k tiles)
+
 **Open / deferred**:
-- **Band T temporal** — HYDE epoch dropdown + LMR period/year selector; largest remaining feature, undesigned
+- **eVolv2k chart + HYDE tile views** — backend complete, frontend written but not yet browser-tested
+- **LMR precip rate** — rendering looks plausible but needs paleoclimate expert review
 - Diagnostics and Compare tabs — disabled placeholders, not yet designed
 - L8 choropleth performance — 190k basins over GeoJSON is slow; MapLibre/MVT deferred
-- Deploy to server — pending temporal design decisions
+- Deploy to server — pending Band T browser testing + stability
 - Aridity direction note in header strip — low priority
 
 ## External Dependencies
