@@ -2009,6 +2009,16 @@ def _load_codebook() -> List[Dict]:
             rec["monthly_series"] = is_monthly
             # queryable = has a single DB column, OR is a monthly series (column resolved per month)
             rec["queryable"] = bool(col_s) and (".." not in col_s or is_monthly)
+            # Band T subsystem: lmr | evolv2k | hyde (drives Explorer rendering mode)
+            key = rec.get("schema_key") or ""
+            if key.startswith("lmr_"):
+                rec["t_subsystem"] = "lmr"
+            elif key.startswith("evolv2k_"):
+                rec["t_subsystem"] = "evolv2k"
+            elif key.startswith("hyde_"):
+                rec["t_subsystem"] = "hyde"
+            else:
+                rec["t_subsystem"] = None
             rows.append(rec)
     # Second pass: hide _id vars whose _name or _code partner exists in the same codebook
     all_keys = {r["schema_key"] for r in rows}
@@ -2330,3 +2340,48 @@ def explorer_categorical(var: str, level: int = 6):
     finally:
         if "conn" in locals():
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Band T: Explorer endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/explorer/evolv2k", include_in_schema=False)
+def explorer_evolv2k():
+    """Return complete eVolv2k v4 event catalog (256 events). Client-side filtering.
+
+    lat is approximate source latitude only; no longitude in source data.
+    Events with lat=0 are equatorial; lat=±45 are unlocated NH/SH defaults.
+    """
+    with db_connect() as conn:
+        rows = conn.execute("""
+            SELECT year_ad, month, lat, vssi_tg, vssi_1sig, asymmetry, location, tephra
+            FROM temporal.evolv2k_v4
+            ORDER BY year_ad
+        """).fetchall()
+    events = [
+        {
+            "year":      int(r[0]),
+            "month":     int(r[1]) if r[1] is not None else None,
+            "lat":       float(r[2]) if r[2] is not None else None,
+            "vssi_tg":   round(float(r[3]), 2),
+            "vssi_1sig": round(float(r[4]), 2) if r[4] is not None else None,
+            "asymmetry": round(float(r[5]), 3) if r[5] is not None else None,
+            "location":  r[6],
+            "tephra":    bool(r[7]) if r[7] is not None else None,
+        }
+        for r in rows
+    ]
+    return {
+        "meta": {
+            "count":    len(events),
+            "year_min": min(e["year"] for e in events),
+            "year_max": max(e["year"] for e in events),
+            "note": (
+                "eVolv2k v4 (Sigl & Toohey 2024). lat = approximate source latitude; "
+                "no longitude in source data. lat=0 → equatorial default; "
+                "lat=±45 → unlocated NH/SH default."
+            ),
+        },
+        "events": events,
+    }
