@@ -313,45 +313,46 @@ Also set `facecolor='white'` in `savefig` and `fig.patch.set_facecolor("white")`
 
 ---
 
-## Current Dev Task — Explorer page (`explorer` branch)
+## Current Dev Task — Explorer MapLibre retool (`maplibre` branch)
 
-A new `/sandbox/explorer` page exposing all EDOPS signature variables as interactive choropleth maps — a visual companion to the CHAR report. Branch `explorer` created 2026-06-01 from `main`.
+Branch `maplibre` created 2026-06-03 from `main`. Replaces Leaflet with MapLibre GL JS
+on the Explorer page to fix a root performance problem: the Leaflet approach sent full
+GeoJSON (geometry + values, ~15–20 MB) on every variable selection, causing ~10 s loads
+on the server. **Regions tab deferred until retool is complete.**
 
-**Spec**: `docs/design/EDOPS_explorer_cc_prompt.md` (authoritative) + wireframe `docs/design/images/explorer_wireframe_v0.3.png`.
+### Explorer page — what was built (now on `main`)
+`/sandbox/explorer` with Leaflet choropleth, full variable accordion (Bands A–T),
+histogram, LISA, Band T (LMR/HYDE/eVolv2k). Deployed to edops.kgeographer.org.
+See `logs/session_log_20260602.md` for full build detail.
 
-**Routes**:
-- `/sandbox` → 301 → `/sandbox/lookup` (existing sandbox, backward-compatible)
-- `/sandbox/lookup` → `sandbox.html`
-- `/sandbox/explorer` → `explorer.html` (new)
+### Completed 2026-06-03 (see `logs/session_log_20260603.md`)
+- Choropleth color scheme fixed: warm/dry=red, cold/wet=blue throughout
+  - Temperature variables: diverging renderer corrected (was warm=BLUE)
+  - Aridity + precipitation: switched from VIRIDIS to RDBU sequential (low=red=dry)
+  - LMR PDSI + precip anomaly: split from temperature renderer (drought=red, wet=blue)
+- First deploy to edops.kgeographer.org; lessons: push main before pull, install pyarrow
 
-**Status — completed 2026-06-02 session 1** (see `logs/session_log_20260602.md`):
-- Codebook API (`/api/explorer/codebook`): computed `queryable`, `monthly_series`, `hide_in_explorer` flags; output band filtered
-- Values API (`/api/explorer/values?var&level&su&month`): GeoJSON + stats, s/u/delta modes, NoData masking, tmp_dc_* ÷10, monthly column resolution
-- Categorical API (`/api/explorer/categorical?var&level`): top-20 + Other collapse, qualitative palette, 9 lookup tables
-- LISA API (`/api/explorer/lisa?var&level`): parquet-backed, no geometry, `{meta:{counts}, classes:{hybas_id:class}}`
-- Frontend: accordion (Band→Dim→Var, `_id` vars with name partners hidden), choropleth, histogram, category bars, s/u/Δ toggle, month dropdown, Values/LISA toggle, spinner, URL state
-- LISA frontend: `fetchLISA()`, `applyLISAStyle()`, `renderLISAHistogram()`, 404 graceful fallback
-- Sliver fix: stroke color = fill color on all render paths (eliminates sub-pixel white gaps)
-- `tests/test_explorer.py`: 30 tests, 49/49 suite passing
-- `scripts/edop/esda/12_spatial_moran.py`: merge-destroy bug fixed; `tmp_dc_smn`/`tmp_dc_smx` added; VARIABLES 40 → 42
-- LISA parquet: 43 vars × L6 (16,397) + L8 (190,675) = 8,904,096 rows; checkpoint `spatial/variable_characterization.csv` (86 rows)
+### MapLibre retool — architecture
+- **`basin06.pmtiles`**: pre-generated once with tippecanoe; geometry only, hybas_id as
+  feature ID. Gitignored static asset, rsync to server.
+- **Values API**: strips geometry → returns flat `{hybas_id: value}` dict (~0.3 MB
+  gzipped vs. 15–20 MB GeoJSON). Categorical endpoint same treatment.
+- **MapLibre**: renders PMTiles; choropleth via `setFeatureState` + paint expressions.
+  Variable switch becomes a sub-second fetch + GPU paint.
+- LMR, HYDE, eVolv2k, country borders carry over as GeoJSON/raster sources unchanged.
+- Left panel, histogram, header strip, Band T controls: unchanged.
 
-**Status — completed 2026-06-02 session 2** (see `logs/session_log_20260602.md`):
-- Band T `queryable` fix: `is_band_t_active` extension in `_load_codebook()`; 13 implemented Band T vars now clickable
-- Band T backend: `t_subsystem` detection (lmr/evolv2k/hyde); `/api/explorer/evolv2k` endpoint; pre-computation scripts for LMR notches + HYDE tiles
-- LMR choropleth: opacity 0.70, pre-industrial-mean baseline (client-side, notches 0–3), percentile clipping at 3/97%, `formatLMRVal()` for scientific notation
-- Country borders overlay: `app/static/explorer/countries_110m.geojson` from `gaz.admin0`; `bordersPane` (z=450); loaded once per session, removed on A–E switch
-- Legend/histogram text: SVG `font-size` 9→12, 8→11; heights H 90→110; category rows 0.68→0.80rem; container 110→130px
-- LMR caveat note: ocean infill, native grid (not basin-aggregated), proxy coverage sparsity, source citation
-- Pre-computed static assets (gitignored): `lmr_notches.geojson` (6.2 MB), HYDE tile pyramid (332 MB, 64k tiles)
+### MapLibre retool — phases
+- Phase 0: `tippecanoe` → `basin06.pmtiles` (Karl runs locally, L6 only for now)
+- Phase 1: backend endpoint simplification (values + categorical response shapes)
+- Phase 2: MapLibre frontend (replace Leaflet rendering, feature-state choropleth)
+- Phase 3: test + verify, rsync pmtiles to server, merge to main
 
-**Open / deferred**:
-- **eVolv2k chart + HYDE tile views** — backend complete, frontend written but not yet browser-tested
-- **LMR precip rate** — rendering looks plausible but needs paleoclimate expert review
-- Diagnostics and Compare tabs — disabled placeholders, not yet designed
-- L8 choropleth performance — 190k basins over GeoJSON is slow; MapLibre/MVT deferred
-- Deploy to server — pending Band T browser testing + stability
-- Aridity direction note in header strip — low priority
+### Still open / deferred
+- Regions tab (was "Diagnostics") — deferred until MapLibre retool complete
+- L8 choropleth — deferred until after 8 June demo
+- eVolv2k + HYDE tile browser testing
+- LMR precip rate paleoclimate review
 
 ## External Dependencies
 
