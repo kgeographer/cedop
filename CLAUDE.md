@@ -313,43 +313,37 @@ Also set `facecolor='white'` in `savefig` and `fig.patch.set_facecolor("white")`
 
 ---
 
-## Current Dev Task — Explorer MapLibre retool (`maplibre` branch)
+## Explorer page — current state (as of 2026-06-04, all on `main`)
 
-Branch `maplibre` created 2026-06-03 from `main`. Replaces Leaflet with MapLibre GL JS
-on the Explorer page to fix a root performance problem: the Leaflet approach sent full
-GeoJSON (geometry + values, ~15–20 MB) on every variable selection, causing ~10 s loads
-on the server. **Regions tab deferred until retool is complete.**
+`/sandbox/explorer` deployed to edops.kgeographer.org. Full feature set:
+- **Global tab**: MapLibre GL JS choropleth on `basin06.pmtiles`; Bands A–T accordion;
+  histogram; LISA; Band T (LMR 5-period notch / HYDE 4-var 3-view / eVolv2k timeline)
+- **Regions tab**: 6-panel synchronized regional choropleth (East Asia, South Asia,
+  Southwest Asia, Mediterranean & N. Africa, Mesoamerica, Pacific Northwest); Band T
+  (LMR + HYDE) fully supported with country overlay on LMR; eVolv2k shows placeholder
+- **Controls strip** (`#ex-controls`): sits above tab panes — visible on both Global and
+  Regions tabs; HYDE view/epoch and LMR period buttons work from Regions tab
 
-### Explorer page — what was built (now on `main`)
-`/sandbox/explorer` with Leaflet choropleth, full variable accordion (Bands A–T),
-histogram, LISA, Band T (LMR/HYDE/eVolv2k). Deployed to edops.kgeographer.org.
-See `logs/session_log_20260602.md` for full build detail.
+### Key architecture decisions
+- **`basin06.pmtiles`** (18.2 MB): pre-generated with tippecanoe; geometry only, hybas_id
+  as feature ID. Gitignored, rsync to server. Never changes.
+- **Values API**: flat `{hybas_id: value}` dict (~0.3 MB) — no geometry. Sub-second loads.
+- **Shared colorMap**: built once in render functions, applied to Global + all 6 region maps
+- **`syncRegionMaps()`**: re-applies current state on every Regions tab switch
 
 ### Completed 2026-06-03 (see `logs/session_log_20260603.md`)
+- MapLibre retool: PMTiles choropleth, geometry-free values API, merged maplibre → main
 - Choropleth color scheme fixed: warm/dry=red, cold/wet=blue throughout
-  - Temperature variables: diverging renderer corrected (was warm=BLUE)
-  - Aridity + precipitation: switched from VIRIDIS to RDBU sequential (low=red=dry)
-  - LMR PDSI + precip anomaly: split from temperature renderer (drought=red, wet=blue)
-- First deploy to edops.kgeographer.org; lessons: push main before pull, install pyarrow
+- First deploy to edops.kgeographer.org
 
-### MapLibre retool — architecture
-- **`basin06.pmtiles`**: pre-generated once with tippecanoe; geometry only, hybas_id as
-  feature ID. Gitignored static asset, rsync to server.
-- **Values API**: strips geometry → returns flat `{hybas_id: value}` dict (~0.3 MB
-  gzipped vs. 15–20 MB GeoJSON). Categorical endpoint same treatment.
-- **MapLibre**: renders PMTiles; choropleth via `setFeatureState` + paint expressions.
-  Variable switch becomes a sub-second fetch + GPU paint.
-- LMR, HYDE, eVolv2k, country borders carry over as GeoJSON/raster sources unchanged.
-- Left panel, histogram, header strip, Band T controls: unchanged.
-
-### MapLibre retool — phases
-- Phase 0: `tippecanoe` → `basin06.pmtiles` (Karl runs locally, L6 only for now)
-- Phase 1: backend endpoint simplification (values + categorical response shapes)
-- Phase 2: MapLibre frontend (replace Leaflet rendering, feature-state choropleth)
-- Phase 3: test + verify, rsync pmtiles to server, merge to main
+### Completed 2026-06-04 (see `logs/session_log_20260604.md`)
+- Regions tab complete: 6-panel lazy-init, synchronized render, Band T support
+- Band T layer-stacking fix (LMR↔HYDE switch cleans up prior source on region maps)
+- Legend correct for all modes including HYDE (real SVG color ramp)
+- Controls strip moved above tab panes for cross-tab visibility
+- Global map default zoom 2 → 1
 
 ### Still open / deferred
-- Regions tab (was "Diagnostics") — deferred until MapLibre retool complete
 - L8 choropleth — deferred until after 8 June demo
 - eVolv2k + HYDE tile browser testing
 - LMR precip rate paleoclimate review
