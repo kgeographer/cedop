@@ -313,25 +313,45 @@ Also set `facecolor='white'` in `savefig` and `fig.patch.set_facecolor("white")`
 
 ---
 
-## Next Dev Task — Sandbox Choropleth Page
+## Current Dev Task — Explorer page (`explorer` branch)
 
-A new page in the sandbox app to expose all EDOPS signature variables as interactive choropleth maps — a visual companion to the CHAR report. Significant new dev task; branch TBD, created from `main`.
+A new `/sandbox/explorer` page exposing all EDOPS signature variables as interactive choropleth maps — a visual companion to the CHAR report. Branch `explorer` created 2026-06-01 from `main`.
 
-**Goal**: Allow a researcher to browse the global spatial distribution of every implemented signature variable on a Leaflet map, one variable at a time. No place-query required — global map first. Complements CHAR findings by making spatial structure visible without running notebooks.
+**Spec**: `docs/design/EDOPS_explorer_cc_prompt.md` (authoritative) + wireframe `docs/design/images/explorer_wireframe_v0.3.png`.
 
-**Context**:
-- The sandbox (`/sandbox`, `app/templates/sandbox.html`) is currently a single complex page for place-lookup → basin → signature. The choropleth view is a different interaction mode and will likely be a separate route/page.
-- `metadata/edops_codebook_v03_draft.tsv` is the variable registry: bands A–E + T, with `friendly_name`, `position_method`, `historical_validity`, `typology_cluster` columns that can drive the variable-selector UI.
-- Band T variables require a time window; v1 will likely cover static bands A–E only, with Band T deferred.
-- `docs/design/scenarios.md` has user profiles — read before any sandbox UI work.
+**Routes**:
+- `/sandbox` → 301 → `/sandbox/lookup` (existing sandbox, backward-compatible)
+- `/sandbox/lookup` → `sandbox.html`
+- `/sandbox/explorer` → `explorer.html` (new)
 
-**Key open design questions** (to resolve at task start, with Karl):
-- Separate route + template, or tab added to existing sandbox?
-- Tile delivery: pre-generated vector tiles, server-side PostGIS MVT, or chunked GeoJSON? (190k L8 basins is too large for a single GeoJSON payload.)
-- Variable selector UI shape: band-grouped dropdown, codebook-driven accordion, or something else?
-- Color scale: per-variable quantile breaks, or percentile bins derived from `position_method`?
+**Status — completed 2026-06-02 session 1** (see `logs/session_log_20260602.md`):
+- Codebook API (`/api/explorer/codebook`): computed `queryable`, `monthly_series`, `hide_in_explorer` flags; output band filtered
+- Values API (`/api/explorer/values?var&level&su&month`): GeoJSON + stats, s/u/delta modes, NoData masking, tmp_dc_* ÷10, monthly column resolution
+- Categorical API (`/api/explorer/categorical?var&level`): top-20 + Other collapse, qualitative palette, 9 lookup tables
+- LISA API (`/api/explorer/lisa?var&level`): parquet-backed, no geometry, `{meta:{counts}, classes:{hybas_id:class}}`
+- Frontend: accordion (Band→Dim→Var, `_id` vars with name partners hidden), choropleth, histogram, category bars, s/u/Δ toggle, month dropdown, Values/LISA toggle, spinner, URL state
+- LISA frontend: `fetchLISA()`, `applyLISAStyle()`, `renderLISAHistogram()`, 404 graceful fallback
+- Sliver fix: stroke color = fill color on all render paths (eliminates sub-pixel white gaps)
+- `tests/test_explorer.py`: 30 tests, 49/49 suite passing
+- `scripts/edop/esda/12_spatial_moran.py`: merge-destroy bug fixed; `tmp_dc_smn`/`tmp_dc_smx` added; VARIABLES 40 → 42
+- LISA parquet: 43 vars × L6 (16,397) + L8 (190,675) = 8,904,096 rows; checkpoint `spatial/variable_characterization.csv` (86 rows)
 
-**Do not start implementation without Karl's answers to these questions.**
+**Status — completed 2026-06-02 session 2** (see `logs/session_log_20260602.md`):
+- Band T `queryable` fix: `is_band_t_active` extension in `_load_codebook()`; 13 implemented Band T vars now clickable
+- Band T backend: `t_subsystem` detection (lmr/evolv2k/hyde); `/api/explorer/evolv2k` endpoint; pre-computation scripts for LMR notches + HYDE tiles
+- LMR choropleth: opacity 0.70, pre-industrial-mean baseline (client-side, notches 0–3), percentile clipping at 3/97%, `formatLMRVal()` for scientific notation
+- Country borders overlay: `app/static/explorer/countries_110m.geojson` from `gaz.admin0`; `bordersPane` (z=450); loaded once per session, removed on A–E switch
+- Legend/histogram text: SVG `font-size` 9→12, 8→11; heights H 90→110; category rows 0.68→0.80rem; container 110→130px
+- LMR caveat note: ocean infill, native grid (not basin-aggregated), proxy coverage sparsity, source citation
+- Pre-computed static assets (gitignored): `lmr_notches.geojson` (6.2 MB), HYDE tile pyramid (332 MB, 64k tiles)
+
+**Open / deferred**:
+- **eVolv2k chart + HYDE tile views** — backend complete, frontend written but not yet browser-tested
+- **LMR precip rate** — rendering looks plausible but needs paleoclimate expert review
+- Diagnostics and Compare tabs — disabled placeholders, not yet designed
+- L8 choropleth performance — 190k basins over GeoJSON is slow; MapLibre/MVT deferred
+- Deploy to server — pending Band T browser testing + stability
+- Aridity direction note in header strip — low priority
 
 ## External Dependencies
 

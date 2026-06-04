@@ -86,6 +86,8 @@ VARIABLES = [
     dict(col='soc_th_sav', schema_key='soil_organic_carbon',   friendly='Soil organic carbon',       band='B'),
     # Band C — Climate / Cryosphere / Vegetation
     dict(col='tmp_dc_syr', schema_key='temperature_annual',    friendly='Temperature annual',        band='C', scale_factor=0.1),
+    dict(col='tmp_dc_smn', schema_key='temperature_min',       friendly='Temperature monthly min',   band='C', scale_factor=0.1),
+    dict(col='tmp_dc_smx', schema_key='temperature_max',       friendly='Temperature monthly max',   band='C', scale_factor=0.1),
     dict(col='pre_mm_syr', schema_key='precipitation_annual',  friendly='Precipitation annual',      band='C'),
     dict(col='pet_mm_syr', schema_key='pet_annual',            friendly='PET annual',                band='C'),
     dict(col='aet_mm_syr', schema_key='aet_annual',            friendly='AET annual',                band='C'),
@@ -297,7 +299,15 @@ def merge_staging():
     if not files:
         print('No staging files to merge.')
         return
-    merged = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+    # Seed with existing parquet so partial runs (e.g. --l6-only) don't wipe other scales
+    parts = []
+    if PARQ_OUT.exists():
+        parts.append(pd.read_parquet(PARQ_OUT))
+        print(f'  Existing parquet: {len(parts[0]):,} rows')
+    parts.extend(pd.read_parquet(f) for f in files)
+    merged = pd.concat(parts, ignore_index=True)
+    # Drop any duplicates (variable, scale, hybas_id) — new staging takes precedence
+    merged = merged.drop_duplicates(subset=['variable', 'scale', 'hybas_id'], keep='last')
     PARQ_OUT.parent.mkdir(parents=True, exist_ok=True)
     merged.to_parquet(PARQ_OUT, index=False)
     print(f'\nLISA parquet → {PARQ_OUT}  ({len(merged):,} rows)')

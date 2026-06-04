@@ -1973,3 +1973,420 @@ def societies():
     finally:
         if 'conn' in locals():
             conn.close()
+
+
+# -----------------------
+# Explorer: codebook metadata
+# -----------------------
+
+_CODEBOOK_FIELDS = [
+    "schema_key", "friendly_name", "band", "dimension", "type", "units",
+    "s_u", "status", "typology_cluster", "basin08_col_s", "basin08_col_u",
+    "high_r_partner", "position_method", "position_notes", "historical_validity",
+    "informative_or_degenerate",
+]
+
+_codebook_cache: List[Dict] = []
+
+def _load_codebook() -> List[Dict]:
+    global _codebook_cache
+    if _codebook_cache:
+        return _codebook_cache
+    import csv
+    cb_path = Path(__file__).resolve().parents[2] / "metadata" / "edops_codebook_v03_draft.tsv"
+    if not cb_path.exists():
+        return []
+    rows = []
+    with cb_path.open(newline="") as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            band = row.get("band", "")
+            if not band or band == "output":
+                continue
+            rec = {k: (row.get(k) or None) for k in _CODEBOOK_FIELDS}
+            col_s = rec.get("basin08_col_s") or ""
+            # monthly_series: range notation ending in s01..s12 (12-month seasonal columns)
+            is_monthly = col_s.endswith("s01..s12")
+            rec["monthly_series"] = is_monthly
+            # queryable = has a single DB column, OR is a monthly series (column resolved per month)
+            # Band T subsystem: lmr | evolv2k | hyde (drives Explorer rendering mode)
+            key = rec.get("schema_key") or ""
+            if key.startswith("lmr_"):
+                rec["t_subsystem"] = "lmr"
+            elif key.startswith("evolv2k_"):
+                rec["t_subsystem"] = "evolv2k"
+            elif key.startswith("hyde_"):
+                rec["t_subsystem"] = "hyde"
+            else:
+                rec["t_subsystem"] = None
+            is_band_t_active = (
+                rec.get("band") == "T" and
+                rec.get("status") == "implemented" and
+                rec.get("t_subsystem") is not None
+            )
+            rec["queryable"] = (bool(col_s) and (".." not in col_s or is_monthly)) or is_band_t_active
+            rows.append(rec)
+    # Second pass: hide _id vars whose _name or _code partner exists in the same codebook
+    all_keys = {r["schema_key"] for r in rows}
+    for rec in rows:
+        key = rec.get("schema_key") or ""
+        if key.endswith("_id"):
+            base = key[:-3]
+            rec["hide_in_explorer"] = (base + "_name" in all_keys) or (base + "_code" in all_keys)
+        else:
+            rec["hide_in_explorer"] = False
+    _codebook_cache = rows
+    return rows
+
+
+# Lookup table registry for categorical variables.
+# (lu_table, id_col, name_col)  — id_col joins to basin08_col_s (cast to text both sides)
+_CAT_LOOKUP: Dict[str, tuple] = {
+    "lithology_name":             ("lu_lit", "id",       "class_name"),
+    "climate_zone_name":          ("lu_clz", "genz_id",  "genz_name"),
+    "climate_stratum_code":       ("lu_cls", "gens_id",  "gens_code"),
+    "biome_name":                 ("lu_tbi", "biome_id", "biome_name"),
+    "ecoregion_terrestrial_name": ("lu_tec", "eco_id",   "ecoregion_name"),
+    "pnv_majority_name":          ("lu_pnv", "pnv_id",   "pnv_name"),
+    "freshwater_habitat_name":    ("lu_fmh", "mht_id",   "mht_name"),
+    "freshwater_ecoregion_name":  ("lu_fec", "eco_id",   "ecoregion_name"),
+    "land_cover_name":            ("lu_glc", "glc_id",   "glc_name"),
+}
+
+@router.get("/explorer/codebook", include_in_schema=False)
+def explorer_codebook():
+    return _load_codebook()
+
+
+_lisa_df_cache = None
+
+def _load_lisa_df():
+    global _lisa_df_cache
+    if _lisa_df_cache is not None:
+        return _lisa_df_cache
+    import pandas as pd
+    p = Path(__file__).resolve().parents[2] / "output" / "edop" / "esda" / "lisa_classifications.parquet"
+    if not p.exists():
+        return None
+    _lisa_df_cache = pd.read_parquet(p)
+    return _lisa_df_cache
+
+
+@router.get("/explorer/lisa", include_in_schema=False)
+def explorer_lisa(var: str, level: int = 8):
+    """Return per-basin LISA class assignments for one variable at one scale.
+
+    Returns a flat dict {str(hybas_id): lisa_class} for O(1) JS lookup.
+    No geometry — client reuses the already-loaded choropleth layer.
+    """
+    cb = _load_codebook()
+    row = next((r for r in cb if r["schema_key"] == var), None)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Variable '{var}' not found")
+
+    col_s = row.get("basin08_col_s")
+    if not col_s:
+        raise HTTPException(status_code=404, detail=f"No basin column for '{var}'")
+    if level not in (6, 8):
+        raise HTTPException(status_code=400, detail="level must be 6 or 8")
+
+    df = _load_lisa_df()
+    if df is None:
+        raise HTTPException(status_code=503, detail="LISA parquet not found")
+
+    scale = f"L{level}"
+    sub = df[(df["variable"] == col_s) & (df["scale"] == scale)][["hybas_id", "lisa_class"]]
+    if sub.empty:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No LISA data for '{var}' at L{level} — run the L{level} sweep first"
+        )
+
+    counts = sub["lisa_class"].value_counts().to_dict()
+    classes = dict(zip(sub["hybas_id"].astype(int).astype(str), sub["lisa_class"]))
+    return {
+        "meta": {"var": var, "col": col_s, "level": level, "n": len(sub), "counts": counts},
+        "classes": classes,
+    }
+
+
+@router.get("/explorer/values", include_in_schema=False)
+def explorer_values(var: str, level: int = 6, su: str = "s", month: Optional[int] = None):
+    """Return GeoJSON FeatureCollection + summary stats for one variable at one level.
+
+    su: 's' = local (basin08_col_s), 'u' = upstream (basin08_col_u),
+        'delta' = s minus u (diverging render regardless of var type).
+    month: 1–12 for monthly-series variables (temperature_monthly, precipitation_monthly).
+    Geometry simplified server-side; NoData (-9999) masked to null.
+    Temperature cols (tmp_dc_*) divided by 10 to convert from stored °C×10.
+    """
+    cb = _load_codebook()
+    row = next((r for r in cb if r["schema_key"] == var), None)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Variable '{var}' not found")
+
+    col_s = row.get("basin08_col_s")
+    col_u = row.get("basin08_col_u")
+
+    # Resolve monthly-series column: 'tmp_dc_s01..s12' + month=3 → 'tmp_dc_s03'
+    if row.get("monthly_series"):
+        if month is None:
+            month = 1
+        if not (1 <= month <= 12):
+            raise HTTPException(status_code=400, detail="month must be 1–12")
+        prefix = col_s.split("..")[0][:-2]   # 'tmp_dc_s01..s12' → 'tmp_dc_s'
+        col_s = f"{prefix}{month:02d}"        # → 'tmp_dc_s03'
+        su = "s"  # monthly vars have no upstream
+
+    if su not in ("s", "u", "delta"):
+        raise HTTPException(status_code=400, detail="su must be 's', 'u', or 'delta'")
+    if su == "s" and not col_s:
+        raise HTTPException(status_code=400, detail=f"'{var}' has no local column")
+    if su == "u" and not col_u:
+        raise HTTPException(status_code=400, detail=f"'{var}' has no upstream column")
+    if su == "delta" and not (col_s and col_u):
+        raise HTTPException(status_code=400, detail=f"'{var}' requires both s and u columns for delta")
+    if level not in (6, 8):
+        raise HTTPException(status_code=400, detail="level must be 6 or 8")
+
+    basin_table = "basin06" if level == 6 else "basin08"
+    tol = 0.01 if level == 6 else 0.05
+    NODATA = -9999
+
+    def _col_expr(col: str) -> str:
+        # col names come from the codebook (server-controlled), not user input
+        base = f"CASE WHEN {col} = {NODATA} THEN NULL ELSE {col}::float END"
+        if col.startswith("tmp_dc_"):
+            base = f"CASE WHEN {col} = {NODATA} THEN NULL ELSE ({col}::float / 10.0) END"
+        return base
+
+    if su == "delta":
+        scale = "/ 10.0" if col_s.startswith("tmp_dc_") else ""
+        val_expr = (
+            f"CASE WHEN {col_s} = {NODATA} OR {col_u} = {NODATA} THEN NULL "
+            f"ELSE (({col_s}::float - {col_u}::float){scale}) END"
+        )
+    elif su == "u":
+        val_expr = _col_expr(col_u)
+    else:
+        val_expr = _col_expr(col_s)
+
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                SELECT
+                    hybas_id,
+                    ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, %s), 4) AS geom,
+                    {val_expr} AS value
+                FROM public.{basin_table}
+                ORDER BY hybas_id
+            """, (tol,))
+            rows = cur.fetchall()
+
+        # Summary stats from Python (no second query needed)
+        values = [r[2] for r in rows if r[2] is not None]
+        n_total = len(rows)
+
+        if values:
+            import statistics
+            sv = sorted(values)
+            n = len(sv)
+            def _pct(p): return round(sv[int(p / 100 * (n - 1))], 5)
+            meta = {
+                "var": var, "su": su, "level": level,
+                "var_type": row.get("type"),
+                "units": row.get("units") or "",
+                "s_u": row.get("s_u"),
+                "n_total": n_total,
+                "n_valid": n,
+                "zero_fraction": round(sum(1 for v in values if v == 0) / n, 5),
+                "min":    round(min(values), 5),
+                "max":    round(max(values), 5),
+                "mean":   round(statistics.mean(values), 5),
+                "median": round(statistics.median(values), 5),
+                "p10": _pct(10), "p25": _pct(25),
+                "p75": _pct(75), "p90": _pct(90),
+            }
+        else:
+            meta = {"var": var, "su": su, "level": level, "n_total": n_total, "n_valid": 0}
+
+        # Build GeoJSON — geometry already serialised by PostGIS, parse once per feature
+        features = [
+            {
+                "type": "Feature",
+                "properties": {"hybas_id": r[0], "value": r[2]},
+                "geometry": json.loads(r[1]),
+            }
+            for r in rows
+        ]
+        return {"meta": meta, "geojson": {"type": "FeatureCollection", "features": features}}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+
+
+# Qualitative palette (20 colours, Tableau-like)
+_QUAL_PALETTE = [
+    "#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f",
+    "#edc948","#b07aa1","#ff9da7","#9c755f","#bab0ac",
+    "#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd",
+    "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf",
+]
+_OTHER_COLOR = "#cccccc"
+_TOP_N = 20   # classes beyond this are collapsed to "Other"
+
+@router.get("/explorer/categorical", include_in_schema=False)
+def explorer_categorical(var: str, level: int = 6):
+    """Return category counts + GeoJSON for a categorical variable.
+
+    Categories are sorted by basin count descending; if more than _TOP_N unique
+    classes exist, the tail is collapsed to an 'Other' entry (cat_id = -1).
+    GeoJSON features carry cat_id (integer from basin column, or -1 for Other).
+    """
+    cb = _load_codebook()
+    row = next((r for r in cb if r["schema_key"] == var), None)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Variable '{var}' not found")
+    if var not in _CAT_LOOKUP:
+        raise HTTPException(status_code=400, detail=f"'{var}' has no categorical lookup")
+
+    basin_col = row.get("basin08_col_s")
+    if not basin_col:
+        raise HTTPException(status_code=400, detail=f"'{var}' has no basin column")
+    if level not in (6, 8):
+        raise HTTPException(status_code=400, detail="level must be 6 or 8")
+
+    basin_table = "basin06" if level == 6 else "basin08"
+    tol = 0.01 if level == 6 else 0.05
+    lu_table, lu_id_col, lu_name_col = _CAT_LOOKUP[var]
+
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            # 1. Category counts with names (cast both sides to text for type safety)
+            cur.execute(f"""
+                SELECT lu.{lu_name_col} AS cat_name,
+                       b.{basin_col}    AS cat_id,
+                       COUNT(*)         AS cnt
+                FROM public.{basin_table} b
+                LEFT JOIN public.{lu_table} lu
+                    ON b.{basin_col}::text = lu.{lu_id_col}::text
+                WHERE b.{basin_col} IS NOT NULL
+                GROUP BY b.{basin_col}, lu.{lu_name_col}
+                ORDER BY cnt DESC
+            """)
+            count_rows = cur.fetchall()   # (cat_name, cat_id, cnt)
+
+            # 2. Determine top-N set; anything beyond is "Other"
+            n_total_basins = sum(r[2] for r in count_rows)
+            top_rows  = count_rows[:_TOP_N]
+            tail_rows = count_rows[_TOP_N:]
+            top_ids   = {r[1] for r in top_rows}
+
+            categories = []
+            for i, (cat_name, cat_id, cnt) in enumerate(top_rows):
+                categories.append({
+                    "id":    cat_id,
+                    "name":  cat_name or f"Class {cat_id}",
+                    "count": cnt,
+                    "pct":   round(100 * cnt / n_total_basins, 2) if n_total_basins else 0,
+                    "color": _QUAL_PALETTE[i % len(_QUAL_PALETTE)],
+                })
+            if tail_rows:
+                other_cnt = sum(r[2] for r in tail_rows)
+                categories.append({
+                    "id":    -1,
+                    "name":  f"Other ({len(tail_rows)} classes)",
+                    "count": other_cnt,
+                    "pct":   round(100 * other_cnt / n_total_basins, 2) if n_total_basins else 0,
+                    "color": _OTHER_COLOR,
+                })
+
+            id_to_color = {c["id"]: c["color"] for c in categories}
+
+            # 3. GeoJSON — cat_id per feature
+            cur.execute(f"""
+                SELECT hybas_id,
+                       ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, %s), 4) AS geom,
+                       {basin_col} AS cat_id
+                FROM public.{basin_table}
+                ORDER BY hybas_id
+            """, (tol,))
+            geo_rows = cur.fetchall()
+
+        features = [
+            {
+                "type": "Feature",
+                "properties": {
+                    "hybas_id": r[0],
+                    "cat_id":   r[2] if (r[2] in top_ids) else -1,
+                    "raw_id":   r[2],
+                },
+                "geometry": json.loads(r[1]),
+            }
+            for r in geo_rows
+        ]
+        return {
+            "meta": {
+                "var": var, "level": level,
+                "n_classes": len(count_rows),
+                "n_shown":   len(top_rows),
+                "n_basins":  n_total_basins,
+            },
+            "categories": categories,
+            "geojson": {"type": "FeatureCollection", "features": features},
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Band T: Explorer endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/explorer/evolv2k", include_in_schema=False)
+def explorer_evolv2k():
+    """Return complete eVolv2k v4 event catalog (256 events). Client-side filtering.
+
+    lat is approximate source latitude only; no longitude in source data.
+    Events with lat=0 are equatorial; lat=±45 are unlocated NH/SH defaults.
+    """
+    with db_connect() as conn:
+        rows = conn.execute("""
+            SELECT year_ad, month, lat, vssi_tg, vssi_1sig, asymmetry, location, tephra
+            FROM temporal.evolv2k_v4
+            ORDER BY year_ad
+        """).fetchall()
+    events = [
+        {
+            "year":      int(r[0]),
+            "month":     int(r[1]) if r[1] is not None else None,
+            "lat":       float(r[2]) if r[2] is not None else None,
+            "vssi_tg":   round(float(r[3]), 2),
+            "vssi_1sig": round(float(r[4]), 2) if r[4] is not None else None,
+            "asymmetry": round(float(r[5]), 3) if r[5] is not None else None,
+            "location":  r[6],
+            "tephra":    bool(r[7]) if r[7] is not None else None,
+        }
+        for r in rows
+    ]
+    return {
+        "meta": {
+            "count":    len(events),
+            "year_min": min(e["year"] for e in events),
+            "year_max": max(e["year"] for e in events),
+            "note": (
+                "eVolv2k v4 (Sigl & Toohey 2024). lat = approximate source latitude; "
+                "no longitude in source data. lat=0 → equatorial default; "
+                "lat=±45 → unlocated NH/SH default."
+            ),
+        },
+        "events": events,
+    }
