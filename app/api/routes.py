@@ -2366,3 +2366,52 @@ def explorer_evolv2k():
         },
         "events": events,
     }
+
+
+# ---------------------------------------------------------------------------
+# Explorer: region definitions
+# ---------------------------------------------------------------------------
+
+_REGIONS = [
+    {
+        "id":    "east_asia",
+        "label": "East Asia",
+        "bbox":  [95, 18, 145, 55],   # [west, south, east, north]
+        "zoom":  4,
+    },
+    {
+        "id":    "south_asia",
+        "label": "South Asia",
+        "bbox":  [60, 5, 100, 38],
+        "zoom":  4,
+    },
+    {
+        "id":    "southwest_asia",
+        "label": "Southwest Asia",
+        "bbox":  [25, 13, 65, 45],
+        "zoom":  4,
+    },
+    {
+        "id":    "mediterranean",
+        "label": "Mediterranean & N. Africa",
+        "bbox":  [-10, 15, 42, 50],
+        "zoom":  4,
+    },
+    {
+        "id":    "mesoamerica",
+        "label": "Mesoamerica",
+        "bbox":  [-120, 5, -65, 35],
+        "zoom":  4,
+    },
+    {
+        "id":    "pacific_northwest",
+        "label": "Pacific Northwest",
+        "bbox":  [-130, 40, -108, 56],
+        "zoom":  5,
+    },
+]
+
+@router.get("/explorer/regions", include_in_schema=False)
+def explorer_regions():
+    """Return the fixed set of regional bounding boxes used by the Regions tab."""
+    return {"regions": _REGIONS}

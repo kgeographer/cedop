@@ -37,6 +37,8 @@
     /* ── Tabs ── */
     #ex-tabs .nav-link { font-size: 0.85rem; padding: 0.3rem 0.75rem; }
     #ex-tabs .nav-link.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+    /* Active pane fills the flex container; inactive panes get display:none from Bootstrap */
+    .tab-pane.show.active { flex: 1; display: flex !important; flex-direction: column; }
 
     /* ── Control strip ── */
     #ex-controls { font-size: 0.85rem; background: #f8f9fa; border-bottom: 1px solid #dee2e6; padding: 0.35rem 0.6rem; flex-wrap: wrap; gap: 0.4rem; }
@@ -55,6 +57,26 @@
 
     /* ── Histogram strip ── */
     #ex-histogram { height: 110px; border-top: 1px solid #dee2e6; }
+
+    /* ── Regions grid ── */
+    #ex-regions-grid {
+      flex: 1; display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px; padding: 6px;
+      min-height: 0;
+    }
+    .ex-rmap-panel {
+      border: 1px solid #dee2e6; border-radius: 4px;
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .ex-rmap-label {
+      font-size: 0.72rem; font-weight: 600; color: #444;
+      padding: 2px 6px; background: rgba(255,255,255,0.92);
+      border-bottom: 1px solid #eee; white-space: nowrap;
+    }
+    .ex-rmap-container { flex: 1; min-height: 200px; }
+    /* ── Regions legend strip ── */
+    #ex-regions-legend { height: 68px; border-top: 1px solid #dee2e6; padding: 2px 6px; }
 
     /* ── eVolv2k panel (replaces map+histogram for evolv2k variables) ── */
     #ex-evolv-panel {
@@ -192,10 +214,10 @@
       <!-- Tab bar -->
       <ul class="nav nav-tabs mb-0" id="ex-tabs">
         <li class="nav-item">
-          <button class="nav-link active" id="ex-tab-map" data-bs-toggle="tab" data-bs-target="#ex-pane-map" type="button">Map</button>
+          <button class="nav-link active" id="ex-tab-global" data-bs-toggle="tab" data-bs-target="#ex-pane-global" type="button">Global</button>
         </li>
         <li class="nav-item">
-          <button class="nav-link disabled" id="ex-tab-diag" type="button" title="Not implemented in this build">Diagnostics</button>
+          <button class="nav-link" id="ex-tab-regions" data-bs-toggle="tab" data-bs-target="#ex-pane-regions" type="button">Regions</button>
         </li>
         <li class="nav-item">
           <button class="nav-link disabled" id="ex-tab-compare" type="button" title="Not implemented in this build">Compare</button>
@@ -204,8 +226,8 @@
 
       <div class="tab-content border border-top-0 rounded-bottom" style="flex:1; display:flex; flex-direction:column;">
 
-        <!-- ── Map pane ── -->
-        <div class="tab-pane fade show active" id="ex-pane-map" style="flex:1; display:flex; flex-direction:column;">
+        <!-- ── Global pane ── -->
+        <div class="tab-pane fade show active" id="ex-pane-global">
 
           <!-- Control strip: Bands A–E controls + Band T controls (mutually exclusive visibility) -->
           <div id="ex-controls" class="d-flex align-items-center">
@@ -343,7 +365,16 @@
             </div>
           </div>
 
-        </div><!-- /map pane -->
+        </div><!-- /global pane -->
+
+        <!-- ── Regions pane ── -->
+        <div class="tab-pane fade" id="ex-pane-regions">
+          <div id="ex-regions-placeholder" class="d-flex align-items-center justify-content-center text-muted fst-italic" style="flex:1; font-size:0.9rem;">
+            Select a variable to load regional views
+          </div>
+          <div id="ex-regions-grid" class="d-none"></div>
+          <div id="ex-regions-legend" class="d-none"></div>
+        </div><!-- /regions pane -->
 
       </div><!-- /tab-content -->
 
@@ -379,7 +410,7 @@
       layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
     },
     center: [10, 20],
-    zoom: 2,
+    zoom: 1,
   });
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
@@ -520,6 +551,11 @@
   let _lmrAdjMap       = null;  // current adjusted LMR values for hover
   let _lmrPropKey      = null;
 
+  // ── Region maps (lazy-initialized on first Regions tab click) ──
+  let regionMapsReady  = false;
+  let regionMaps       = [];    // [{map, id, label}]
+  let _lastCatData     = null;  // cached last categorical response for legend
+
   // ── Band T state ──
   let lmrData       = null;   // loaded GeoJSON + meta (cached)
   let evolv2kData   = null;   // loaded event catalog
@@ -560,16 +596,23 @@
     const su = document.querySelector('input[name="ex-su"]:checked')?.value || 's';
     currentColorFn = makeColorFn(meta, su, selectedKey);
 
+    // Build colorMap once; shared by main map and region maps
+    const colorMap = {};
+    for (const [id, val] of Object.entries(values)) colorMap[id] = currentColorFn(val);
+
     const apply = () => {
       map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
-      for (const [id, val] of Object.entries(values)) {
-        map.setFeatureState(
-          { source: 'basin06', sourceLayer: 'basin06', id: Number(id) },
-          { fc: currentColorFn(val) }
-        );
+      for (const [id, fc] of Object.entries(colorMap)) {
+        map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: Number(id) }, { fc });
       }
     };
     if (_mapReady) apply(); else _pendingRender = apply;
+
+    applyRegionFeatureStates(colorMap);
+    renderRegionsLegend();
+    document.getElementById('ex-regions-placeholder').classList.add('d-none');
+    document.getElementById('ex-regions-grid').classList.remove('d-none');
+    document.getElementById('ex-regions-legend').classList.remove('d-none');
   }
 
   // ── Render histogram (Bands A–E) ──
@@ -715,16 +758,23 @@
     const idToColor = Object.fromEntries(categories.map(c => [c.id, c.color]));
     currentIdToName = Object.fromEntries(categories.map(c => [c.id, c.name]));
 
+    _lastCatData = data;
+    const colorMap = {};
+    for (const [id, cat_id] of Object.entries(values)) colorMap[id] = idToColor[cat_id] ?? '#aaa';
+
     const apply = () => {
       map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
-      for (const [id, cat_id] of Object.entries(values)) {
-        map.setFeatureState(
-          { source: 'basin06', sourceLayer: 'basin06', id: Number(id) },
-          { fc: idToColor[cat_id] ?? '#aaa' }
-        );
+      for (const [id, fc] of Object.entries(colorMap)) {
+        map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: Number(id) }, { fc });
       }
     };
     if (_mapReady) apply(); else _pendingRender = apply;
+
+    applyRegionFeatureStates(colorMap);
+    renderRegionsLegend();
+    document.getElementById('ex-regions-placeholder').classList.add('d-none');
+    document.getElementById('ex-regions-grid').classList.remove('d-none');
+    document.getElementById('ex-regions-legend').classList.remove('d-none');
   }
 
   // ── Category bars ──
@@ -778,13 +828,14 @@
   function applyLISAStyle() {
     if (!lisaClasses || !_mapReady) return;
     currentMode = 'lisa';
+    const colorMap = {};
+    for (const [id, cls] of Object.entries(lisaClasses)) colorMap[id] = LISA_COLORS[cls] ?? '#d3d3d3';
     map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
-    for (const [id, cls] of Object.entries(lisaClasses)) {
-      map.setFeatureState(
-        { source: 'basin06', sourceLayer: 'basin06', id: Number(id) },
-        { fc: LISA_COLORS[cls] ?? '#d3d3d3' }
-      );
+    for (const [id, fc] of Object.entries(colorMap)) {
+      map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: Number(id) }, { fc });
     }
+    applyRegionFeatureStates(colorMap);
+    renderRegionsLegend();
   }
 
   function renderLISAHistogram(meta) {
@@ -812,6 +863,143 @@
   // ──────────────────────────────────────────────────
   // Band T: LMR rendering
   // ──────────────────────────────────────────────────
+
+  // ──────────────────────────────────────────────────
+  // Region maps
+  // ──────────────────────────────────────────────────
+
+  function applyRegionFeatureStates(colorMap) {
+    if (!regionMapsReady) return;
+    for (const { map: rm } of regionMaps) {
+      rm.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
+      for (const [id, fc] of Object.entries(colorMap)) {
+        rm.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: Number(id) }, { fc });
+      }
+    }
+  }
+
+  async function initRegionMaps() {
+    if (regionMapsReady) return;
+
+    const { regions } = await fetch('/api/explorer/regions').then(r => r.json());
+    const grid = document.getElementById('ex-regions-grid');
+    grid.innerHTML = '';
+
+    const BASE = {
+      version: 8,
+      sources: {
+        osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 }
+      },
+      layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
+    };
+
+    for (const reg of regions) {
+      const panel = document.createElement('div');
+      panel.className = 'ex-rmap-panel';
+      panel.innerHTML = `<div class="ex-rmap-label">${reg.label}</div>
+                         <div class="ex-rmap-container" id="ex-rmap-${reg.id}"></div>`;
+      grid.appendChild(panel);
+
+      const rm = new maplibregl.Map({
+        container: `ex-rmap-${reg.id}`,
+        style: JSON.parse(JSON.stringify(BASE)),
+        bounds: reg.bbox,
+        fitBoundsOptions: { padding: 8 },
+        attributionControl: false,
+      });
+
+      await new Promise(resolve => rm.on('load', () => {
+        rm.addSource('basin06', { type: 'vector', url: 'pmtiles:///static/explorer/basin06.pmtiles' });
+        rm.addLayer({
+          id: 'basin06-fill', type: 'fill', source: 'basin06', 'source-layer': 'basin06',
+          paint: { 'fill-color': ['coalesce', ['feature-state', 'fc'], '#d3d3d3'], 'fill-opacity': 0.85 }
+        });
+        resolve();
+      }));
+
+      regionMaps.push({ map: rm, id: reg.id, label: reg.label });
+    }
+
+    regionMapsReady = true;
+
+    // Apply whatever is currently on the Global map
+    if (currentMode === 'lisa' && lisaClasses) {
+      const colorMap = {};
+      for (const [id, cls] of Object.entries(lisaClasses)) colorMap[id] = LISA_COLORS[cls] ?? '#d3d3d3';
+      applyRegionFeatureStates(colorMap);
+    } else if (currentMode === 'categorical' && _lastCatData) {
+      const idToColor = Object.fromEntries(_lastCatData.categories.map(c => [c.id, c.color]));
+      const colorMap = {};
+      for (const [id, cat_id] of Object.entries(_lastCatData.values)) colorMap[id] = idToColor[cat_id] ?? '#aaa';
+      applyRegionFeatureStates(colorMap);
+    } else if (currentColorFn && lastNumericData) {
+      const colorMap = {};
+      for (const [id, val] of Object.entries(lastNumericData.values)) colorMap[id] = currentColorFn(val);
+      applyRegionFeatureStates(colorMap);
+    }
+
+    renderRegionsLegend();
+  }
+
+  function renderRegionsLegend() {
+    const el = document.getElementById('ex-regions-legend');
+    if (!el) return;
+    const W = el.clientWidth || 600, H = 60;
+    const N = 50;
+
+    if (currentMode === 'categorical') {
+      // Category color swatches
+      if (!currentIdToName) { el.innerHTML = ''; return; }
+      const entries = Object.entries(currentIdToName).slice(0, 20);
+      const swatches = entries.map(([id, name]) => {
+        const v = allVars.find(v => v.schema_key === selectedKey);
+        return '';  // will be replaced below
+      });
+      // Build from categoriesData cached in lastCategoricalData
+      if (!_lastCatData) { el.innerHTML = ''; return; }
+      const bw = Math.max(2, Math.round((W - 8) / _lastCatData.categories.length));
+      const items = _lastCatData.categories.map(c =>
+        `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:6px;font-size:0.7rem;white-space:nowrap;">
+           <span style="width:10px;height:10px;border-radius:2px;background:${c.color};display:inline-block;flex-shrink:0;"></span>
+           ${escHtml(c.name)}
+         </span>`
+      ).join('');
+      el.style.height = 'auto'; el.style.minHeight = '28px'; el.style.overflowX = 'auto';
+      el.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:center;padding:4px 2px;">${items}</div>`;
+      return;
+    }
+
+    if (currentMode === 'lisa') {
+      const items = LISA_ORDER.map(cls =>
+        `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:10px;font-size:0.78rem;">
+           <span style="width:14px;height:14px;background:${LISA_COLORS[cls]};display:inline-block;border-radius:2px;"></span>${cls}
+         </span>`
+      ).join('');
+      el.style.height = '32px'; el.style.overflowX = '';
+      el.innerHTML = `<div style="display:flex;align-items:center;padding:4px 2px;">${items}</div>`;
+      return;
+    }
+
+    // Numeric: color ramp
+    if (!currentColorFn || !currentMeta) { el.innerHTML = ''; return; }
+    el.style.height = '68px'; el.style.overflowX = '';
+    const lo = currentMeta.p10 ?? currentMeta.min, hi = currentMeta.p90 ?? currentMeta.max;
+    const bars = Array.from({length: N}, (_, i) => {
+      const t = i / (N - 1);
+      const v = lo + t * (hi - lo);
+      const x = 2 + i * ((W - 4) / N), bw2 = ((W - 4) / N) + 0.5;
+      return `<rect x="${x.toFixed(1)}" y="18" width="${bw2.toFixed(1)}" height="28" fill="${currentColorFn(v)}" stroke="none"/>`;
+    }).join('');
+    const units = currentMeta.units ? ` ${currentMeta.units}` : '';
+    el.innerHTML = `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;">
+      ${bars}
+      <text x="2"      y="14" font-size="11" fill="#555">${lo.toFixed(2)}${units}</text>
+      <text x="${W/2}" y="14" font-size="11" fill="#888" text-anchor="middle">${((lo+hi)/2).toFixed(2)}</text>
+      <text x="${W-2}" y="14" font-size="11" fill="#555" text-anchor="end">${hi.toFixed(2)}${units}</text>
+      <text x="2"      y="${H-2}" font-size="10" fill="#aaa">p10</text>
+      <text x="${W-2}" y="${H-2}" font-size="10" fill="#aaa" text-anchor="end">p90</text>
+    </svg>`;
+  }
 
   async function loadCountriesOverlay() {
     if (countriesAdded) return;
@@ -1460,6 +1648,18 @@
       else fetchAndRender();
     }
   }
+
+  // ── Regions tab: lazy init on first click, show grid/legend ──
+  document.getElementById('ex-tab-regions').addEventListener('click', async () => {
+    const hasData = lastNumericData || _lastCatData || lisaClasses;
+    if (hasData) {
+      document.getElementById('ex-regions-placeholder').classList.add('d-none');
+      document.getElementById('ex-regions-grid').classList.remove('d-none');
+      document.getElementById('ex-regions-legend').classList.remove('d-none');
+    }
+    await initRegionMaps();
+    renderRegionsLegend();
+  });
 
   // ── Filter listeners ──
   document.getElementById('ex-search-box').addEventListener('input', e => { filterSearch = e.target.value.trim(); renderAccordion(); });

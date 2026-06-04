@@ -55,6 +55,10 @@ def sandbox_lookup(request: Request):
 def sandbox_explorer(request: Request):
     return templates.TemplateResponse("explorer.html", {"request": request})
 
+@router.get("/sandbox/explorer/regions-test")
+def sandbox_explorer_regions_test(request: Request):
+    return templates.TemplateResponse("explorer_regions_test.html", {"request": request})
+
 @router.get("/edops")
 def edops(request: Request):
     return templates.TemplateResponse("edops.html", {"request": request})
