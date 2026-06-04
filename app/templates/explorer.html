@@ -398,16 +398,26 @@
     const n = pal.length - 1, i = Math.min(n-1, Math.floor(t*n));
     return lerpColor(pal[i], pal[i+1], t*n - i);
   }
-  function makeColorFn(meta, suMode) {
-    const isDelta   = suMode === 'delta';
-    const isDiverge = isDelta || (meta.min < 0 && meta.var_type !== 'string');
+  function makeColorFn(meta, suMode, schemaKey) {
+    const isDelta    = suMode === 'delta';
+    const isDiverge  = isDelta || (meta.min < 0 && meta.var_type !== 'string');
     const isZeroInfl = !isDiverge && meta.zero_fraction > 0.5;
     const lo = meta.p10 ?? meta.min, hi = meta.p90 ?? meta.max;
     if (isDiverge) {
       const absMax = Math.max(Math.abs(lo), Math.abs(hi)) || 1;
       return v => {
         if (v == null) return '#d3d3d3';
-        return interpPalette(RDBU, Math.max(0, Math.min(1, (v + absMax) / (2 * absMax))));
+        // positive (warm/high) = RED, negative (cold/low) = BLUE — universal cartographic rubric
+        const t = Math.max(0, Math.min(1, (v + absMax) / (2 * absMax)));
+        return interpPalette(RDBU, 1 - t);
+      };
+    }
+    // Moisture variables: low = dry = RED, high = wet = BLUE
+    if (schemaKey === 'aridity_index' || schemaKey === 'precipitation_annual') {
+      const range = (hi - lo) || 1;
+      return v => {
+        if (v == null) return '#d3d3d3';
+        return interpPalette(RDBU, Math.max(0, Math.min(1, (v - lo) / range)));
       };
     }
     const range = (hi - lo) || 1;
@@ -470,7 +480,7 @@
     const { meta, geojson } = data;
     currentMeta = meta;
     const su = document.querySelector('input[name="ex-su"]:checked')?.value || 's';
-    currentColorFn = makeColorFn(meta, su);
+    currentColorFn = makeColorFn(meta, su, selectedKey);
 
     choroplethLayer = L.geoJSON(geojson, {
       style: f => {
@@ -827,7 +837,9 @@
         if (v == null) return { fillColor: 'transparent', fillOpacity: 0, weight: 0, color: 'transparent' };
         // Blue=low (negative), red=high (positive): use 1-t to reverse RDBU
         const t = Math.max(0, Math.min(1, (v + absMax) / (2 * absMax)));
-        const fill = interpPalette(RDBU, 1 - t);
+        // Temperature: warm (positive) = RED. PDSI/precip: wet (positive) = BLUE, dry = RED.
+        const lmrT = selectedKey === 'lmr_temp_anomaly' ? 1 - t : t;
+        const fill = interpPalette(RDBU, lmrT);
         return { fillColor: fill, fillOpacity: 0.70, weight: 0.2, color: '#888', opacity: 0.3 };
       },
       onEachFeature: (f, layer) => {
@@ -848,10 +860,10 @@
     }).addTo(map);
 
     updateVarHeaderBandT();
-    renderLMRLegend(absMax);
+    renderLMRLegend(absMax, selectedKey !== 'lmr_temp_anomaly');
   }
 
-  function renderLMRLegend(absMax) {
+  function renderLMRLegend(absMax, reverseBar) {
     const el = document.getElementById('ex-histogram');
     resetHistogramEl(el);
     el.style.height = 'auto';
@@ -859,17 +871,25 @@
     const N = 40;
     const bars = Array.from({length: N}, (_, i) => {
       const t = i / (N - 1);
-      const fill = interpPalette(RDBU, 1 - t);
+      // reverseBar=false (temperature): left=BLUE(cold) → right=RED(warm)
+      // reverseBar=true  (PDSI/precip):  left=RED(dry)  → right=BLUE(wet)
+      const fill = interpPalette(RDBU, reverseBar ? t : 1 - t);
       const x = 2 + i * ((W - 4) / N), bw = (W - 4) / N;
       return `<rect x="${x.toFixed(1)}" y="22" width="${(bw + 0.5).toFixed(1)}" height="32" fill="${fill}" stroke="none"/>`;
     }).join('');
     const negLabel = formatLMRVal(-absMax);
     const posLabel = formatLMRVal(+absMax);
+    const leftLabel  = selectedKey === 'lmr_temp_anomaly' ? 'cooler than pre-industrial mean (blue)'
+                     : selectedKey === 'lmr_pdsi'         ? 'drought / dry — negative PDSI (red)'
+                     :                                       'drier than mean (red)';
+    const rightLabel = selectedKey === 'lmr_temp_anomaly' ? 'warmer than pre-industrial mean (red)'
+                     : selectedKey === 'lmr_pdsi'         ? 'wet — positive PDSI (blue)'
+                     :                                       'wetter than mean (blue)';
     el.innerHTML = `
       <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;">
         ${bars}
-        <text x="2"      y="17" font-size="12" fill="#333">cooler than pre-industrial mean (blue)</text>
-        <text x="${W-2}" y="17" font-size="12" fill="#333" text-anchor="end">warmer than pre-industrial mean (red)</text>
+        <text x="2"      y="17" font-size="12" fill="#333">${leftLabel}</text>
+        <text x="${W-2}" y="17" font-size="12" fill="#333" text-anchor="end">${rightLabel}</text>
         <text x="2"      y="${H-4}" font-size="12" fill="#666">${negLabel}</text>
         <text x="${W/2}" y="${H-4}" font-size="12" fill="#888" text-anchor="middle">0</text>
         <text x="${W-2}" y="${H-4}" font-size="12" fill="#666" text-anchor="end">${posLabel}</text>
