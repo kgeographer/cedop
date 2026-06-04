@@ -4,10 +4,10 @@ test_explorer.py
 Tests for the /api/explorer/* endpoints added for the Explorer choropleth page.
 
 Four endpoints covered:
-  /api/explorer/codebook   — variable metadata for the accordion
-  /api/explorer/values     — numeric GeoJSON + stats (s / u / delta modes)
-  /api/explorer/categorical — categorical GeoJSON + category legend
-  /api/explorer/lisa       — LISA class assignments (no geometry)
+  /api/explorer/codebook    — variable metadata for the accordion
+  /api/explorer/values      — flat {hybas_id: value} dict + stats (s / u / delta modes)
+  /api/explorer/categorical — flat {hybas_id: cat_id} dict + category legend
+  /api/explorer/lisa        — LISA class assignments (no geometry)
 
 All DB-hitting tests are skipped if the DB is unavailable.
 """
@@ -88,29 +88,35 @@ def test_values_aridity_l6(client):
     r = client.get("/api/explorer/values", params={"var": "aridity_index", "level": 6, "su": "s"})
     assert r.status_code == 200
     data = r.json()
-    assert "meta" in data and "geojson" in data
+    assert "meta" in data and "values" in data
+    assert "geojson" not in data, "values endpoint must not return GeoJSON geometry"
     meta = data["meta"]
     assert meta["n_valid"] > 0
     assert meta["min"] is not None and meta["max"] is not None
 
 
-def test_values_geojson_structure(client):
+def test_values_flat_dict_structure(client):
     r = client.get("/api/explorer/values", params={"var": "aridity_index", "level": 6})
     assert r.status_code == 200
-    fc = r.json()["geojson"]
-    assert fc["type"] == "FeatureCollection"
-    feats = fc["features"]
-    assert len(feats) > 1000, "Expected thousands of L6 basins"
-    f = feats[0]
-    assert "hybas_id" in f["properties"]
-    assert "value" in f["properties"]
+    vals = r.json()["values"]
+    assert isinstance(vals, dict), "values must be a dict"
+    assert len(vals) > 1000, "Expected thousands of L6 basin entries"
+
+
+def test_values_keys_are_integers(client):
+    # MapLibre setFeatureState requires numeric IDs — keys must parse as integers, not floats
+    r = client.get("/api/explorer/values", params={"var": "aridity_index", "level": 6})
+    assert r.status_code == 200
+    sample = list(r.json()["values"].keys())[:20]
+    for k in sample:
+        assert "." not in k, f"hybas_id key looks like a float: '{k}' — must be integer string"
 
 
 def test_values_no_nodata_sentinel(client):
     # -9999 sentinel values must be masked to null, never appear as a raw value
     r = client.get("/api/explorer/values", params={"var": "aridity_index", "level": 6})
     assert r.status_code == 200
-    vals = [f["properties"]["value"] for f in r.json()["geojson"]["features"]]
+    vals = list(r.json()["values"].values())
     assert -9999 not in vals, "-9999 NoData sentinel must be masked to null"
 
 
@@ -118,7 +124,7 @@ def test_values_temperature_divide_by_10(client):
     # tmp_dc_smn stored as °C×10 — displayed values should be in plausible °C range
     r = client.get("/api/explorer/values", params={"var": "temperature_min", "level": 6, "su": "s"})
     assert r.status_code == 200
-    vals = [f["properties"]["value"] for f in r.json()["geojson"]["features"] if f["properties"]["value"] is not None]
+    vals = [v for v in r.json()["values"].values() if v is not None]
     assert vals, "No non-null temperature values"
     assert max(vals) < 200, f"temperature_min looks like it's still in °C×10 (max={max(vals)})"
     assert min(vals) > -200, f"temperature_min out of plausible range (min={min(vals)})"
@@ -165,7 +171,8 @@ def test_categorical_lithology_l6(client):
     r = client.get("/api/explorer/categorical", params={"var": "lithology_name", "level": 6})
     assert r.status_code == 200
     data = r.json()
-    assert "categories" in data and "geojson" in data
+    assert "categories" in data and "values" in data
+    assert "geojson" not in data, "categorical endpoint must not return GeoJSON geometry"
     cats = data["categories"]
     assert len(cats) > 0, "Expected lithology categories"
 
@@ -196,12 +203,16 @@ def test_categorical_pct_sums_to_100(client):
     assert abs(total - 100.0) < 1.0, f"Category percentages should sum to ~100, got {total}"
 
 
-def test_categorical_geojson_has_cat_id(client):
+def test_categorical_values_dict(client):
     r = client.get("/api/explorer/categorical", params={"var": "lithology_name", "level": 6})
     assert r.status_code == 200
-    feats = r.json()["geojson"]["features"]
-    assert len(feats) > 0
-    assert "cat_id" in feats[0]["properties"]
+    vals = r.json()["values"]
+    assert isinstance(vals, dict), "values must be a dict"
+    assert len(vals) > 1000, "Expected thousands of L6 basin entries"
+    # Values should be cat_id integers (or -1 for Other)
+    sample = list(vals.values())[:20]
+    for v in sample:
+        assert isinstance(v, int), f"cat_id value should be int, got {type(v)}: {v}"
 
 
 def test_categorical_invalid_var(client):

@@ -2111,13 +2111,13 @@ def explorer_lisa(var: str, level: int = 8):
 
 @router.get("/explorer/values", include_in_schema=False)
 def explorer_values(var: str, level: int = 6, su: str = "s", month: Optional[int] = None):
-    """Return GeoJSON FeatureCollection + summary stats for one variable at one level.
+    """Return flat {hybas_id: value} dict + summary stats for one variable at one level.
 
     su: 's' = local (basin08_col_s), 'u' = upstream (basin08_col_u),
         'delta' = s minus u (diverging render regardless of var type).
     month: 1–12 for monthly-series variables (temperature_monthly, precipitation_monthly).
-    Geometry simplified server-side; NoData (-9999) masked to null.
-    Temperature cols (tmp_dc_*) divided by 10 to convert from stored °C×10.
+    NoData (-9999) masked to null. Temperature cols (tmp_dc_*) divided by 10 (°C×10→°C).
+    Response: {meta: {...}, values: {hybas_id: value|null, ...}}
     """
     cb = _load_codebook()
     row = next((r for r in cb if r["schema_key"] == var), None)
@@ -2174,52 +2174,41 @@ def explorer_values(var: str, level: int = 6, su: str = "s", month: Optional[int
         conn = db_connect()
         with conn.cursor() as cur:
             cur.execute(f"""
-                SELECT
-                    hybas_id,
-                    ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, %s), 4) AS geom,
-                    {val_expr} AS value
+                SELECT hybas_id, {val_expr} AS value
                 FROM public.{basin_table}
                 ORDER BY hybas_id
-            """, (tol,))
+            """)
             rows = cur.fetchall()
 
-        # Summary stats from Python (no second query needed)
-        values = [r[2] for r in rows if r[2] is not None]
+        valid_rows = [(r[0], r[1]) for r in rows if r[1] is not None]
         n_total = len(rows)
+        n_valid = len(valid_rows)
 
-        if values:
+        if valid_rows:
             import statistics
-            sv = sorted(values)
-            n = len(sv)
-            def _pct(p): return round(sv[int(p / 100 * (n - 1))], 5)
+            vals = [r[1] for r in valid_rows]
+            sv = sorted(vals)
+            def _pct(p): return round(sv[int(p / 100 * (n_valid - 1))], 5)
             meta = {
                 "var": var, "su": su, "level": level,
                 "var_type": row.get("type"),
                 "units": row.get("units") or "",
                 "s_u": row.get("s_u"),
                 "n_total": n_total,
-                "n_valid": n,
-                "zero_fraction": round(sum(1 for v in values if v == 0) / n, 5),
-                "min":    round(min(values), 5),
-                "max":    round(max(values), 5),
-                "mean":   round(statistics.mean(values), 5),
-                "median": round(statistics.median(values), 5),
+                "n_valid": n_valid,
+                "zero_fraction": round(sum(1 for v in vals if v == 0) / n_valid, 5),
+                "min":    round(min(vals), 5),
+                "max":    round(max(vals), 5),
+                "mean":   round(statistics.mean(vals), 5),
+                "median": round(statistics.median(vals), 5),
                 "p10": _pct(10), "p25": _pct(25),
                 "p75": _pct(75), "p90": _pct(90),
             }
         else:
             meta = {"var": var, "su": su, "level": level, "n_total": n_total, "n_valid": 0}
 
-        # Build GeoJSON — geometry already serialised by PostGIS, parse once per feature
-        features = [
-            {
-                "type": "Feature",
-                "properties": {"hybas_id": r[0], "value": r[2]},
-                "geometry": json.loads(r[1]),
-            }
-            for r in rows
-        ]
-        return {"meta": meta, "geojson": {"type": "FeatureCollection", "features": features}}
+        values = {int(r[0]): r[1] for r in rows}
+        return {"meta": meta, "values": values}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -2240,11 +2229,11 @@ _TOP_N = 20   # classes beyond this are collapsed to "Other"
 
 @router.get("/explorer/categorical", include_in_schema=False)
 def explorer_categorical(var: str, level: int = 6):
-    """Return category counts + GeoJSON for a categorical variable.
+    """Return category counts + flat {hybas_id: cat_id} dict for a categorical variable.
 
     Categories are sorted by basin count descending; if more than _TOP_N unique
     classes exist, the tail is collapsed to an 'Other' entry (cat_id = -1).
-    GeoJSON features carry cat_id (integer from basin column, or -1 for Other).
+    Response: {meta: {...}, categories: [...], values: {hybas_id: cat_id, ...}}
     """
     cb = _load_codebook()
     row = next((r for r in cb if r["schema_key"] == var), None)
@@ -2260,7 +2249,6 @@ def explorer_categorical(var: str, level: int = 6):
         raise HTTPException(status_code=400, detail="level must be 6 or 8")
 
     basin_table = "basin06" if level == 6 else "basin08"
-    tol = 0.01 if level == 6 else 0.05
     lu_table, lu_id_col, lu_name_col = _CAT_LOOKUP[var]
 
     try:
@@ -2305,30 +2293,18 @@ def explorer_categorical(var: str, level: int = 6):
                     "color": _OTHER_COLOR,
                 })
 
-            id_to_color = {c["id"]: c["color"] for c in categories}
-
-            # 3. GeoJSON — cat_id per feature
+            # 3. Flat values — cat_id per basin
             cur.execute(f"""
-                SELECT hybas_id,
-                       ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, %s), 4) AS geom,
-                       {basin_col} AS cat_id
+                SELECT hybas_id, {basin_col} AS cat_id
                 FROM public.{basin_table}
                 ORDER BY hybas_id
-            """, (tol,))
-            geo_rows = cur.fetchall()
+            """)
+            val_rows = cur.fetchall()
 
-        features = [
-            {
-                "type": "Feature",
-                "properties": {
-                    "hybas_id": r[0],
-                    "cat_id":   r[2] if (r[2] in top_ids) else -1,
-                    "raw_id":   r[2],
-                },
-                "geometry": json.loads(r[1]),
-            }
-            for r in geo_rows
-        ]
+        values = {
+            int(r[0]): (r[1] if (r[1] in top_ids) else -1)
+            for r in val_rows
+        }
         return {
             "meta": {
                 "var": var, "level": level,
@@ -2337,7 +2313,7 @@ def explorer_categorical(var: str, level: int = 6):
                 "n_basins":  n_total_basins,
             },
             "categories": categories,
-            "geojson": {"type": "FeatureCollection", "features": features},
+            "values": values,
         }
 
     except Exception as e:

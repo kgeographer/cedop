@@ -7,8 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="" />
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-5K56B8BCD9"></script>
   <script>
@@ -353,33 +352,106 @@
   </div><!-- /row -->
 </div><!-- /container -->
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+<script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 <script>
 (function () {
 
-  // ── Leaflet map + spinner overlay ──
-  const map = L.map('ex-map', { zoomControl: true }).setView([20, 10], 2);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 18
-  }).addTo(map);
+  // ── MapLibre + PMTiles setup ──
+  const protocol = new pmtiles.Protocol();
+  maplibregl.addProtocol('pmtiles', protocol.tile);
 
-  // Pane for country borders — renders above all choropleth layers
-  map.createPane('bordersPane');
-  map.getPane('bordersPane').style.zIndex = 450;
-  map.getPane('bordersPane').style.pointerEvents = 'none';
+  const map = new maplibregl.Map({
+    container: 'ex-map',
+    style: {
+      version: 8,
+      sources: {
+        osm: {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+        }
+      },
+      layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
+    },
+    center: [10, 20],
+    zoom: 2,
+  });
+  map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+  // Spinner overlay
   const _spinner = document.createElement('div');
   _spinner.style.cssText = 'display:none;position:absolute;inset:0;background:rgba(255,255,255,0.6);z-index:999;align-items:center;justify-content:center;';
   _spinner.innerHTML = '<div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Loading</span></div>';
   document.getElementById('ex-map').appendChild(_spinner);
   const showSpinner = () => { _spinner.style.display = 'flex'; };
   const hideSpinner = () => { _spinner.style.display = 'none'; };
+
+  // Add basin06 PMTiles source + fill layer once map is loaded
+  let _mapReady = false;
+  let _pendingRender = null;
+
+  map.on('load', () => {
+    _mapReady = true;
+    map.addSource('basin06', {
+      type: 'vector',
+      url: 'pmtiles:///static/explorer/basin06.pmtiles',
+    });
+    map.addLayer({
+      id: 'basin06-fill',
+      type: 'fill',
+      source: 'basin06',
+      'source-layer': 'basin06',
+      paint: {
+        'fill-color':         ['coalesce', ['feature-state', 'fc'], '#d3d3d3'],
+        'fill-opacity':       ['case', ['boolean', ['feature-state', 'hover'], false], 0.95, 0.85],
+        'fill-outline-color': ['case', ['boolean', ['feature-state', 'hover'], false],
+                                '#333', ['coalesce', ['feature-state', 'fc'], '#bbb']],
+      }
+    });
+    if (_pendingRender) { _pendingRender(); _pendingRender = null; }
+  });
+
+  // Hover state + popup for basin06 layer
+  let hoveredId = null;
+  const _popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8, maxWidth: '260px' });
+
+  map.on('mousemove', 'basin06-fill', (e) => {
+    if (!e.features.length) return;
+    map.getCanvas().style.cursor = 'pointer';
+    const f  = e.features[0];
+    const id = f.id;
+    if (hoveredId !== null && hoveredId !== id) {
+      map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: hoveredId }, { hover: false });
+    }
+    hoveredId = id;
+    map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id }, { hover: true });
+    let html;
+    if (currentMode === 'categorical') {
+      const cat_id = currentValues?.[id];
+      const name = currentIdToName?.[cat_id] ?? `Class ${cat_id ?? '?'}`;
+      html = `<div style="font-size:0.78rem;">${escHtml(String(name))}<br><span style="color:#888;">Basin ${id}</span></div>`;
+    } else {
+      const val = currentValues?.[id];
+      const disp = val != null ? `${Number(val.toFixed(4))} ${currentMeta?.units || ''}`.trim() : 'No data';
+      html = `<div style="font-size:0.78rem;line-height:1.4;"><strong>Basin ${id}</strong><br>${disp}</div>`;
+      if (val != null) highlightHistoBin(val);
+    }
+    _popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+  });
+  map.on('mouseleave', 'basin06-fill', () => {
+    map.getCanvas().style.cursor = '';
+    if (hoveredId !== null) {
+      map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: hoveredId }, { hover: false });
+      hoveredId = null;
+    }
+    _popup.remove();
+    clearHistoHighlight();
+  });
 
   // ── Color palettes ──
   const VIRIDIS = ['#440154','#443982','#31688e','#21918c','#35b779','#8fd744','#fde725'];
@@ -429,23 +501,28 @@
   }
 
   // ── Choropleth state ──
-  let choroplethLayer = null;
-  let currentMeta = null;
-  let currentColorFn = null;
+  let currentMeta     = null;
+  let currentColorFn  = null;
+  let currentValues   = null;   // flat {hybas_id: value} — also used by hover tooltip
+  let currentMode     = 'values'; // 'values' | 'categorical' | 'lisa'
+  let currentIdToName = null;   // for categorical hover tooltip
 
   // ── LISA state ──
   let lisaClasses    = null;
   let lastNumericData = null;
   let currentViewMode = 'values';
 
-  // ── Country borders overlay ──
-  let countriesData  = null;  // cached GeoJSON
-  let countriesLayer = null;  // Leaflet GeoJSON layer (lives on borders pane)
+  // ── Layer flags ──
+  let countriesData    = null;
+  let countriesAdded   = false;
+  let lmrSourceAdded   = false;
+  let hydeSourceAdded  = false;
+  let _lmrAdjMap       = null;  // current adjusted LMR values for hover
+  let _lmrPropKey      = null;
 
   // ── Band T state ──
-  let lmrData       = null;   // loaded GeoJSON + meta
+  let lmrData       = null;   // loaded GeoJSON + meta (cached)
   let evolv2kData   = null;   // loaded event catalog
-  let hydeLayer     = null;   // current HYDE TileLayer
   let lmrNotchIndex = 0;      // 0–4
   let hydeViewMode  = 'first_epoch'; // first_epoch | persistence | current_value
   let hydeEpoch     = 7;      // 1–7 (current_value only)
@@ -474,44 +551,25 @@
     '100–1000 CE', '1100–1700 CE', '1710–1900 CE', '1910–2025 CE',
   ];
 
-  // ── Render choropleth (Bands A–E) ──
+  // ── Render choropleth (Bands A–E) via MapLibre feature state ──
   function renderChoropleth(data) {
-    if (choroplethLayer) { map.removeLayer(choroplethLayer); choroplethLayer = null; }
-    const { meta, geojson } = data;
-    currentMeta = meta;
+    const { meta, values } = data;
+    currentMeta   = meta;
+    currentValues = values;
+    currentMode   = 'values';
     const su = document.querySelector('input[name="ex-su"]:checked')?.value || 's';
     currentColorFn = makeColorFn(meta, su, selectedKey);
 
-    choroplethLayer = L.geoJSON(geojson, {
-      style: f => {
-        const fill = currentColorFn(f.properties.value);
-        return { fillColor: fill, fillOpacity: 0.85, weight: 0.4, color: fill, opacity: 1 };
-      },
-      onEachFeature: (f, layer) => {
-        const v = f.properties.value;
-        const disp = v != null ? `${Number(v.toFixed(4))} ${meta.units || ''}`.trim() : 'No data';
-        layer.on('mouseover', function () {
-          this.setStyle({ weight: 1.5, color: '#333', fillOpacity: 0.9 });
-          highlightHistoBin(v);
-        });
-        layer.on('mouseout', function () {
-          if (currentViewMode === 'lisa' && lisaClasses) {
-            const id  = String(layer.feature.properties.hybas_id);
-            const cls = lisaClasses[id];
-            const fill = LISA_COLORS[cls] ?? '#d3d3d3';
-            this.setStyle({ fillColor: fill, fillOpacity: 0.8, weight: 0.4, color: fill, opacity: 1 });
-          } else {
-            choroplethLayer.resetStyle(this);
-            clearHistoHighlight();
-          }
-        });
-        layer.bindTooltip(
-          `<div style="font-size:0.78rem;line-height:1.4;">` +
-          `<strong>Basin ${f.properties.hybas_id}</strong><br>` +
-          `${disp}</div>`, { sticky: true }
+    const apply = () => {
+      map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
+      for (const [id, val] of Object.entries(values)) {
+        map.setFeatureState(
+          { source: 'basin06', sourceLayer: 'basin06', id: Number(id) },
+          { fc: currentColorFn(val) }
         );
       }
-    }).addTo(map);
+    };
+    if (_mapReady) apply(); else _pendingRender = apply;
   }
 
   // ── Render histogram (Bands A–E) ──
@@ -521,7 +579,7 @@
     resetHistogramEl(el);
     if (!meta.n_valid) { el.innerHTML = '<span class="text-muted small">No data</span>'; return; }
 
-    const values = geojson.features.map(f => f.properties.value).filter(v => v != null);
+    const values = Object.values(data.values).filter(v => v != null);
     const N_BINS = 28;
     const lo = meta.p10 ?? meta.min, hi = meta.p90 ?? meta.max;
     const step = (hi - lo) / N_BINS || 1;
@@ -649,27 +707,24 @@
     }
   }
 
-  // ── Categorical choropleth ──
+  // ── Categorical choropleth via MapLibre feature state ──
   function renderCategoricalChoropleth(data) {
-    if (choroplethLayer) { map.removeLayer(choroplethLayer); choroplethLayer = null; }
-    const { categories, geojson } = data;
+    const { categories, values } = data;
+    currentValues   = values;
+    currentMode     = 'categorical';
     const idToColor = Object.fromEntries(categories.map(c => [c.id, c.color]));
-    const idToName  = Object.fromEntries(categories.map(c => [c.id, c.name]));
-    choroplethLayer = L.geoJSON(geojson, {
-      style: f => {
-        const fill = idToColor[f.properties.cat_id] ?? '#aaa';
-        return { fillColor: fill, fillOpacity: 0.85, weight: 0.4, color: fill, opacity: 1 };
-      },
-      onEachFeature: (f, layer) => {
-        const name = idToName[f.properties.cat_id] ?? `Class ${f.properties.raw_id}`;
-        layer.on('mouseover', function () { this.setStyle({ weight: 1.5, color: '#333', fillOpacity: 0.95 }); });
-        layer.on('mouseout',  function () { choroplethLayer.resetStyle(this); });
-        layer.bindTooltip(
-          `<div style="font-size:0.78rem;">${escHtml(name)}<br>` +
-          `<span class="text-muted">Basin ${f.properties.hybas_id}</span></div>`, { sticky: true }
+    currentIdToName = Object.fromEntries(categories.map(c => [c.id, c.name]));
+
+    const apply = () => {
+      map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
+      for (const [id, cat_id] of Object.entries(values)) {
+        map.setFeatureState(
+          { source: 'basin06', sourceLayer: 'basin06', id: Number(id) },
+          { fc: idToColor[cat_id] ?? '#aaa' }
         );
       }
-    }).addTo(map);
+    };
+    if (_mapReady) apply(); else _pendingRender = apply;
   }
 
   // ── Category bars ──
@@ -693,7 +748,7 @@
 
   // ── LISA ──
   async function fetchLISA() {
-    if (!selectedKey || !choroplethLayer) return;
+    if (!selectedKey || !currentValues) return;
     const level = document.querySelector('input[name="ex-level"]:checked')?.value || '6';
     const strip = document.getElementById('ex-var-header');
     showSpinner();
@@ -721,13 +776,15 @@
   }
 
   function applyLISAStyle() {
-    if (!choroplethLayer || !lisaClasses) return;
-    choroplethLayer.eachLayer(layer => {
-      const id = String(layer.feature?.properties?.hybas_id);
-      const cls = lisaClasses[id];
-      const fill = LISA_COLORS[cls] ?? '#d3d3d3';
-      layer.setStyle({ fillColor: fill, fillOpacity: 0.8, weight: 0.4, color: fill, opacity: 1 });
-    });
+    if (!lisaClasses || !_mapReady) return;
+    currentMode = 'lisa';
+    map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
+    for (const [id, cls] of Object.entries(lisaClasses)) {
+      map.setFeatureState(
+        { source: 'basin06', sourceLayer: 'basin06', id: Number(id) },
+        { fc: LISA_COLORS[cls] ?? '#d3d3d3' }
+      );
+    }
   }
 
   function renderLISAHistogram(meta) {
@@ -757,18 +814,22 @@
   // ──────────────────────────────────────────────────
 
   async function loadCountriesOverlay() {
-    if (countriesLayer) return;  // already on map
+    if (countriesAdded) return;
     if (!countriesData) {
       try {
         const resp = await fetch('/static/explorer/countries_110m.geojson');
         countriesData = await resp.json();
       } catch (e) { return; }
     }
-    countriesLayer = L.geoJSON(countriesData, {
-      pane: 'bordersPane',
-      style: { weight: 0.8, color: '#555', fill: false, opacity: 0.7 },
-      interactive: false,
-    }).addTo(map);
+    if (!_mapReady || map.getSource('countries')) return;
+    map.addSource('countries', { type: 'geojson', data: countriesData });
+    map.addLayer({
+      id: 'countries-line',
+      type: 'line',
+      source: 'countries',
+      paint: { 'line-color': '#555', 'line-width': 0.8, 'line-opacity': 0.7 },
+    });
+    countriesAdded = true;
   }
 
   async function loadAndRenderLMR() {
@@ -776,7 +837,9 @@
       showSpinner();
       try {
         const resp = await fetch('/static/explorer/lmr_notches.geojson');
-        lmrData = await resp.json();
+        const raw = await resp.json();
+        raw.features.forEach((f, i) => { f.id = i; });  // assign feature IDs for setFeatureState
+        lmrData = raw;
       } catch (e) {
         document.getElementById('ex-var-header').innerHTML =
           '<span class="text-danger small">Failed to load LMR data</span>';
@@ -784,6 +847,41 @@
         return;
       }
       hideSpinner();
+    }
+    // Add GeoJSON source + layer once (reuse on notch changes)
+    if (_mapReady && !map.getSource('lmr')) {
+      map.addSource('lmr', { type: 'geojson', data: lmrData });
+      map.addLayer({
+        id: 'lmr-fill',
+        type: 'fill',
+        source: 'lmr',
+        paint: {
+          'fill-color':         ['coalesce', ['feature-state', 'fc'], 'transparent'],
+          'fill-opacity':       0.70,
+          'fill-outline-color': '#88888855',
+        }
+      });
+      lmrSourceAdded = true;
+      // LMR hover tooltip — register once
+      const lmrPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8, maxWidth: '280px' });
+      map.on('mousemove', 'lmr-fill', (e) => {
+        if (!e.features.length || !_lmrAdjMap) return;
+        const f = e.features[0];
+        const raw = f.properties[_lmrPropKey];
+        const adj = _lmrAdjMap.get(f.id);
+        const vMeta = allVars.find(v => v.schema_key === selectedKey);
+        const units = vMeta?.units || '';
+        const rawDisp = raw != null ? formatLMRVal(raw) : 'No data';
+        const adjDisp = adj != null ? (adj >= 0 ? '+' : '') + formatLMRVal(adj) : '';
+        lmrPopup.setLngLat(e.lngLat).setHTML(
+          `<div style="font-size:0.78rem;line-height:1.4;">` +
+          `<strong>LMR cell ${f.properties.lat}°N, ${f.properties.lon}°E</strong><br>` +
+          `${rawDisp}${units ? ' ' + units : ''} (vs 1951–80)` +
+          (adjDisp ? `<br>${adjDisp}${units ? ' ' + units : ''} (vs pre-industrial mean)` : '') +
+          `</div>`
+        ).addTo(map);
+      });
+      map.on('mouseleave', 'lmr-fill', () => lmrPopup.remove());
     }
     renderLMRChoropleth();
     loadCountriesOverlay();
@@ -802,62 +900,35 @@
   }
 
   function renderLMRChoropleth() {
-    if (choroplethLayer) { map.removeLayer(choroplethLayer); choroplethLayer = null; }
-    if (hydeLayer)       { map.removeLayer(hydeLayer);       hydeLayer = null; }
-    if (!lmrData)        return;
+    if (!lmrData || !_mapReady) return;
 
     const prefix = LMR_VAR_PREFIX[selectedKey];
     if (!prefix) return;
-    const propKey = `${prefix}_${lmrNotchIndex}`;
-
-    // LMR values are anomalies vs 1951-1980. Adjust per-cell using the pre-industrial
-    // mean (notches 0–3: Early → LIA, excluding Industrial) so MCA reads warm and LIA
-    // reads cold on a medieval scale, without Industrial warming inflating the baseline.
+    _lmrPropKey = `${prefix}_${lmrNotchIndex}`;
     const preIndKeys = [0, 1, 2, 3].map(i => `${prefix}_${i}`);
 
-    const adjMap = new Map();
+    _lmrAdjMap = new Map();
     for (const f of lmrData.features) {
       const preIndVals = preIndKeys.map(k => f.properties[k]).filter(v => v != null);
       if (!preIndVals.length) continue;
       const cellMean = preIndVals.reduce((a, b) => a + b, 0) / preIndVals.length;
-      const raw = f.properties[propKey];
-      adjMap.set(f, raw != null ? raw - cellMean : null);
+      const raw = f.properties[_lmrPropKey];
+      _lmrAdjMap.set(f.id, raw != null ? raw - cellMean : null);
     }
 
-    // Percentile-clip at 3rd/97th to prevent outlier blowout
-    const vals = [...adjMap.values()].filter(v => v != null);
+    const vals = [..._lmrAdjMap.values()].filter(v => v != null);
     const sorted = [...vals].sort((a, b) => a - b);
     const lo = lmrPercentile(sorted, 0.03);
     const hi = lmrPercentile(sorted, 0.97);
     const absMax = Math.max(Math.abs(lo), Math.abs(hi)) || 1;
 
-    choroplethLayer = L.geoJSON(lmrData, {
-      style: f => {
-        const v = adjMap.get(f);
-        if (v == null) return { fillColor: 'transparent', fillOpacity: 0, weight: 0, color: 'transparent' };
-        // Blue=low (negative), red=high (positive): use 1-t to reverse RDBU
-        const t = Math.max(0, Math.min(1, (v + absMax) / (2 * absMax)));
-        // Temperature: warm (positive) = RED. PDSI/precip: wet (positive) = BLUE, dry = RED.
-        const lmrT = selectedKey === 'lmr_temp_anomaly' ? 1 - t : t;
-        const fill = interpPalette(RDBU, lmrT);
-        return { fillColor: fill, fillOpacity: 0.70, weight: 0.2, color: '#888', opacity: 0.3 };
-      },
-      onEachFeature: (f, layer) => {
-        const raw = f.properties[propKey];
-        const adj = adjMap.get(f);
-        const vMeta = allVars.find(v => v.schema_key === selectedKey);
-        const units = vMeta?.units || '';
-        const rawDisp = raw != null ? formatLMRVal(raw) : 'No data';
-        const adjDisp = adj != null ? (adj >= 0 ? '+' : '') + formatLMRVal(adj) : '';
-        layer.bindTooltip(
-          `<div style="font-size:0.78rem;line-height:1.4;">` +
-          `<strong>LMR cell ${f.properties.lat}°N, ${f.properties.lon}°E</strong><br>` +
-          `${rawDisp}${units ? ' ' + units : ''} (vs 1951–80)` +
-          (adjDisp ? `<br>${adjDisp}${units ? ' ' + units : ''} (vs pre-industrial mean)` : '') +
-          `</div>`, { sticky: true }
-        );
-      }
-    }).addTo(map);
+    map.removeFeatureState({ source: 'lmr' });
+    for (const [id, v] of _lmrAdjMap) {
+      if (v == null) continue;
+      const t    = Math.max(0, Math.min(1, (v + absMax) / (2 * absMax)));
+      const lmrT = selectedKey === 'lmr_temp_anomaly' ? 1 - t : t;
+      map.setFeatureState({ source: 'lmr', id }, { fc: interpPalette(RDBU, lmrT) });
+    }
 
     updateVarHeaderBandT();
     renderLMRLegend(absMax, selectedKey !== 'lmr_temp_anomaly');
@@ -909,19 +980,28 @@
   // ──────────────────────────────────────────────────
 
   function renderHYDE() {
-    if (choroplethLayer) { map.removeLayer(choroplethLayer); choroplethLayer = null; }
-    if (hydeLayer)       { map.removeLayer(hydeLayer);       hydeLayer = null; }
+    if (!_mapReady) return;
+    // Remove previous HYDE source/layer (tile URL changes with var/view/epoch)
+    if (map.getLayer('hyde-layer'))  map.removeLayer('hyde-layer');
+    if (map.getSource('hyde-raster')) map.removeSource('hyde-raster');
 
     const view = hydeViewMode === 'current_value' ? `epoch_${hydeEpoch}` : hydeViewMode;
     const tileUrl = `/static/explorer/hyde_tiles/${hydeVar}/${view}/{z}/{x}/{y}.png`;
 
-    hydeLayer = L.tileLayer(tileUrl, {
-      maxNativeZoom: 6,
-      maxZoom: 10,
-      opacity: 0.88,
-      errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    map.addSource('hyde-raster', {
+      type: 'raster',
+      tiles: [tileUrl],
+      tileSize: 256,
+      maxzoom: 6,
       attribution: 'HYDE 3.4 (Klein Goldewijk et al. 2017)',
-    }).addTo(map);
+    });
+    map.addLayer({
+      id: 'hyde-layer',
+      type: 'raster',
+      source: 'hyde-raster',
+      paint: { 'raster-opacity': 0.88 },
+    });
+    hydeSourceAdded = true;
 
     updateVarHeaderBandT();
     renderHYDELegend();
@@ -1293,9 +1373,21 @@
       document.getElementById('ex-histogram').style.display  = isEvolv ? 'none' : '';
       document.getElementById('ex-evolv-panel').classList.toggle('d-none', !isEvolv);
 
-      // Clear prior layers from other subsystems
-      if (choroplethLayer && subsystem !== 'lmr') { map.removeLayer(choroplethLayer); choroplethLayer = null; }
-      if (hydeLayer       && subsystem !== 'hyde') { map.removeLayer(hydeLayer);       hydeLayer = null; }
+      // Hide basin06 fill layer while Band T is active
+      if (_mapReady && map.getLayer('basin06-fill'))
+        map.setLayoutProperty('basin06-fill', 'visibility', 'none');
+      // Clear incompatible Band T layers
+      if (subsystem !== 'hyde' && hydeSourceAdded) {
+        if (map.getLayer('hyde-layer'))   map.removeLayer('hyde-layer');
+        if (map.getSource('hyde-raster')) map.removeSource('hyde-raster');
+        hydeSourceAdded = false;
+      }
+      if (subsystem !== 'lmr' && lmrSourceAdded) {
+        if (map.getLayer('lmr-fill'))  map.removeLayer('lmr-fill');
+        if (map.getSource('lmr'))      map.removeSource('lmr');
+        lmrSourceAdded = false;
+        lmrData = null;  // force reload next time LMR is opened
+      }
 
       lisaClasses = null;
 
@@ -1320,9 +1412,25 @@
       document.getElementById('ex-histogram').style.display = '';
       document.getElementById('ex-evolv-panel').classList.add('d-none');
 
-      // Remove Band T layers
-      if (hydeLayer)       { map.removeLayer(hydeLayer);       hydeLayer = null; }
-      if (countriesLayer)  { map.removeLayer(countriesLayer);  countriesLayer = null; }
+      // Show basin06 fill layer; remove Band T layers
+      if (_mapReady && map.getLayer('basin06-fill'))
+        map.setLayoutProperty('basin06-fill', 'visibility', 'visible');
+      if (hydeSourceAdded) {
+        if (map.getLayer('hyde-layer'))   map.removeLayer('hyde-layer');
+        if (map.getSource('hyde-raster')) map.removeSource('hyde-raster');
+        hydeSourceAdded = false;
+      }
+      if (lmrSourceAdded) {
+        if (map.getLayer('lmr-fill'))  map.removeLayer('lmr-fill');
+        if (map.getSource('lmr'))      map.removeSource('lmr');
+        lmrSourceAdded = false;
+        lmrData = null;
+      }
+      if (countriesAdded) {
+        if (map.getLayer('countries-line')) map.removeLayer('countries-line');
+        if (map.getSource('countries'))     map.removeSource('countries');
+        countriesAdded = false;
+      }
 
       // s/u toggle
       const suToggle = document.getElementById('ex-su-toggle');
