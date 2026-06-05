@@ -147,6 +147,20 @@
     .ex-var-item.preview { color: #777; }
     .ex-var-tag { font-size: 0.7rem; color: #888; }
     .ex-var-tag.preview-tag { color: #c87000; }
+
+    /* ── Compare pane ── */
+    #ex-pane-compare { display: flex; flex-direction: column; }
+    #ex-compare-controls { font-size: 0.85rem; background: #f8f9fa; border-bottom: 1px solid #dee2e6; padding: 0.35rem 0.6rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+    #ex-compare-controls .btn { font-size: 0.75rem; padding: 0.18rem 0.5rem; }
+    #ex-scatter-wrap { flex: 1; position: relative; min-height: 350px; }
+    #ex-scatter-canvas { display: block; }
+    #ex-scatter-callout { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); max-width: 320px; text-align: center; background: rgba(255,255,255,0.93); border: 1px solid #ccc; border-radius: 5px; padding: 0.4rem 0.7rem; font-size: 0.78rem; line-height: 1.45; box-shadow: 0 1px 4px rgba(0,0,0,0.12); display: none; pointer-events: none; }
+    #ex-scatter-callout .callout-region { font-weight: 700; }
+    #ex-scatter-callout .callout-r { font-family: monospace; font-size: 0.82rem; }
+    #ex-spearman-strip { height: 42px; border-top: 1px solid #dee2e6; padding: 0 0.6rem; display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; overflow-x: auto; flex-shrink: 0; }
+    .ex-region-pill { border-radius: 3px; padding: 0.15rem 0.45rem; font-size: 0.72rem; color: #fff; white-space: nowrap; cursor: pointer; transition: box-shadow 0.1s; }
+    .ex-region-pill:hover { opacity: 0.85; }
+    .ex-region-pill.selected { box-shadow: 0 0 0 2.5px #fff, 0 0 0 4px #333; }
   </style>
 </head>
 <body>
@@ -220,7 +234,7 @@
           <button class="nav-link" id="ex-tab-regions" data-bs-toggle="tab" data-bs-target="#ex-pane-regions" type="button">Regions</button>
         </li>
         <li class="nav-item">
-          <button class="nav-link disabled" id="ex-tab-compare" type="button" title="Not implemented in this build">Compare</button>
+          <button class="nav-link" id="ex-tab-compare" data-bs-toggle="tab" data-bs-target="#ex-pane-compare" type="button">Compare</button>
         </li>
       </ul>
 
@@ -375,6 +389,38 @@
           <div id="ex-regions-grid" class="d-none"></div>
           <div id="ex-regions-legend" class="d-none"></div>
         </div><!-- /regions pane -->
+
+        <!-- ── Compare pane ── -->
+        <div class="tab-pane fade" id="ex-pane-compare">
+          <!-- Controls row -->
+          <div id="ex-compare-controls">
+            <div class="d-flex align-items-center gap-1 flex-wrap">
+              <span class="text-muted me-1">Pairs:</span>
+              <button class="btn btn-outline-primary active" data-x="temperature_annual" data-y="precipitation_annual">T × P (sign reversal)</button>
+              <button class="btn btn-outline-secondary" data-x="elevation_mean" data-y="slope_deg">Ele × Slope (plateau)</button>
+              <button class="btn btn-outline-secondary" data-x="elevation_mean" data-y="precipitation_annual">Ele × Precip (orographic)</button>
+              <button class="btn btn-outline-secondary" data-x="temperature_annual" data-y="snow_cover_annual">Temp × Snow (cold-arid)</button>
+            </div>
+            <div class="d-flex align-items-center gap-1 ms-auto">
+              <span class="text-muted">X:</span>
+              <select id="ex-compare-x" class="form-select form-select-sm" style="width:auto; font-size:0.8rem;"></select>
+              <span class="text-muted">Y:</span>
+              <select id="ex-compare-y" class="form-select form-select-sm" style="width:auto; font-size:0.8rem;"></select>
+            </div>
+          </div>
+          <!-- Scatter canvas -->
+          <div id="ex-scatter-wrap">
+            <canvas id="ex-scatter-canvas"></canvas>
+            <div id="ex-scatter-status" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:0.85rem;color:#888;font-style:italic;pointer-events:none;">Loading…</div>
+            <div id="ex-scatter-callout"></div>
+          </div>
+          <!-- Regional Spearman strip -->
+          <div id="ex-spearman-strip">
+            <span class="text-muted me-1">Regional r<sub>s</sub>:</span>
+            <span id="ex-spearman-pills"></span>
+            <span id="ex-spearman-global" class="ms-3 text-muted"></span>
+          </div>
+        </div><!-- /compare pane -->
 
       </div><!-- /tab-content -->
 
@@ -1893,6 +1939,401 @@
 
   // ── Init ──
   loadCodebook().then(restoreFromUrl);
+
+  // ── Compare tab ──
+  const _REGION_COLORS = {
+    east_asia:         '#4e79a7',
+    south_asia:        '#f28e2b',
+    southwest_asia:    '#e15759',
+    mediterranean:     '#76b7b2',
+    mesoamerica:       '#59a14f',
+    pacific_northwest: '#b07aa1',
+  };
+  const _REGION_LABELS = {
+    east_asia:         'East Asia',
+    south_asia:        'South Asia',
+    southwest_asia:    'SW Asia',
+    mediterranean:     'Mediterranean',
+    mesoamerica:       'Mesoamerica',
+    pacific_northwest: 'Pacific NW',
+  };
+  const _UNASSIGNED_COLOR = '#cccccc';
+
+  let _basinRegions    = null;
+  let _scatterData     = null;
+  let _compareX        = 'temperature_annual';
+  let _compareY        = 'precipitation_annual';
+  let _compareInit     = false;
+  let _selectedRegion  = null;
+  let _byRegionCache   = null;  // built once per data load, reused on re-render
+  let _globalRCache    = null;
+
+  async function _loadBasinRegions() {
+    if (_basinRegions) return _basinRegions;
+    const r = await fetch('/static/explorer/basin_regions.json');
+    _basinRegions = await r.json();
+    return _basinRegions;
+  }
+
+  function _spearman(xs, ys) {
+    const n = xs.length;
+    if (n < 3) return null;
+    function ranks(arr) {
+      const idx = arr.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
+      const r = new Array(n);
+      let j = 0;
+      while (j < n) {
+        let k = j;
+        while (k < n - 1 && idx[k + 1].v === idx[k].v) k++;
+        const avg = (j + k) / 2 + 1;
+        for (let m = j; m <= k; m++) r[idx[m].i] = avg;
+        j = k + 1;
+      }
+      return r;
+    }
+    const rx = ranks(xs), ry = ranks(ys);
+    const mx = (n + 1) / 2;
+    let sXY = 0, sX2 = 0, sY2 = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = rx[i] - mx, dy = ry[i] - mx;
+      sXY += dx * dy; sX2 += dx * dx; sY2 += dy * dy;
+    }
+    if (sX2 === 0 || sY2 === 0) return null;
+    return sXY / Math.sqrt(sX2 * sY2);
+  }
+
+  async function _fetchScatter(x, y) {
+    const status = document.getElementById('ex-scatter-status');
+    status.style.display = 'block'; status.textContent = 'Loading…';
+    const canvas = document.getElementById('ex-scatter-canvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('ex-spearman-pills').innerHTML = '';
+    document.getElementById('ex-spearman-global').textContent = '';
+    document.getElementById('ex-scatter-callout').style.display = 'none';
+    _byRegionCache = null;  // reset per-data caches
+    _globalRCache  = null;
+    _selectedRegion = null;
+    try {
+      await _loadBasinRegions();
+      const resp = await fetch(`/api/explorer/scatter?x=${encodeURIComponent(x)}&y=${encodeURIComponent(y)}&level=6`);
+      if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
+      _scatterData = await resp.json();
+      _selectedRegion = null;  // clear any click during fetch
+      status.style.display = 'none';
+      _renderScatter();
+    } catch (e) {
+      status.textContent = `Error: ${e.message}`;
+    }
+  }
+
+  function _renderScatter() {
+    if (!_scatterData || !_basinRegions) return;
+    const canvas = document.getElementById('ex-scatter-canvas');
+    const wrap   = document.getElementById('ex-scatter-wrap');
+    const dpr    = window.devicePixelRatio || 1;
+    const w      = wrap.clientWidth;
+    const h      = wrap.clientHeight;
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const PAD = { l: 62, r: 24, t: 28, b: 48 };
+    const CW = w - PAD.l - PAD.r;
+    const CH = h - PAD.t - PAD.b;
+    if (CW <= 0 || CH <= 0) return;
+
+    const vals  = _scatterData.values;
+    const xMeta = _scatterData.x_meta;
+    const yMeta = _scatterData.y_meta;
+    const xs = vals.map(v => v[1]);
+    const ys = vals.map(v => v[2]);
+
+    // Clip both axes to suppress extreme outlier leverage on regression and display
+    // y: p97 (more aggressive — vertical outliers most commonly squash the cluster)
+    // x: p99 (lighter — want to show the tail but not let it dominate the fit)
+    const sortedX = [...xs].sort((a, b) => a - b);
+    const sortedY = [...ys].sort((a, b) => a - b);
+    const xMin = sortedX[0], xDispMax = sortedX[Math.floor(0.99 * (sortedX.length - 1))];
+    const yMin = sortedY[0], yDispMax = sortedY[Math.floor(0.97 * (sortedY.length - 1))];
+    const xRange = xDispMax - xMin || 1;
+    const yRange = yDispMax - yMin  || 1;
+    const nClipped = vals.filter(v => v[1] > xDispMax || v[2] > yDispMax).length;
+
+    const cx = v => PAD.l + Math.min(1, Math.max(0, (v - xMin) / xRange)) * CW;
+    const cy = v => PAD.t + CH - Math.min(1, Math.max(0, (v - yMin) / yRange)) * CH;
+
+    // Displayed subset — regression fit on what's visible, not the full range
+    const dispVals = vals.filter(v => v[1] <= xDispMax && v[2] <= yDispMax);
+    const dispXs   = dispVals.map(v => v[1]);
+    const dispYs   = dispVals.map(v => v[2]);
+
+    // Build per-region buckets once per data load
+    if (!_byRegionCache) {
+      _byRegionCache = {};
+      for (const [id, xv, yv] of vals) {
+        const rid = _basinRegions[String(id)];
+        if (rid) {
+          if (!_byRegionCache[rid]) _byRegionCache[rid] = { xs: [], ys: [] };
+          _byRegionCache[rid].xs.push(xv); _byRegionCache[rid].ys.push(yv);
+        }
+      }
+    }
+    const byRegion = _byRegionCache;
+
+    // OLS helper
+    function ols(xArr, yArr) {
+      const m = xArr.length;
+      if (m < 2) return null;
+      let sx = 0, sy = 0, sxy = 0, sx2 = 0;
+      for (let i = 0; i < m; i++) { sx += xArr[i]; sy += yArr[i]; sxy += xArr[i]*yArr[i]; sx2 += xArr[i]*xArr[i]; }
+      const mxv = sx/m, myv = sy/m, denom = sx2 - m*mxv*mxv;
+      if (denom === 0) return null;
+      const s = (sxy - m*mxv*myv) / denom;
+      return { slope: s, icept: myv - s*mxv, xMin: Math.min(...xArr), xMax: Math.max(...xArr) };
+    }
+
+    const sel = _selectedRegion;
+
+    // Points: gray by default; selected region colored
+    const RADIUS = Math.max(1.2, Math.min(2.5, 7000 / vals.length));
+    for (const [id, xv, yv] of vals) {
+      if (xv > xDispMax || yv > yDispMax) continue;  // outside display window
+      const rid = _basinRegions[String(id)];
+      if (sel) {
+        ctx.globalAlpha = (rid === sel) ? 0.55 : 0.07;
+        ctx.fillStyle   = (rid === sel) ? _REGION_COLORS[sel] : '#999';
+      } else {
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle   = '#888';
+      }
+      ctx.beginPath();
+      ctx.arc(cx(xv), cy(yv), RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Axes
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD.l, PAD.t); ctx.lineTo(PAD.l, PAD.t + CH); ctx.lineTo(PAD.l + CW, PAD.t + CH);
+    ctx.stroke();
+
+    // Clip note if outliers removed
+    if (nClipped > 0) {
+      ctx.fillStyle = '#999'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(`↑→ ${nClipped} basins outside display range not shown`, PAD.l + 4, PAD.t + 10);
+    }
+
+    // Tick labels
+    ctx.fillStyle = '#555'; ctx.font = '9px sans-serif';
+    for (let i = 0; i <= 5; i++) {
+      const v = xMin + (i / 5) * xRange;
+      const x = cx(v);
+      ctx.textAlign = 'center';
+      ctx.fillText(v.toFixed(xRange > 50 ? 0 : 1), x, PAD.t + CH + 13);
+      ctx.beginPath(); ctx.moveTo(x, PAD.t + CH); ctx.lineTo(x, PAD.t + CH + 4); ctx.stroke();
+    }
+    for (let i = 0; i <= 5; i++) {
+      const v = yMin + (i / 5) * yRange;
+      const y = cy(v);
+      ctx.textAlign = 'right';
+      ctx.fillText(v.toFixed(yRange > 50 ? 0 : 1), PAD.l - 5, y + 3);
+      ctx.beginPath(); ctx.moveTo(PAD.l - 4, y); ctx.lineTo(PAD.l, y); ctx.stroke();
+    }
+
+    // Axis labels
+    ctx.fillStyle = '#333'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(xMeta.label + (xMeta.units ? ` (${xMeta.units})` : ''), PAD.l + CW / 2, h - 6);
+    ctx.save(); ctx.translate(13, PAD.t + CH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText(yMeta.label + (yMeta.units ? ` (${yMeta.units})` : ''), 0, 0); ctx.restore();
+
+    // Global regression line — fit on displayed subset only
+    const n    = vals.length;
+    const gOls = ols(dispXs, dispYs);
+    if (gOls) {
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5; ctx.globalAlpha = sel ? 0.35 : 0.65;
+      ctx.beginPath();
+      ctx.moveTo(cx(gOls.xMin), cy(gOls.slope * gOls.xMin + gOls.icept));
+      ctx.lineTo(cx(gOls.xMax), cy(gOls.slope * gOls.xMax + gOls.icept));
+      ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+
+    // Selected region regression line — fit on region's displayed subset
+    if (sel) {
+      const d = byRegion[sel];
+      if (d && d.xs.length >= 5) {
+        const rDispXs = d.xs.filter((x, i) => x <= xDispMax && d.ys[i] <= yDispMax);
+        const rDispYs = d.ys.filter((y, i) => d.xs[i] <= xDispMax && y <= yDispMax);
+        const fit = ols(rDispXs, rDispYs);
+        if (fit) {
+          ctx.strokeStyle = _REGION_COLORS[sel]; ctx.lineWidth = 3; ctx.globalAlpha = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx(fit.xMin), cy(fit.slope * fit.xMin + fit.icept));
+          ctx.lineTo(cx(fit.xMax), cy(fit.slope * fit.xMax + fit.icept));
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Global r annotation (top-left, always shown)
+    const globalR = _globalRCache !== null ? _globalRCache : (_globalRCache = _spearman(xs, ys));
+    if (globalR !== null) {
+      ctx.fillStyle = sel ? '#999' : '#222';
+      ctx.font = `${sel ? '' : 'bold '}11px sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText(`Global r = ${globalR.toFixed(3)}  (n = ${n.toLocaleString()})`, PAD.l + 8, PAD.t + (nClipped > 0 ? 24 : 16));
+    }
+
+    _updateSpearmanStrip(globalR, byRegion);
+    _updateCallout(byRegion, globalR);
+  }
+
+  function _updateSpearmanStrip(globalR, byRegion) {
+    if (!_scatterData || !_basinRegions) return;
+    const html = Object.keys(_REGION_COLORS).map(rid => {
+      const d   = byRegion[rid];
+      const r   = d && d.xs.length >= 3 ? _spearman(d.xs, d.ys) : null;
+      const rStr = r !== null ? r.toFixed(3) : '–';
+      const n   = d ? d.xs.length : 0;
+      const sel = _selectedRegion === rid ? ' selected' : '';
+      return `<span class="ex-region-pill${sel}" data-rid="${rid}" style="background:${_REGION_COLORS[rid]};" title="${_REGION_LABELS[rid]}: r=${rStr}, n=${n}">${_REGION_LABELS[rid]} ${rStr}</span>`;
+    }).join('');
+    document.getElementById('ex-spearman-pills').innerHTML = html;
+    const gStr = globalR !== null ? `Global: ${globalR.toFixed(3)}` : '';
+    document.getElementById('ex-spearman-global').textContent = gStr;
+  }
+
+  function _olsSlope(xArr, yArr) {
+    const m = xArr.length;
+    if (m < 2) return 0;
+    let sx = 0, sy = 0, sxy = 0, sx2 = 0;
+    for (let i = 0; i < m; i++) { sx += xArr[i]; sy += yArr[i]; sxy += xArr[i]*yArr[i]; sx2 += xArr[i]*xArr[i]; }
+    const mx = sx/m, my = sy/m, denom = sx2 - m*mx*mx;
+    return denom === 0 ? 0 : (sxy - m*mx*my) / denom;
+  }
+
+  function _updateCallout(byRegion, globalR) {
+    const box = document.getElementById('ex-scatter-callout');
+    if (!_selectedRegion || !_scatterData) { box.style.display = 'none'; return; }
+    const rid  = _selectedRegion;
+    const d    = byRegion[rid];
+    const rReg = d && d.xs.length >= 3 ? _spearman(d.xs, d.ys) : null;
+    if (rReg === null || globalR === null) { box.style.display = 'none'; return; }
+
+    const xLbl = _scatterData.x_meta.label.toLowerCase();
+    const yLbl = _scatterData.y_meta.label.toLowerCase();
+
+    // Use OLS slope sign for direction — on displayed subset, consistent with drawn line
+    const allVals = _scatterData.values;
+    const sortX2  = [...allVals.map(v => v[1])].sort((a,b) => a-b);
+    const sortY2  = [...allVals.map(v => v[2])].sort((a,b) => a-b);
+    const xCap    = sortX2[Math.floor(0.99 * (sortX2.length - 1))];
+    const yCap    = sortY2[Math.floor(0.97 * (sortY2.length - 1))];
+    const dv      = allVals.filter(v => v[1] <= xCap && v[2] <= yCap);
+    const gSlope  = _olsSlope(dv.map(v => v[1]), dv.map(v => v[2]));
+    const rDispXs = d.xs.filter((x, i) => x <= xCap && d.ys[i] <= yCap);
+    const rDispYs = d.ys.filter((y, i) => d.xs[i] <= xCap && y <= yCap);
+    const rSlope  = _olsSlope(rDispXs, rDispYs);
+    const sameDir = (rSlope > 0) === (gSlope > 0);
+
+    const rDir  = rSlope > 0 ? 'higher' : 'lower';   // direction of regional trend
+    const gDir  = gSlope > 0 ? 'higher' : 'lower';   // direction of global trend
+
+    let interpretation;
+    if (!sameDir) {
+      interpretation = `Sign reversal: in this region, higher ${xLbl} is associated with <em>${rDir}</em> ${yLbl} — opposing the global direction (higher → ${gDir}).`;
+    } else if (Math.abs(rReg) > Math.abs(globalR) + 0.15) {
+      interpretation = `Stronger association here than globally — higher ${xLbl} → ${rDir} ${yLbl}, more pronounced than the global trend.`;
+    } else if (Math.abs(rReg) < Math.abs(globalR) - 0.15) {
+      interpretation = `The global trend (higher ${xLbl} → ${gDir} ${yLbl}) is attenuated or absent in this region.`;
+    } else {
+      interpretation = `Higher ${xLbl} → ${rDir} ${yLbl} — consistent with the global pattern.`;
+    }
+
+    box.innerHTML = `<span class="callout-region" style="color:${_REGION_COLORS[rid]}">${_REGION_LABELS[rid]}</span><br>` +
+      `<span class="callout-r">r = ${rReg.toFixed(3)}</span> &nbsp;vs. global <span class="callout-r">r = ${globalR.toFixed(3)}</span> &nbsp;(n = ${d.xs.length})<br>` +
+      `<span style="color:#555">${interpretation}</span>`;
+    box.style.display = 'block';
+  }
+
+  function _initCompareTab() {
+    if (_compareInit) return;
+    _compareInit = true;
+
+    const floatVars = allVars.filter(v => v.type === 'float' && v.basin08_col_s && !v.monthly_series);
+    const selX = document.getElementById('ex-compare-x');
+    const selY = document.getElementById('ex-compare-y');
+    floatVars.forEach(v => {
+      const lbl = v.friendly_name || v.schema_key;
+      selX.insertAdjacentHTML('beforeend', `<option value="${v.schema_key}">${lbl}</option>`);
+      selY.insertAdjacentHTML('beforeend', `<option value="${v.schema_key}">${lbl}</option>`);
+    });
+    selX.value = _compareX;
+    selY.value = _compareY;
+
+    function _deselectQuickBtns() {
+      document.querySelectorAll('#ex-compare-controls button[data-x]').forEach(b => {
+        b.classList.remove('btn-outline-primary', 'active');
+        b.classList.add('btn-outline-secondary');
+      });
+    }
+    selX.addEventListener('change', () => {
+      _compareX = selX.value; _compareY = selY.value;
+      _deselectQuickBtns();
+      _fetchScatter(_compareX, _compareY);
+    });
+    selY.addEventListener('change', () => {
+      _compareX = selX.value; _compareY = selY.value;
+      _deselectQuickBtns();
+      _fetchScatter(_compareX, _compareY);
+    });
+
+    document.querySelectorAll('#ex-compare-controls button[data-x]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _compareX = btn.dataset.x; _compareY = btn.dataset.y;
+        selX.value = _compareX; selY.value = _compareY;
+        document.querySelectorAll('#ex-compare-controls button[data-x]').forEach(b => {
+          b.classList.toggle('btn-outline-primary', b === btn);
+          b.classList.toggle('active', b === btn);
+          b.classList.toggle('btn-outline-secondary', b !== btn);
+        });
+        _fetchScatter(_compareX, _compareY);
+      });
+    });
+
+    // Region pill click — toggle highlight for that region
+    document.getElementById('ex-spearman-pills').addEventListener('click', e => {
+      const pill = e.target.closest('.ex-region-pill[data-rid]');
+      if (!pill) return;
+      const rid = pill.dataset.rid;
+      _selectedRegion = (_selectedRegion === rid) ? null : rid;
+      _renderScatter();
+    });
+  }
+
+  document.getElementById('ex-tab-compare').addEventListener('click', async () => {
+    _initCompareTab();
+    if (!_scatterData) {
+      await _loadBasinRegions();
+      _fetchScatter(_compareX, _compareY);
+    } else {
+      // Re-render in case canvas was resized while tab was inactive
+      requestAnimationFrame(_renderScatter);
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (document.getElementById('ex-pane-compare').classList.contains('show')) {
+      requestAnimationFrame(_renderScatter);
+    }
+  });
 
 })();
 </script>

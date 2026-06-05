@@ -58,12 +58,17 @@ cultural patterns — using D-PLACE, Seshat, and Cliopatria as external datasets
 
 ## Current work
 
-Explorer Compare tab — bivariate scatter (canvas), per-region Spearman strip, quick-buttons
-for documented CHAR pairs. Default pair: `tmp_dc_syr × pre_mm_syr` (Mediterranean sign
-reversal). Requires `basin_regions.json` precomputed lookup (hybas_id → region_id).
+Explorer Compare tab — **provisionally complete** as of 2026-06-04.
+
+- Canvas scatter, region-highlight-on-pill-click, callout annotation, regional Spearman strip
+- `/api/explorer/scatter` endpoint; `basin_regions.json` static lookup (gitignored — rsync)
+- OLS regression fit on displayed subset only (p99 x-clip, p97 y-clip) — avoids leverage distortion
+- Default pair: `temperature_annual × precipitation_annual` (Mediterranean sign reversal)
+- Quick-buttons: T×P (sign reversal) | Ele×Slope (plateau) | Ele×Precip (orographic) | Temp×Snow (cold-arid)
+- To swap default pair: `explorer.html` lines 399 (active button), 1964–1965 (`_compareX`/`_compareY`)
 
 Design: `docs/design/EDOPS_explorer_prompt_compare.md`.
-Task sequence: see session log `logs/session_log_20260604.md` §"Compare tab — task sequence".
+Detail: `logs/session_log_20260604.md` §"Compare tab".
 
 ---
 
@@ -161,8 +166,8 @@ Mediterranean & N. Africa, Mesoamerica, Pacific Northwest. Band T fully supporte
 /api/explorer/regions
     Six region bounding boxes for Regions tab.
 
-/api/explorer/scatter?x=VAR&y=VAR&level=6   [planned — Compare tab]
-    Paired values for bivariate scatter.
+/api/explorer/scatter?x=VAR&y=VAR&level=6
+    Paired values for bivariate scatter: {x_meta, y_meta, n_paired, values: [[id,x,y],…]}
 ```
 
 ---
@@ -221,7 +226,7 @@ python -m pytest tests/                # 19/19 tests (as of 2026-05-03)
 
 ## Open / deferred items
 
-- **Explorer Compare tab** — in progress (see Current work)
+- **Explorer Compare tab** — provisionally complete; open exploration welcome, no known blockers
 - **Explorer L8 choropleth** — deferred until after 8 June demo
 - **Lookup neighborhood types** — single basin / neighbors / buffer; polygon aggregation
   is methodologically thorny; deferred to Phase 3 (Aggregation)

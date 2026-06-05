@@ -2415,3 +2415,90 @@ _REGIONS = [
 def explorer_regions():
     """Return the fixed set of regional bounding boxes used by the Regions tab."""
     return {"regions": _REGIONS}
+
+
+# ---------------------------------------------------------------------------
+# Explorer: bivariate scatter data
+# ---------------------------------------------------------------------------
+
+@router.get("/explorer/scatter", include_in_schema=False)
+def explorer_scatter(x: str, y: str, level: int = 6):
+    """Return paired values for a bivariate scatter plot.
+
+    Both variables use their local ('s') column. NoData (-9999) masked;
+    rows where either value is null are excluded. Temperature columns
+    (tmp_dc_*) divided by 10 (°C×10 → °C).
+
+    Response:
+      {
+        "x_meta": {var, label, units, n_total, n_valid},
+        "y_meta": {var, label, units, n_total, n_valid},
+        "n_paired": int,
+        "values": [[hybas_id, x_val, y_val], ...]
+      }
+    """
+    if level not in (6, 8):
+        raise HTTPException(status_code=400, detail="level must be 6 or 8")
+
+    cb = _load_codebook()
+
+    def _resolve(var_key: str):
+        row = next((r for r in cb if r["schema_key"] == var_key), None)
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Variable '{var_key}' not found")
+        col = row.get("basin08_col_s")
+        if not col:
+            raise HTTPException(status_code=400, detail=f"'{var_key}' has no local column")
+        if row.get("monthly_series"):
+            col = col.split("..")[0][:-2] + "01"   # default to January for monthly vars
+        return row, col
+
+    x_row, x_col = _resolve(x)
+    y_row, y_col = _resolve(y)
+
+    basin_table = "basin06" if level == 6 else "basin08"
+    NODATA = -9999
+
+    def _expr(col: str, alias: str) -> str:
+        if col.startswith("tmp_dc_"):
+            return f"CASE WHEN {col} = {NODATA} THEN NULL ELSE ({col}::float / 10.0) END AS {alias}"
+        return f"CASE WHEN {col} = {NODATA} THEN NULL ELSE {col}::float END AS {alias}"
+
+    sql = f"""
+        SELECT hybas_id,
+               {_expr(x_col, 'xv')},
+               {_expr(y_col, 'yv')}
+        FROM public.{basin_table}
+        ORDER BY hybas_id
+    """
+
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+
+    n_total = len(rows)
+    paired = [[int(r[0]), r[1], r[2]] for r in rows if r[1] is not None and r[2] is not None]
+
+    def _meta(row, col, n_paired):
+        return {
+            "var":     row["schema_key"],
+            "col":     col,
+            "label":   row.get("friendly_name") or row["schema_key"],
+            "units":   row.get("units") or "",
+            "n_total": n_total,
+            "n_valid": n_paired,
+        }
+
+    return {
+        "x_meta":   _meta(x_row, x_col, len(paired)),
+        "y_meta":   _meta(y_row, y_col, len(paired)),
+        "n_paired": len(paired),
+        "values":   paired,
+    }
