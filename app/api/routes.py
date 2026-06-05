@@ -1993,7 +1993,7 @@ def _load_codebook() -> List[Dict]:
     if _codebook_cache:
         return _codebook_cache
     import csv
-    cb_path = Path(__file__).resolve().parents[2] / "metadata" / "edops_codebook_v03_draft.tsv"
+    cb_path = Path(__file__).resolve().parents[2] / "metadata" / "edops_codebook_v03.tsv"
     if not cb_path.exists():
         return []
     rows = []

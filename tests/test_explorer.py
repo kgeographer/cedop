@@ -295,3 +295,85 @@ def test_lisa_no_geometry_in_response(client):
     data = r.json()
     assert "geojson" not in data, "LISA endpoint must not return GeoJSON geometry"
     assert "features" not in data
+
+
+# ---------------------------------------------------------------------------
+# /api/explorer/scatter
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def scatter_data(client):
+    r = client.get("/api/explorer/scatter",
+                   params={"x": "temperature_annual", "y": "precipitation_annual", "level": 6})
+    assert r.status_code == 200
+    return r.json()
+
+
+def test_scatter_response_shape(scatter_data):
+    for key in ("x_meta", "y_meta", "n_paired", "values"):
+        assert key in scatter_data, f"Missing top-level key: {key}"
+    for meta_key in ("var", "col", "label", "units", "n_total", "n_valid"):
+        assert meta_key in scatter_data["x_meta"], f"x_meta missing field: {meta_key}"
+        assert meta_key in scatter_data["y_meta"], f"y_meta missing field: {meta_key}"
+
+
+def test_scatter_n_paired_matches_values(scatter_data):
+    assert scatter_data["n_paired"] == len(scatter_data["values"]), (
+        "n_paired must equal len(values)"
+    )
+
+
+def test_scatter_values_are_triples(scatter_data):
+    sample = scatter_data["values"][:20]
+    for triple in sample:
+        assert len(triple) == 3, f"Expected [hybas_id, x, y] triple, got len={len(triple)}"
+        hybas_id, xv, yv = triple
+        assert isinstance(hybas_id, int), f"hybas_id must be int, got {type(hybas_id)}"
+        assert isinstance(xv, (int, float)), f"x value must be numeric, got {type(xv)}"
+        assert isinstance(yv, (int, float)), f"y value must be numeric, got {type(yv)}"
+
+
+def test_scatter_substantial_coverage(scatter_data):
+    assert scatter_data["n_paired"] > 5000, (
+        f"Expected >5000 paired values for temperature×precip, got {scatter_data['n_paired']}"
+    )
+
+
+def test_scatter_temperature_divided_by_10(client):
+    # temperature_annual → tmp_dc_syr stored as °C×10; endpoint divides by 10
+    r = client.get("/api/explorer/scatter",
+                   params={"x": "temperature_annual", "y": "aridity_index", "level": 6})
+    assert r.status_code == 200
+    x_vals = [v[1] for v in r.json()["values"] if v[1] is not None]
+    assert x_vals, "No temperature_annual x values"
+    assert max(x_vals) < 100, f"temperature_annual looks undivided (max={max(x_vals):.1f})"
+    assert min(x_vals) > -100, f"temperature_annual out of plausible range (min={min(x_vals):.1f})"
+
+
+def test_scatter_no_nodata_sentinel(scatter_data):
+    for hybas_id, xv, yv in scatter_data["values"]:
+        assert xv != -9999, f"x=-9999 NoData sentinel in output (hybas_id={hybas_id})"
+        assert yv != -9999, f"y=-9999 NoData sentinel in output (hybas_id={hybas_id})"
+
+
+def test_scatter_meta_var_names(scatter_data):
+    assert scatter_data["x_meta"]["var"] == "temperature_annual"
+    assert scatter_data["y_meta"]["var"] == "precipitation_annual"
+
+
+def test_scatter_invalid_x_var_returns_404(client):
+    r = client.get("/api/explorer/scatter",
+                   params={"x": "nonexistent_var", "y": "precipitation_annual", "level": 6})
+    assert r.status_code == 404
+
+
+def test_scatter_invalid_y_var_returns_404(client):
+    r = client.get("/api/explorer/scatter",
+                   params={"x": "temperature_annual", "y": "nonexistent_var", "level": 6})
+    assert r.status_code == 404
+
+
+def test_scatter_invalid_level_returns_400(client):
+    r = client.get("/api/explorer/scatter",
+                   params={"x": "temperature_annual", "y": "precipitation_annual", "level": 7})
+    assert r.status_code == 400
