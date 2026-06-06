@@ -86,6 +86,39 @@ Two-column layout:
 
 ---
 
+## Seshat context for future work
+
+- Seshat databank is at https://seshat-db.com/ (not seshatdatabank.info)
+- Per-polity landing pages exist at `https://seshat-db.com/core/polity/{N}` for 800+
+  polities, but the numeric ID is not stored in `gaz.clio_polities` or `seshat.*` — would
+  need to be mapped if direct linking is wanted
+- Immediate design decision: Seshat data is handled locally (from the `seshat` schema)
+  rather than linking out, because the medium-term goal is correlation analysis between
+  Seshat social complexity variables and EDOPS environmental signatures. The viewer's
+  General + Social tabs are the first step toward that — making the data visible per polity
+  as a precursor to systematic cross-dataset analysis. This is a Phase 4 activity
+  (correspondence testing) and follows Phase 3 (aggregation / area signatures).
+
+---
+
+## Planned: geometry history outlines (Phase A)
+
+When viewing any slice N, MapLibre should show outlines of all prior *distinct* geometries
+(identified by MD5 geom hash) accumulated behind the current filled polygon. At step 3 of
+Northern Song you'd see outlines of groups A and B; at step 4, A+B+C; at step 5/6, A+B+C+D.
+History accumulates at every step, not just the last.
+
+Implementation:
+- Add `geom_hash` + `geom_group` integer to `/api/polity/slices` via SQL window function
+- Client caches GeoJSON per distinct geom_group as user steps through
+- MapLibre history-outline layer updated on each step
+- Outlines progressively lighter/more transparent for older groups (TBD)
+
+Seshat diff highlighting (Phase B) deferred — needs separate design pass, especially for
+single-seshatid polities where year_from matching is required (Northern Song case).
+
+---
+
 ## Open / next steps
 
 - **Phase 2**: basin06 overlay toggle — `/api/polity/basins?id=N` returning hybas_id array;

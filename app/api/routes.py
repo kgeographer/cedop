@@ -2586,6 +2586,101 @@ def polity_slices(name: str):
     ]
 
 
+@router.get("/polity/seshat")
+def polity_seshat(seshatid: str):
+    """Seshat general + social variables for a polity."""
+    GENERAL_FIELDS = [
+        'capital', 'language', 'linguistic_family',
+        'religion', 'religion_family', 'religion_genus',
+        'degree_of_centralization', 'duration', 'peak_years',
+        'alternative_name', 'supracultural_entity',
+        'preceding_entity', 'succeeding_entity',
+    ]
+    NUMERIC_VARS = {
+        'polity_population', 'polity_territory',
+        'population_of_the_largest_settlement', 'largest_communication_distance',
+        'administrative_level', 'military_level', 'religious_level', 'settlement_hierarchy',
+    }
+    BINARY_PRESENT = {'present', 'a~p', 'p~a'}
+
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            # General variables
+            cur.execute("""
+                SELECT variable_name, value_from, value_to
+                FROM seshat.general
+                WHERE polity_new_id = %(sid)s AND variable_name = ANY(%(fields)s)
+                ORDER BY variable_name, value_from
+            """, {"sid": seshatid, "fields": GENERAL_FIELDS})
+            gen_rows = cur.fetchall()
+
+            # Social variables — all for this seshatid
+            cur.execute("""
+                SELECT subsection, variable_name, value_from, value_to
+                FROM seshat.social
+                WHERE polity_new_id = %(sid)s
+                ORDER BY subsection, variable_name
+            """, {"sid": seshatid})
+            soc_rows = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+
+    if not gen_rows and not soc_rows:
+        raise HTTPException(status_code=404, detail=f"No Seshat data for '{seshatid}'")
+
+    # Build general dict (multi-value fields become lists)
+    general: Dict[str, Any] = {}
+    for var, vfrom, vto in gen_rows:
+        val = vfrom if not vto else f"{vfrom} – {vto}"
+        if var in general:
+            if isinstance(general[var], list):
+                general[var].append(val)
+            else:
+                general[var] = [general[var], val]
+        else:
+            general[var] = val
+
+    # Build social dict grouped by subsection
+    # Binary: include only if any value is present/A~P/P~A
+    # Numeric: include best (non-unknown) value
+    from collections import defaultdict
+    soc_agg: Dict[str, Dict[str, Any]] = defaultdict(dict)  # subsection → {var → {value, type}}
+    for subsection, var, vfrom, vto in soc_rows:
+        if not vfrom:
+            continue
+        entry = soc_agg[subsection].get(var)
+        if var in NUMERIC_VARS:
+            if vfrom.lower() != 'unknown':
+                try:
+                    num = int(vfrom)
+                    # Keep largest value (most informative for pop/territory)
+                    if entry is None or num > entry.get('num', -1):
+                        soc_agg[subsection][var] = {"type": "numeric", "value": vfrom, "num": num}
+                except ValueError:
+                    pass
+        else:
+            # Binary — record if present/transitional; don't overwrite a present with absent
+            if vfrom.lower() in BINARY_PRESENT:
+                soc_agg[subsection][var] = {"type": "binary", "value": vfrom}
+            elif entry is None and vfrom.lower() not in {'uncoded', 'unknown'}:
+                soc_agg[subsection][var] = {"type": "binary", "value": vfrom}
+
+    # Serialise: drop internal 'num' key, filter to coded entries only
+    social: Dict[str, List[Dict]] = {}
+    for subsection, vars_dict in sorted(soc_agg.items()):
+        entries = []
+        for var, info in sorted(vars_dict.items()):
+            entries.append({"var": var, "type": info["type"], "value": info["value"]})
+        if entries:
+            social[subsection] = entries
+
+    return {"seshatid": seshatid, "general": general, "social": social}
+
+
 @router.get("/polity/geom")
 def polity_geom(id: int):
     """GeoJSON Feature for a single polity slice by row id."""

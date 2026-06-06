@@ -89,14 +89,15 @@
       flex: 1 1 0;
       min-width: 0;
     }
-    #cp-btn-play {
-      opacity: 0.55;
+    #cp-btn-play.play-ready {
+      opacity: 1;
+      cursor: pointer;
+    }
+    #cp-btn-play:not(.play-ready) {
+      opacity: 0.4;
       cursor: not-allowed;
       color: #6c757d;
       border-color: #ced4da;
-    }
-    #cp-btn-play::after {
-      content: '';
     }
 
     /* Right: info panel */
@@ -120,35 +121,55 @@
       color: #495057;
       margin-top: 0.3rem;
     }
-    #cp-wiki-panel {
+    #cp-tab-nav {
+      flex: 0 0 auto;
+      border-bottom: 1px solid #dee2e6;
+      background: #f8f9fa;
+      padding: 0 0.5rem;
+    }
+    #cp-tab-nav .nav-link {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.6rem;
+      color: #495057;
+    }
+    #cp-tab-nav .nav-link.active {
+      font-weight: 600;
+      color: #0d6efd;
+      border-bottom: 2px solid #0d6efd;
+      background: none;
+    }
+    #cp-tab-content {
       flex: 1 1 0;
       overflow-y: auto;
       padding: 0.75rem;
     }
-    #cp-wiki-panel .wiki-thumb {
+    /* Wikipedia tab */
+    .wiki-thumb {
       float: right;
       margin: 0 0 0.5rem 0.75rem;
       max-width: 100px;
     }
-    #cp-wiki-panel .wiki-thumb img { width: 100%; border-radius: 3px; }
+    .wiki-thumb img { width: 100%; border-radius: 3px; }
     #cp-wiki-extract {
       font-size: 0.82rem;
       line-height: 1.5;
       color: #343a40;
     }
-    #cp-seshat-panel {
-      flex: 0 0 auto;
-      border-top: 1px solid #dee2e6;
-      padding: 0.6rem 0.75rem;
-      background: #f8f9fa;
-      font-size: 0.78rem;
-      color: #6c757d;
-    }
-    #cp-seshat-panel .seshat-label {
-      font-weight: 600;
-      color: #495057;
-      margin-bottom: 0.2rem;
-    }
+    /* General tab */
+    .seshat-gen-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
+    .seshat-gen-table td { padding: 0.2rem 0.25rem; vertical-align: top; }
+    .seshat-gen-table td:first-child { color: #6c757d; white-space: nowrap; padding-right: 0.5rem; }
+    /* Social tab */
+    .soc-subsection { font-size: 0.72rem; font-weight: 600; color: #495057;
+                      margin: 0.6rem 0 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .soc-subsection:first-child { margin-top: 0; }
+    .soc-grid { display: flex; flex-wrap: wrap; gap: 0.2rem 0.4rem; margin-bottom: 0.3rem; }
+    .soc-item { font-size: 0.72rem; color: #212529; }
+    .soc-item.present::before  { content: '✓ '; color: #198754; }
+    .soc-item.transitional::before { content: '~ '; color: #fd7e14; }
+    .soc-numeric { font-size: 0.75rem; margin-bottom: 0.15rem; }
+    .soc-numeric .soc-num-label { color: #6c757d; }
+    .soc-numeric .soc-num-val   { font-weight: 500; }
 
     /* Welcome state */
     #cp-welcome {
@@ -217,7 +238,7 @@
       <button id="cp-btn-prev" class="btn btn-sm btn-outline-secondary" disabled title="Previous slice">
         <i class="bi bi-chevron-left"></i>
       </button>
-      <button id="cp-btn-play" class="btn btn-sm btn-outline-secondary" disabled title="Play animation — coming soon">
+      <button id="cp-btn-play" class="btn btn-sm btn-outline-secondary" disabled title="Play through slices">
         <i class="bi bi-play-fill"></i>
       </button>
       <button id="cp-btn-next" class="btn btn-sm btn-outline-secondary" disabled title="Next slice">
@@ -239,32 +260,63 @@
       <div id="cp-memberof-note"></div>
     </div>
 
-    <!-- Wiki + future Seshat -->
-    <div id="cp-wiki-panel">
-      <!-- Welcome state -->
-      <div id="cp-welcome">
-        <h6>Navigating historical polities</h6>
-        <p>Search for any polity by name above. Results include empires, kingdoms, city-states, and confederacies from 3400 BCE to 2024 CE, drawn from the <a href="https://seshatdatabank.info/" target="_blank">Seshat</a> Cliopatria dataset.</p>
-        <p>Once selected, the map displays the polity's territory for its earliest recorded slice. Use the controls below the map to step through time or drag the slider across the polity's full lifespan.</p>
-        <p class="text-muted" style="font-size:0.78rem;">1,522 distinct polities · 11,178 distinct territorial configurations · 12,987 time slices</p>
-      </div>
-      <!-- Wiki content (hidden until selection) -->
-      <div id="cp-wiki-content" style="display:none;">
-        <div class="wiki-thumb" id="cp-wiki-thumb" style="display:none;">
-          <img id="cp-wiki-img" src="" alt="">
-        </div>
-        <div id="cp-wiki-extract"></div>
-        <div class="mt-2">
-          <a id="cp-wiki-link" href="#" target="_blank" class="small">Wikipedia <i class="bi bi-box-arrow-up-right"></i></a>
-        </div>
-      </div>
+    <!-- Tab nav -->
+    <div id="cp-tab-nav">
+      <ul class="nav nav-tabs border-0">
+        <li class="nav-item">
+          <button class="nav-link active" data-tab="wiki">Wikipedia</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-tab="general">General</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-tab="social">Social</button>
+        </li>
+      </ul>
     </div>
 
-    <!-- Seshat placeholder -->
-    <div id="cp-seshat-panel">
-      <div class="seshat-label">Seshat data</div>
-      <div id="cp-seshat-content" class="text-muted fst-italic">— available after polity selection —</div>
-    </div>
+    <!-- Tab content -->
+    <div id="cp-tab-content">
+
+      <!-- Wikipedia tab -->
+      <div id="cp-tab-wiki" class="cp-tab-pane">
+        <div id="cp-welcome">
+          <h6>Navigating historical polities</h6>
+          <p>Search for any polity by name above. Results include empires, kingdoms, city-states, and confederacies from 3400 BCE to 2024 CE, drawn from the <a href="https://seshat-db.com/" target="_blank">Seshat</a> Cliopatria dataset.</p>
+          <p>Once selected, the map displays the polity's territory for its earliest recorded slice. Use the controls below the map to step through time or drag the slider across the polity's full lifespan.</p>
+          <p class="text-muted" style="font-size:0.78rem;">1,522 distinct polities · 11,178 distinct territorial configurations · 12,987 time slices</p>
+        </div>
+        <div id="cp-wiki-content" style="display:none;">
+          <div class="wiki-thumb" id="cp-wiki-thumb" style="display:none;">
+            <img id="cp-wiki-img" src="" alt="">
+          </div>
+          <div id="cp-wiki-extract"></div>
+          <div class="mt-2">
+            <a id="cp-wiki-link" href="#" target="_blank" class="small">Wikipedia <i class="bi bi-box-arrow-up-right"></i></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- General tab -->
+      <div id="cp-tab-general" class="cp-tab-pane" style="display:none;">
+        <div id="cp-general-content" class="text-muted fst-italic" style="font-size:0.82rem;">
+          — select a polity —
+        </div>
+        <div class="mt-2" style="display:none;" id="cp-seshat-link-wrap">
+          <a href="https://seshat-db.com/" target="_blank" class="small text-muted">
+            seshatdatabank.info <i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Social tab -->
+      <div id="cp-tab-social" class="cp-tab-pane" style="display:none;">
+        <div id="cp-social-content" class="text-muted fst-italic" style="font-size:0.82rem;">
+          — select a polity —
+        </div>
+      </div>
+
+    </div><!-- #cp-tab-content -->
 
   </div><!-- #cp-right -->
 </div><!-- #cp-main -->
@@ -279,6 +331,12 @@ const map = new maplibregl.Map({
   style: {
     version: 8,
     sources: {
+      hillshade: {
+        type: 'raster',
+        tiles: ['https://tiles.openstreetmap.us/raster/hillshade/{z}/{x}/{y}.jpg'],
+        tileSize: 256,
+        attribution: '',
+      },
       osm: {
         type: 'raster',
         tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
@@ -286,7 +344,11 @@ const map = new maplibregl.Map({
         attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
       }
     },
-    layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
+    layers: [
+      { id: 'hillshade-tiles', type: 'raster', source: 'hillshade' },
+      { id: 'osm-tiles',       type: 'raster', source: 'osm',
+        paint: { 'raster-opacity': 0.6 } },
+    ]
   },
   center: [20, 30],
   zoom: 2,
@@ -320,8 +382,9 @@ map.on('load', () => {
 });
 
 // ── State ────────────────────────────────────────────────────────────────────
-let _slices  = [];   // [{id, fromyear, toyear, area_km2, seshatid, invalid_source_geom, memberof}]
-let _current = -1;   // index into _slices
+let _slices   = [];   // [{id, fromyear, toyear, area_km2, seshatid, invalid_source_geom, memberof}]
+let _current  = -1;   // index into _slices
+let _playTimer = null;
 
 // ── Search ───────────────────────────────────────────────────────────────────
 const searchInput    = document.getElementById('cp-search-input');
@@ -376,6 +439,7 @@ async function selectPolity(name) {
   initControls();
   await loadSlice(0);
   fetchWiki(_slices[0]);
+  fetchSeshat(_slices[0].seshatid);
 }
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -383,6 +447,8 @@ const btnPrev    = document.getElementById('cp-btn-prev');
 const btnNext    = document.getElementById('cp-btn-next');
 const slider     = document.getElementById('cp-year-slider');
 const sliceLabel = document.getElementById('cp-slice-label');
+
+const btnPlay = document.getElementById('cp-btn-play');
 
 function initControls() {
   const first = _slices[0].fromyear;
@@ -395,10 +461,37 @@ function initControls() {
 
   btnPrev.disabled = true;
   btnNext.disabled = _slices.length <= 1;
+
+  stopPlay();
+  btnPlay.disabled = _slices.length <= 1;
+  btnPlay.classList.add('play-ready');
 }
 
-btnPrev.addEventListener('click', () => stepSlice(-1));
-btnNext.addEventListener('click', () => stepSlice(1));
+function startPlay() {
+  if (_playTimer) return;
+  btnPlay.innerHTML = '<i class="bi bi-pause-fill"></i>';
+  btnPlay.title = 'Pause';
+  _playTimer = setInterval(() => {
+    if (_current >= _slices.length - 1) { stopPlay(); return; }
+    _current++;
+    slider.value = _slices[_current].fromyear;
+    loadSlice(_current);
+  }, 1000);
+}
+
+function stopPlay() {
+  if (_playTimer) { clearInterval(_playTimer); _playTimer = null; }
+  btnPlay.innerHTML = '<i class="bi bi-play-fill"></i>';
+  btnPlay.title = 'Play through slices';
+}
+
+btnPlay.addEventListener('click', () => {
+  if (!btnPlay.classList.contains('play-ready')) return;
+  if (_playTimer) stopPlay(); else startPlay();
+});
+
+btnPrev.addEventListener('click', () => { stopPlay(); stepSlice(-1); });
+btnNext.addEventListener('click', () => { stopPlay(); stepSlice(1); });
 
 slider.addEventListener('input', () => {
   // Update label while dragging without fetching geometry
@@ -411,7 +504,7 @@ slider.addEventListener('input', () => {
 });
 
 slider.addEventListener('change', () => {
-  // Fetch geometry only on release
+  stopPlay();
   const year = parseInt(slider.value);
   const idx  = nearestSlice(year);
   _current   = idx;
@@ -466,7 +559,15 @@ async function loadSlice(idx) {
 
   updateSliceLabel(idx);
   updateInfoHeader(gj.properties);
+
+  // Refresh Seshat panel only when seshatid changes across slices
+  const sid = _slices[idx].seshatid;
+  if (sid !== _lastSeshatId) {
+    _lastSeshatId = sid;
+    fetchSeshat(sid);
+  }
 }
+let _lastSeshatId = null;
 
 // ── Info header ───────────────────────────────────────────────────────────────
 function updateInfoHeader(props) {
@@ -494,6 +595,133 @@ function updateInfoHeader(props) {
     }
   } else {
     moEl.style.display = 'none';
+  }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('#cp-tab-nav .nav-link').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#cp-tab-nav .nav-link').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.cp-tab-pane').forEach(p => p.style.display = 'none');
+    btn.classList.add('active');
+    document.getElementById(`cp-tab-${btn.dataset.tab}`).style.display = 'block';
+  });
+});
+
+// ── Seshat ────────────────────────────────────────────────────────────────────
+const GEN_LABELS = {
+  capital:                  'Capital',
+  duration:                 'Duration',
+  peak_years:               'Peak years',
+  language:                 'Language',
+  linguistic_family:        'Language family',
+  religion:                 'Religion',
+  religion_family:          'Religion family',
+  religion_genus:           'Religion genus',
+  degree_of_centralization: 'Centralization',
+  supracultural_entity:     'Supracultural entity',
+  alternative_name:         'Also known as',
+  preceding_entity:         'Preceded by',
+  succeeding_entity:        'Succeeded by',
+};
+const GEN_ORDER = Object.keys(GEN_LABELS);
+
+const SOC_LABELS = {
+  Bureaucracy_Characteristics:         'Bureaucracy',
+  Hierarchical_Complexity:             'Complexity',
+  Information:                         'Information',
+  Law:                                 'Law',
+  Professions:                         'Professions',
+  Social_Scale:                        'Social Scale',
+  'Special-purpose_Sites':             'Sites',
+  'Specialized_Buildings:_polity_owned': 'Buildings',
+  Transport_Infrastructure:            'Transport',
+};
+
+const NUMERIC_LABELS = {
+  administrative_level:              'Admin levels',
+  military_level:                    'Military levels',
+  religious_level:                   'Religious levels',
+  settlement_hierarchy:              'Settlement hierarchy',
+  polity_population:                 'Population',
+  polity_territory:                  'Territory (km²)',
+  population_of_the_largest_settlement: 'Largest settlement pop.',
+  largest_communication_distance:    'Max comm. distance (km)',
+};
+
+async function fetchSeshat(seshatid) {
+  const genEl  = document.getElementById('cp-general-content');
+  const socEl  = document.getElementById('cp-social-content');
+  const linkWr = document.getElementById('cp-seshat-link-wrap');
+
+  if (!seshatid) {
+    genEl.innerHTML = '<span class="text-muted fst-italic">No Seshat ID for this slice.</span>';
+    socEl.innerHTML = '<span class="text-muted fst-italic">No Seshat ID for this slice.</span>';
+    linkWr.style.display = 'none';
+    return;
+  }
+  genEl.innerHTML = '<span class="text-muted">Loading…</span>';
+  socEl.innerHTML = '<span class="text-muted">Loading…</span>';
+
+  try {
+    const res  = await fetch(`/api/polity/seshat?seshatid=${encodeURIComponent(seshatid)}`);
+    if (!res.ok) throw new Error('not found');
+    const json = await res.json();
+
+    // General tab
+    const g = json.general || {};
+    const genRows = GEN_ORDER.filter(k => g[k] !== undefined).map(k => {
+      let val = Array.isArray(g[k]) ? g[k].join('; ') : g[k];
+      // Trim verbose preceding/succeeding entity strings
+      if ((k === 'preceding_entity' || k === 'succeeding_entity')) {
+        const m = val.match(/--->\s*(.+?)\s*\[/);
+        if (m) val = m[1];
+      }
+      return `<tr><td>${escHtml(GEN_LABELS[k])}</td><td>${escHtml(String(val))}</td></tr>`;
+    }).join('');
+    genEl.innerHTML = genRows
+      ? `<table class="seshat-gen-table">${genRows}</table>`
+      : '<span class="text-muted fst-italic">No general data found.</span>';
+    linkWr.style.display = genRows ? 'block' : 'none';
+
+    // Social tab
+    const s = json.social || {};
+    if (!Object.keys(s).length) {
+      socEl.innerHTML = '<span class="text-muted fst-italic">No social complexity data for this polity.</span>';
+    } else {
+      let html = '';
+      for (const [subsection, items] of Object.entries(s)) {
+        const shortLabel = subsection.replace(/ /g,'_');
+        const label = SOC_LABELS[shortLabel] || subsection;
+        html += `<div class="soc-subsection">${escHtml(label)}</div>`;
+
+        const numerics  = items.filter(i => i.type === 'numeric');
+        const binaries  = items.filter(i => i.type === 'binary');
+
+        if (numerics.length) {
+          numerics.forEach(i => {
+            const lbl = NUMERIC_LABELS[i.var] || i.var.replace(/_/g,' ');
+            const val = parseInt(i.value).toLocaleString();
+            html += `<div class="soc-numeric"><span class="soc-num-label">${escHtml(lbl)}: </span>` +
+                    `<span class="soc-num-val">${escHtml(val)}</span></div>`;
+          });
+        }
+        if (binaries.length) {
+          html += '<div class="soc-grid">';
+          binaries.forEach(i => {
+            const lbl = i.var.replace(/_/g,' ');
+            const cls = (i.value.toLowerCase() === 'present') ? 'present' : 'transitional';
+            html += `<span class="soc-item ${cls}">${escHtml(lbl)}</span>`;
+          });
+          html += '</div>';
+        }
+      }
+      socEl.innerHTML = html;
+    }
+  } catch(e) {
+    genEl.innerHTML = '<span class="text-muted fst-italic">No Seshat data for this polity.</span>';
+    socEl.innerHTML = '<span class="text-muted fst-italic">No Seshat data for this polity.</span>';
+    linkWr.style.display = 'none';
   }
 }
 
