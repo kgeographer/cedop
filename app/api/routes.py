@@ -2502,3 +2502,123 @@ def explorer_scatter(x: str, y: str, level: int = 6):
         "n_paired": len(paired),
         "values":   paired,
     }
+
+
+# -----------------------
+# Cliopatria polity endpoints
+# -----------------------
+
+@router.get("/polity/search")
+def polity_search(q: str = "", year: Optional[int] = None):
+    """Autocomplete search over leaf polity names. Returns name + slice count."""
+    if len(q) < 2:
+        return []
+    sql = """
+        SELECT name, MIN(fromyear) AS first, MAX(toyear) AS last, COUNT(*) AS slices
+        FROM gaz.clio_polities
+        WHERE NOT is_component AND name ILIKE %(pattern)s
+    """
+    params: Dict[str, Any] = {"pattern": f"%{q}%"}
+    if year is not None:
+        sql += " AND fromyear <= %(year)s AND toyear >= %(year)s"
+        params["year"] = year
+    sql += " GROUP BY name ORDER BY name LIMIT 40"
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+    return [
+        {"name": r[0], "first": r[1], "last": r[2], "slices": r[3]}
+        for r in rows
+    ]
+
+
+@router.get("/polity/slices")
+def polity_slices(name: str):
+    """All time slices for a named leaf polity (no geometry)."""
+    sql = """
+        SELECT id, fromyear, toyear, area, seshatid, invalid_source_geom,
+               memberof, components
+        FROM gaz.clio_polities
+        WHERE name = %(name)s AND NOT is_component
+        ORDER BY fromyear
+    """
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(sql, {"name": name})
+            rows = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"Polity '{name}' not found")
+
+    # Determine if memberof parent is a true composite (>1 distinct components at any slice)
+    parent_is_composite = False
+    for r in rows:
+        memberof = r[6]  # text[]
+        if memberof and len(memberof) > 0:
+            parent_name = memberof[0]
+            # Check if any sibling polities share this parent
+            break
+
+    return [
+        {
+            "id":                  r[0],
+            "fromyear":            r[1],
+            "toyear":              r[2],
+            "area_km2":            round(r[3], 1) if r[3] else None,
+            "seshatid":            r[4],
+            "invalid_source_geom": r[5],
+            "memberof":            r[6],
+            "components":          r[7],
+        }
+        for r in rows
+    ]
+
+
+@router.get("/polity/geom")
+def polity_geom(id: int):
+    """GeoJSON Feature for a single polity slice by row id."""
+    sql = """
+        SELECT name, fromyear, toyear, area, seshatid,
+               invalid_source_geom, memberof,
+               ST_AsGeoJSON(geom, 6)::json AS geometry
+        FROM gaz.clio_polities
+        WHERE id = %(id)s
+    """
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(sql, {"id": id})
+            r = cur.fetchone()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+    if not r:
+        raise HTTPException(status_code=404, detail=f"Slice id {id} not found")
+    return {
+        "type": "Feature",
+        "properties": {
+            "id":                  id,
+            "name":                r[0],
+            "fromyear":            r[1],
+            "toyear":              r[2],
+            "area_km2":            round(r[3], 1) if r[3] else None,
+            "seshatid":            r[4],
+            "invalid_source_geom": r[5],
+            "memberof":            r[6],
+        },
+        "geometry": r[7],
+    }

@@ -62,3 +62,7 @@ def sandbox_explorer_regions_test(request: Request):
 @router.get("/edops")
 def edops(request: Request):
     return templates.TemplateResponse("edops.html", {"request": request})
+
+@router.get("/polities")
+def polities(request: Request):
+    return templates.TemplateResponse("cliopatria.html", {"request": request})

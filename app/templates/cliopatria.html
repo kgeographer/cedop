@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cliopatria Polity Viewer | Computing Place</title>
+  <link rel="stylesheet" href="/static/css/site.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="" />
+  <style>
+    body { overflow: hidden; }
+
+    #cp-search-bar {
+      position: relative;
+      z-index: 10;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    #cp-search-input {
+      flex: 1;
+      max-width: 480px;
+    }
+    #cp-search-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 1rem;
+      width: 480px;
+      max-height: 320px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      z-index: 100;
+      display: none;
+    }
+    .cp-search-item {
+      padding: 0.45rem 0.75rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .cp-search-item:last-child { border-bottom: none; }
+    .cp-search-item:hover { background: #e9ecef; }
+    .cp-search-item .slices-badge {
+      float: right;
+      color: #6c757d;
+      font-size: 0.78rem;
+    }
+
+    #cp-main {
+      display: flex;
+      height: calc(100vh - 56px - 48px); /* navbar + search bar */
+    }
+
+    /* Left: map + controls */
+    #cp-left {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    #cp-map {
+      flex: 1 1 0;
+      min-height: 0;
+    }
+    #cp-controls {
+      flex: 0 0 auto;
+      background: #f8f9fa;
+      border-top: 1px solid #dee2e6;
+      padding: 0.4rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    #cp-controls .slice-label {
+      font-size: 0.8rem;
+      color: #495057;
+      white-space: nowrap;
+      min-width: 200px;
+    }
+    #cp-year-slider {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    #cp-btn-play {
+      opacity: 0.55;
+      cursor: not-allowed;
+      color: #6c757d;
+      border-color: #ced4da;
+    }
+    #cp-btn-play::after {
+      content: '';
+    }
+
+    /* Right: info panel */
+    #cp-right {
+      flex: 0 0 300px;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #dee2e6;
+      background: #fff;
+      overflow: hidden;
+    }
+    #cp-info-header {
+      flex: 0 0 auto;
+      padding: 0.75rem;
+      border-bottom: 1px solid #dee2e6;
+      background: #f8f9fa;
+    }
+    #cp-info-header h6 { margin: 0; font-size: 0.9rem; }
+    #cp-info-meta {
+      font-size: 0.78rem;
+      color: #495057;
+      margin-top: 0.3rem;
+    }
+    #cp-wiki-panel {
+      flex: 1 1 0;
+      overflow-y: auto;
+      padding: 0.75rem;
+    }
+    #cp-wiki-panel .wiki-thumb {
+      float: right;
+      margin: 0 0 0.5rem 0.75rem;
+      max-width: 100px;
+    }
+    #cp-wiki-panel .wiki-thumb img { width: 100%; border-radius: 3px; }
+    #cp-wiki-extract {
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #343a40;
+    }
+    #cp-seshat-panel {
+      flex: 0 0 auto;
+      border-top: 1px solid #dee2e6;
+      padding: 0.6rem 0.75rem;
+      background: #f8f9fa;
+      font-size: 0.78rem;
+      color: #6c757d;
+    }
+    #cp-seshat-panel .seshat-label {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 0.2rem;
+    }
+
+    /* Welcome state */
+    #cp-welcome {
+      padding: 1rem 0.75rem;
+      font-size: 0.85rem;
+      color: #495057;
+      line-height: 1.6;
+    }
+    #cp-welcome h6 { color: #343a40; font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+    #cp-invalid-warn {
+      display: none;
+      font-size: 0.75rem;
+      color: #856404;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 3px;
+      padding: 0.25rem 0.5rem;
+      margin-top: 0.3rem;
+    }
+    #cp-memberof-note {
+      display: none;
+      font-size: 0.75rem;
+      color: #0c5460;
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      border-radius: 3px;
+      padding: 0.25rem 0.5rem;
+      margin-top: 0.3rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom" style="height:56px;">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      <img src="/static/images/cp_01_800w.jpg" alt="Computing Place" style="height:40px;" class="me-2">
+    </a>
+    <span class="navbar-text fw-semibold" style="font-size:0.95rem;">Cliopatria Polity Viewer</span>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <a href="/sandbox/lookup" class="text-decoration-none small">Lookup</a>
+      <a href="/sandbox/explorer" class="text-decoration-none small">Explorer</a>
+      <span class="badge bg-secondary-subtle text-dark fw-normal" style="font-size:0.8rem;">Cliopatria</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Search bar -->
+<div id="cp-search-bar">
+  <i class="bi bi-search text-secondary"></i>
+  <input id="cp-search-input" type="text" class="form-control form-control-sm"
+         placeholder="Search polities — e.g. 'empire', 'tang', 'rome'…" autocomplete="off">
+  <span id="cp-search-hint" class="text-muted small">1,522 polities · 3400 BCE – 2024 CE</span>
+  <div id="cp-search-dropdown"></div>
+</div>
+
+<!-- Main two-column layout -->
+<div id="cp-main">
+
+  <!-- Left: map + temporal controls -->
+  <div id="cp-left">
+    <div id="cp-map"></div>
+    <div id="cp-controls">
+      <button id="cp-btn-prev" class="btn btn-sm btn-outline-secondary" disabled title="Previous slice">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <button id="cp-btn-play" class="btn btn-sm btn-outline-secondary" disabled title="Play animation — coming soon">
+        <i class="bi bi-play-fill"></i>
+      </button>
+      <button id="cp-btn-next" class="btn btn-sm btn-outline-secondary" disabled title="Next slice">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+      <input id="cp-year-slider" type="range" class="form-range" disabled>
+      <span id="cp-slice-label" class="slice-label text-muted">— select a polity —</span>
+    </div>
+  </div>
+
+  <!-- Right: info panel -->
+  <div id="cp-right">
+
+    <!-- Header: polity name + metadata -->
+    <div id="cp-info-header">
+      <h6 id="cp-polity-name">Polity Viewer</h6>
+      <div id="cp-info-meta"></div>
+      <div id="cp-invalid-warn"><i class="bi bi-exclamation-triangle-fill me-1"></i>Source geometry has self-intersections; display may be approximate.</div>
+      <div id="cp-memberof-note"></div>
+    </div>
+
+    <!-- Wiki + future Seshat -->
+    <div id="cp-wiki-panel">
+      <!-- Welcome state -->
+      <div id="cp-welcome">
+        <h6>Navigating historical polities</h6>
+        <p>Search for any polity by name above. Results include empires, kingdoms, city-states, and confederacies from 3400 BCE to 2024 CE, drawn from the <a href="https://seshatdatabank.info/" target="_blank">Seshat</a> Cliopatria dataset.</p>
+        <p>Once selected, the map displays the polity's territory for its earliest recorded slice. Use the controls below the map to step through time or drag the slider across the polity's full lifespan.</p>
+        <p class="text-muted" style="font-size:0.78rem;">1,522 distinct polities · 11,178 distinct territorial configurations · 12,987 time slices</p>
+      </div>
+      <!-- Wiki content (hidden until selection) -->
+      <div id="cp-wiki-content" style="display:none;">
+        <div class="wiki-thumb" id="cp-wiki-thumb" style="display:none;">
+          <img id="cp-wiki-img" src="" alt="">
+        </div>
+        <div id="cp-wiki-extract"></div>
+        <div class="mt-2">
+          <a id="cp-wiki-link" href="#" target="_blank" class="small">Wikipedia <i class="bi bi-box-arrow-up-right"></i></a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seshat placeholder -->
+    <div id="cp-seshat-panel">
+      <div class="seshat-label">Seshat data</div>
+      <div id="cp-seshat-content" class="text-muted fst-italic">— available after polity selection —</div>
+    </div>
+
+  </div><!-- #cp-right -->
+</div><!-- #cp-main -->
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmJ7HTuNPh8wSmkU96BpDAGMb2aJ" crossorigin="anonymous"></script>
+<script>
+// ── Map init ────────────────────────────────────────────────────────────────
+const map = new maplibregl.Map({
+  container: 'cp-map',
+  style: {
+    version: 8,
+    sources: {
+      osm: {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+      }
+    },
+    layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
+  },
+  center: [20, 30],
+  zoom: 2,
+});
+map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+// Add polity layer once map is ready
+map.on('load', () => {
+  map.addSource('polity', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'polity-fill',
+    type: 'fill',
+    source: 'polity',
+    paint: {
+      'fill-color': '#3d6b9e',
+      'fill-opacity': 0.35,
+    }
+  });
+  map.addLayer({
+    id: 'polity-outline',
+    type: 'line',
+    source: 'polity',
+    paint: {
+      'line-color': '#1a3d6b',
+      'line-width': 1.5,
+    }
+  });
+});
+
+// ── State ────────────────────────────────────────────────────────────────────
+let _slices  = [];   // [{id, fromyear, toyear, area_km2, seshatid, invalid_source_geom, memberof}]
+let _current = -1;   // index into _slices
+
+// ── Search ───────────────────────────────────────────────────────────────────
+const searchInput    = document.getElementById('cp-search-input');
+const searchDropdown = document.getElementById('cp-search-dropdown');
+let _searchTimer = null;
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(_searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { searchDropdown.style.display = 'none'; return; }
+  _searchTimer = setTimeout(() => fetchSearch(q), 220);
+});
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape') searchDropdown.style.display = 'none';
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#cp-search-bar')) searchDropdown.style.display = 'none';
+});
+
+async function fetchSearch(q) {
+  const res  = await fetch(`/api/polity/search?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  renderDropdown(data);
+}
+
+function renderDropdown(items) {
+  if (!items.length) { searchDropdown.style.display = 'none'; return; }
+  searchDropdown.innerHTML = items.map(it => {
+    const era = formatYear(it.first) + ' – ' + formatYear(it.last);
+    return `<div class="cp-search-item" data-name="${escHtml(it.name)}">
+      ${escHtml(it.name)}
+      <span class="slices-badge">${era} &nbsp;·&nbsp; ${it.slices} slices</span>
+    </div>`;
+  }).join('');
+  searchDropdown.querySelectorAll('.cp-search-item').forEach(el => {
+    el.addEventListener('click', () => selectPolity(el.dataset.name));
+  });
+  searchDropdown.style.display = 'block';
+}
+
+// ── Polity selection ──────────────────────────────────────────────────────────
+async function selectPolity(name) {
+  searchInput.value = name;
+  searchDropdown.style.display = 'none';
+
+  const res    = await fetch(`/api/polity/slices?name=${encodeURIComponent(name)}`);
+  _slices      = await res.json();
+  _current     = 0;
+
+  initControls();
+  await loadSlice(0);
+  fetchWiki(_slices[0]);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+const btnPrev    = document.getElementById('cp-btn-prev');
+const btnNext    = document.getElementById('cp-btn-next');
+const slider     = document.getElementById('cp-year-slider');
+const sliceLabel = document.getElementById('cp-slice-label');
+
+function initControls() {
+  const first = _slices[0].fromyear;
+  const last  = _slices[_slices.length - 1].toyear;
+
+  slider.min      = first;
+  slider.max      = last;
+  slider.value    = first;
+  slider.disabled = false;
+
+  btnPrev.disabled = true;
+  btnNext.disabled = _slices.length <= 1;
+}
+
+btnPrev.addEventListener('click', () => stepSlice(-1));
+btnNext.addEventListener('click', () => stepSlice(1));
+
+slider.addEventListener('input', () => {
+  // Update label while dragging without fetching geometry
+  const year = parseInt(slider.value);
+  const idx  = nearestSlice(year);
+  if (idx !== _current) {
+    _current = idx;
+    updateSliceLabel(idx);
+  }
+});
+
+slider.addEventListener('change', () => {
+  // Fetch geometry only on release
+  const year = parseInt(slider.value);
+  const idx  = nearestSlice(year);
+  _current   = idx;
+  slider.value = _slices[idx].fromyear;
+  loadSlice(idx);
+});
+
+function stepSlice(delta) {
+  const next = _current + delta;
+  if (next < 0 || next >= _slices.length) return;
+  _current = next;
+  slider.value = _slices[next].fromyear;
+  loadSlice(next);
+}
+
+function nearestSlice(year) {
+  let best = 0, bestDist = Infinity;
+  _slices.forEach((s, i) => {
+    const mid  = (s.fromyear + s.toyear) / 2;
+    const dist = Math.abs(mid - year);
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  });
+  return best;
+}
+
+function updateSliceLabel(idx) {
+  const s = _slices[idx];
+  sliceLabel.textContent =
+    `Slice ${idx + 1} of ${_slices.length}  ·  ${formatYear(s.fromyear)} – ${formatYear(s.toyear)}` +
+    (s.area_km2 ? `  ·  ${Math.round(s.area_km2).toLocaleString()} km²` : '');
+  btnPrev.disabled = idx === 0;
+  btnNext.disabled = idx === _slices.length - 1;
+}
+
+// ── Slice load ────────────────────────────────────────────────────────────────
+async function loadSlice(idx) {
+  const s   = _slices[idx];
+  const res = await fetch(`/api/polity/geom?id=${s.id}`);
+  const gj  = await res.json();
+
+  map.getSource('polity').setData(gj);
+
+  // Fit map to bounds
+  const coords = allCoords(gj.geometry);
+  if (coords.length) {
+    const lons = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+    map.fitBounds(
+      [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+      { padding: 40, maxZoom: 8, duration: 600 }
+    );
+  }
+
+  updateSliceLabel(idx);
+  updateInfoHeader(gj.properties);
+}
+
+// ── Info header ───────────────────────────────────────────────────────────────
+function updateInfoHeader(props) {
+  document.getElementById('cp-polity-name').textContent = props.name;
+
+  const meta = [];
+  meta.push(`${formatYear(props.fromyear)} – ${formatYear(props.toyear)}`);
+  if (props.area_km2) meta.push(`${Math.round(props.area_km2).toLocaleString()} km²`);
+  if (props.seshatid) meta.push(`Seshat: ${props.seshatid}`);
+  document.getElementById('cp-info-meta').textContent = meta.join('  ·  ');
+
+  const warnEl = document.getElementById('cp-invalid-warn');
+  warnEl.style.display = props.invalid_source_geom ? 'block' : 'none';
+
+  const moEl = document.getElementById('cp-memberof-note');
+  if (props.memberof && props.memberof.length) {
+    // Suppress singleton-self wrappers: (X) containing only X adds no information
+    const singletonSelf = props.memberof.length === 1 &&
+                          props.memberof[0] === `(${props.name})`;
+    if (singletonSelf) {
+      moEl.style.display = 'none';
+    } else {
+      moEl.textContent   = `Part of ${props.memberof.join(', ')}`;
+      moEl.style.display = 'block';
+    }
+  } else {
+    moEl.style.display = 'none';
+  }
+}
+
+// ── Wikipedia ─────────────────────────────────────────────────────────────────
+let _lastWikiName = '';
+
+async function fetchWiki(slice) {
+  const name = searchInput.value.trim();
+  if (name === _lastWikiName) return;
+  _lastWikiName = name;
+
+  document.getElementById('cp-welcome').style.display      = 'none';
+  document.getElementById('cp-wiki-content').style.display = 'block';
+  document.getElementById('cp-wiki-extract').textContent   = 'Loading…';
+  document.getElementById('cp-wiki-thumb').style.display   = 'none';
+
+  // Use the wikipedia field from the first slice's memberof or just the polity name
+  const wikiTitle = encodeURIComponent(name.replace(/ /g, '_'));
+  try {
+    const res  = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${wikiTitle}`);
+    const data = await res.json();
+
+    document.getElementById('cp-wiki-extract').textContent = data.extract || 'No summary available.';
+    document.getElementById('cp-wiki-link').href           = data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${wikiTitle}`;
+
+    if (data.thumbnail?.source) {
+      document.getElementById('cp-wiki-img').src         = data.thumbnail.source;
+      document.getElementById('cp-wiki-thumb').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('cp-wiki-extract').textContent = 'Wikipedia summary unavailable.';
+  }
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function formatYear(y) {
+  if (y === null || y === undefined) return '?';
+  return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function allCoords(geom) {
+  // Flatten all coordinate pairs from a GeoJSON geometry
+  const out = [];
+  function walk(arr, depth) {
+    if (depth === 0) { out.push(arr); return; }
+    arr.forEach(c => walk(c, depth - 1));
+  }
+  if (geom.type === 'Polygon')      walk(geom.coordinates, 2);
+  if (geom.type === 'MultiPolygon') walk(geom.coordinates, 3);
+  return out;
+}
+</script>
+</body>
+</html>
