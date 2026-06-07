@@ -2595,6 +2595,57 @@ def polity_slices(name: str):
     ]
 
 
+@router.get("/polity/period")
+def polity_period(year: int):
+    """GeoJSON FeatureCollection of all active leaf polities at a given year."""
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT ST_AsGeoJSON(ST_Simplify(geom, 0.08), 4)::json AS geometry,
+                       id, name, seshatid, fromyear, toyear
+                FROM gaz.clio_polities
+                WHERE fromyear <= %(year)s AND toyear >= %(year)s
+                  AND NOT is_component
+                  AND NOT COALESCE(invalid_source_geom, false)
+                  AND geom IS NOT NULL
+                ORDER BY name
+            """, {"year": year})
+            rows = cur.fetchall()
+        features = [
+            {"type": "Feature", "geometry": geom,
+             "properties": {"id": id_, "name": name, "seshatid": seshatid,
+                            "fromyear": fromyear, "toyear": toyear}}
+            for geom, id_, name, seshatid, fromyear, toyear in rows
+            if geom is not None
+        ]
+        return {"type": "FeatureCollection", "features": features}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/polity/period/years")
+def polity_period_years():
+    """Sorted list of distinct fromyear values for non-component polities (for smart stepping)."""
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT fromyear
+                FROM gaz.clio_polities
+                WHERE NOT is_component
+                ORDER BY fromyear
+            """)
+            rows = cur.fetchall()
+        return [r[0] for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
 @router.get("/polity/seshat")
 def polity_seshat(seshatid: str):
     """Seshat general + social variables for a polity."""

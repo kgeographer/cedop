@@ -11,12 +11,35 @@
   <style>
     body { overflow: hidden; }
 
+    /* Mode chips */
+    #cp-mode-chips { display: flex; gap: 0.2rem; }
+    .cp-mode-chip {
+      padding: 0.18rem 0.7rem;
+      font-size: 0.75rem;
+      border: 1px solid #ced4da;
+      border-radius: 999px;
+      background: #fff;
+      color: #495057;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .cp-mode-chip.active  { background: #1a3d6b; color: #fff; border-color: #1a3d6b; }
+    .cp-mode-chip:not(.active):hover { background: #e9ecef; }
+
+    /* Period year input */
+    #cp-year-input {
+      width: 78px;
+      font-size: 0.8rem;
+      padding: 0.2rem 0.4rem;
+      display: none;
+    }
+
     #cp-search-bar {
       position: relative;
       z-index: 10;
       background: #f8f9fa;
       border-bottom: 1px solid #dee2e6;
-      padding: 0.5rem 1rem;
+      padding: 0.5rem 2rem;
       display: flex;
       align-items: center;
       gap: 0.75rem;
@@ -28,7 +51,7 @@
     #cp-search-dropdown {
       position: absolute;
       top: 100%;
-      left: 1rem;
+      left: 2rem;
       width: 480px;
       max-height: 320px;
       overflow-y: auto;
@@ -57,6 +80,7 @@
     #cp-main {
       display: flex;
       height: calc(100vh - 56px - 48px); /* navbar + search bar */
+      padding: 0 2rem;
     }
 
     /* Left: map + controls */
@@ -247,6 +271,21 @@
       white-space: nowrap;
       z-index: 20;
     }
+    #cp-period-year-overlay {
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 50px;
+      background: rgba(15, 30, 60, 0.82);
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 10;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
@@ -258,6 +297,15 @@
       <img src="/static/images/cp_01_800w.jpg" alt="Computing Place" style="height:40px;" class="me-2">
     </a>
     <span class="navbar-text fw-semibold" style="font-size:0.95rem;">Cliopatria Polity Viewer</span>
+    <div class="ms-4 d-flex align-items-center gap-2">
+      <div id="cp-mode-chips">
+        <button class="cp-mode-chip active" data-mode="search">Search</button>
+        <button class="cp-mode-chip" data-mode="period">Period</button>
+      </div>
+      <button id="cp-reset-btn" class="btn btn-sm btn-outline-secondary ms-1" title="Reset view">
+        <i class="bi bi-arrow-counterclockwise"></i>
+      </button>
+    </div>
     <div class="ms-auto d-flex align-items-center gap-3">
       <a href="/sandbox/lookup" class="text-decoration-none small">Lookup</a>
       <a href="/sandbox/explorer" class="text-decoration-none small">Explorer</a>
@@ -282,8 +330,12 @@
   <div id="cp-left">
     <div id="cp-map">
       <div id="cp-map-tooltip"></div>
+      <div id="cp-period-year-overlay"></div>
     </div>
     <div id="cp-controls">
+      <button id="cp-btn-start" class="btn btn-sm btn-outline-secondary" disabled title="Jump to start (3400 BCE)">
+        <i class="bi bi-skip-backward-fill"></i>
+      </button>
       <button id="cp-btn-prev" class="btn btn-sm btn-outline-secondary" disabled title="Previous slice">
         <i class="bi bi-chevron-left"></i>
       </button>
@@ -294,6 +346,8 @@
         <i class="bi bi-chevron-right"></i>
       </button>
       <input id="cp-year-slider" type="range" class="form-range" disabled>
+      <input id="cp-year-input" type="number" class="form-control form-control-sm"
+             min="-3000" max="2024" placeholder="year" title="Enter a year">
       <span id="cp-slice-label" class="slice-label text-muted">— select a polity —</span>
     </div>
   </div>
@@ -313,10 +367,10 @@
     <div id="cp-tab-nav">
       <ul class="nav nav-tabs border-0">
         <li class="nav-item">
-          <button class="nav-link" data-tab="wiki">Wikipedia</button>
+          <button class="nav-link active" data-tab="wiki">Wikipedia</button>
         </li>
         <li class="nav-item">
-          <button class="nav-link active" data-tab="general">General</button>
+          <button class="nav-link" data-tab="general">General</button>
         </li>
         <li class="nav-item">
           <button class="nav-link" data-tab="social">Social</button>
@@ -328,12 +382,18 @@
     <div id="cp-tab-content">
 
       <!-- Wikipedia tab -->
-      <div id="cp-tab-wiki" class="cp-tab-pane" style="display:none;">
-        <div id="cp-welcome">
+      <div id="cp-tab-wiki" class="cp-tab-pane">
+        <div id="cp-welcome-search">
           <h6>Navigating historical polities</h6>
           <p>Search for any polity by name above. Results include empires, kingdoms, city-states, and confederacies from 3400 BCE to 2024 CE, drawn from the <a href="https://seshat-db.com/" target="_blank">Seshat</a> Cliopatria dataset.</p>
           <p>Once selected, the map displays the polity's territory for its earliest recorded slice. Use the controls below the map to step through time or drag the slider across the polity's full lifespan.</p>
           <p class="text-muted" style="font-size:0.78rem;">1,522 distinct polities · 11,178 distinct territorial configurations · 12,987 time slices</p>
+        </div>
+        <div id="cp-welcome-period" style="display:none;">
+          <h6>Browsing by period</h6>
+          <p>All polities active at the selected year are shown on the map. Use the controls below to step forward or backward through time, or enter a year directly.</p>
+          <p>Click any territory to load polity detail — map location, Seshat variables, and Wikipedia summary — in the tabs to the right.</p>
+          <p class="text-muted" style="font-size:0.78rem;">Coverage begins ~3400 BCE. Use ⏮ to jump to the earliest recorded polities.</p>
         </div>
         <div id="cp-wiki-content" style="display:none;">
           <div class="wiki-thumb" id="cp-wiki-thumb" style="display:none;">
@@ -347,7 +407,7 @@
       </div>
 
       <!-- General tab -->
-      <div id="cp-tab-general" class="cp-tab-pane">
+      <div id="cp-tab-general" class="cp-tab-pane" style="display:none;">
         <div id="cp-general-content" class="text-muted fst-italic" style="font-size:0.82rem;">
           — select a polity —
         </div>
@@ -400,12 +460,26 @@ const map = new maplibregl.Map({
     ]
   },
   center: [20, 30],
-  zoom: 2,
+  zoom: 1,
 });
 map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
 // Add polity layer once map is ready
 map.on('load', () => {
+  // Period-mode layer — all active polities at a given year; sits below everything else
+  map.addSource('period-all', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'period-fill', type: 'fill', source: 'period-all',
+    paint: { 'fill-color': '#b07030', 'fill-opacity': 0.22 }
+  });
+  map.addLayer({
+    id: 'period-outline', type: 'line', source: 'period-all',
+    paint: { 'line-color': '#6b3f10', 'line-width': 1, 'line-opacity': 0.7 }
+  });
+
   // History layers (prior distinct geometries) — added first so they sit behind current
   map.addSource('history', {
     type: 'geojson',
@@ -475,6 +549,25 @@ map.on('mouseleave', 'history-fill', () => {
   _tooltip.style.display = 'none';
 });
 
+// ── Period hover + click ──────────────────────────────────────────────────────
+map.on('mousemove', 'period-fill', (e) => {
+  if (!e.features.length) return;
+  map.getCanvas().style.cursor = 'pointer';
+  const p = e.features[0].properties;
+  _tooltip.textContent = `${p.name}  ${formatYear(p.fromyear)}–${formatYear(p.toyear)}`;
+  _tooltip.style.display = 'block';
+  _tooltip.style.left = (e.point.x + 14) + 'px';
+  _tooltip.style.top  = (e.point.y - 6)  + 'px';
+});
+map.on('mouseleave', 'period-fill', () => {
+  map.getCanvas().style.cursor = '';
+  _tooltip.style.display = 'none';
+});
+map.on('click', 'period-fill', (e) => {
+  if (!e.features.length) return;
+  selectPolity(e.features[0].properties.name);
+});
+
 // ── State ────────────────────────────────────────────────────────────────────
 let _slices      = [];        // full slice list with geom_group
 let _current     = -1;        // index into _slices
@@ -487,6 +580,121 @@ const MAX_HISTORY = 6;           // max prior distinct geometries to show as out
 let _hasIdShift   = false;  // true if current polity has >1 distinct seshatid
 let _prevGeneral  = null;   // general data dict from previous seshatid period
 let _prevSeshatId = null;   // seshatid that produced _prevGeneral
+
+let _mode        = 'search';  // 'search' | 'period'
+let _periodYear  = 1000;
+let _periodYears = [];        // sorted distinct fromyear values for smart stepping
+const PERIOD_MIN = -3000, PERIOD_MAX = 2024, PERIOD_STEP = 10;
+
+// ── Mode switching ────────────────────────────────────────────────────────────
+const searchBar   = document.getElementById('cp-search-bar');
+const yearInput   = document.getElementById('cp-year-input');
+
+function clearMapState() {
+  stopPlay();
+  _slices = []; _current = -1;
+  _geomCache.clear(); _groupRepId.clear(); _groupDateRange.clear();
+  _lastSeshatId = null; _prevGeneral = null; _prevSeshatId = null;
+  _hasIdShift = false;
+  if (map.getSource('polity'))     map.getSource('polity').setData({type:'FeatureCollection',features:[]});
+  if (map.getSource('history'))    map.getSource('history').setData({type:'FeatureCollection',features:[]});
+  if (map.getSource('period-all')) map.getSource('period-all').setData({type:'FeatureCollection',features:[]});
+}
+
+function resetPanel() {
+  document.getElementById('cp-general-content').innerHTML = '— select a polity —';
+  document.getElementById('cp-social-content').innerHTML  = '— select a polity —';
+  document.getElementById('cp-seshat-link-wrap').style.display = 'none';
+  document.getElementById('cp-wiki-content').style.display = 'none';
+  document.getElementById('cp-welcome-search').style.display = _mode === 'period' ? 'none' : 'block';
+  document.getElementById('cp-welcome-period').style.display = _mode === 'period' ? 'block' : 'none';
+  // Activate Wikipedia tab to show welcome
+  document.querySelectorAll('#cp-tab-nav .nav-link').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cp-tab-pane').forEach(p => p.style.display = 'none');
+  document.querySelector('#cp-tab-nav .nav-link[data-tab="wiki"]').classList.add('active');
+  document.getElementById('cp-tab-wiki').style.display = 'block';
+}
+
+const _yearOverlay = document.getElementById('cp-period-year-overlay');
+const btnStart     = document.getElementById('cp-btn-start');
+
+function switchMode(mode) {
+  if (mode === _mode) return;
+  _mode = mode;
+  clearMapState();
+  resetPanel();
+
+  document.querySelectorAll('.cp-mode-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.mode === mode));
+
+  if (mode === 'search') {
+    searchBar.style.display = '';
+    yearInput.style.display = 'none';
+    _yearOverlay.style.display = 'none';
+    slider.disabled = true;
+    btnStart.disabled = true;
+    btnPrev.disabled = btnNext.disabled = true;
+    btnPlay.disabled = true; btnPlay.classList.remove('play-ready');
+    sliceLabel.textContent = '— select a polity —';
+  } else {
+    searchBar.style.display = 'none';
+    yearInput.style.display = 'inline-block';
+    _yearOverlay.style.display = 'block';
+    slider.min = PERIOD_MIN; slider.max = PERIOD_MAX;
+    slider.step = PERIOD_STEP; slider.value = _periodYear;
+    slider.disabled = false;
+    btnStart.disabled = false;
+    btnPrev.disabled = false; btnNext.disabled = false;
+    btnPlay.disabled = false; btnPlay.classList.add('play-ready');
+    yearInput.value = _periodYear;
+    if (!_periodYears.length) {
+      fetch('/api/polity/period/years')
+        .then(r => r.json())
+        .then(years => { _periodYears = years; });
+    }
+    loadPeriod(_periodYear);
+  }
+}
+
+function resetView() {
+  clearMapState();
+  resetPanel();
+  if (_mode === 'search') {
+    document.getElementById('cp-search-input').value = '';
+    slider.disabled = true;
+    btnPrev.disabled = btnNext.disabled = btnPlay.disabled = true;
+    btnPlay.classList.remove('play-ready');
+    sliceLabel.textContent = '— select a polity —';
+  } else {
+    _periodYear = 1000;
+    slider.value = _periodYear;
+    yearInput.value = _periodYear;
+    loadPeriod(_periodYear);
+  }
+}
+
+async function loadPeriod(year) {
+  _periodYear = year;
+  sliceLabel.textContent = 'Loading…';
+  _yearOverlay.textContent = formatYear(year);
+  try {
+    const res = await fetch(`/api/polity/period?year=${year}`);
+    const gj  = await res.json();
+    map.getSource('period-all').setData(gj);
+    sliceLabel.textContent = `${gj.features.length} polities · ${formatYear(year)}`;
+    slider.value    = year;
+    yearInput.value = year;
+  } catch(e) {
+    sliceLabel.textContent = 'Error loading period';
+  }
+}
+
+// Chip toggle
+document.querySelectorAll('.cp-mode-chip').forEach(btn =>
+  btn.addEventListener('click', () => switchMode(btn.dataset.mode)));
+
+// Reset button
+document.getElementById('cp-reset-btn').addEventListener('click', resetView);
 
 // ── Search ───────────────────────────────────────────────────────────────────
 const searchInput    = document.getElementById('cp-search-input');
@@ -564,8 +772,13 @@ async function selectPolity(name) {
   }
 
   initControls();
-  await loadSlice(0);
-  fetchWiki(_slices[0]);
+  const startIdx = _mode === 'period'
+    ? Math.max(0, _slices.findIndex(s => s.fromyear <= _periodYear && s.toyear >= _periodYear))
+    : 0;
+  _current = startIdx;
+  slider.value = _slices[startIdx].fromyear;
+  await loadSlice(startIdx);
+  fetchWiki(_slices[startIdx]);
 }
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -597,12 +810,19 @@ function startPlay() {
   if (_playTimer) return;
   btnPlay.innerHTML = '<i class="bi bi-pause-fill"></i>';
   btnPlay.title = 'Pause';
-  _playTimer = setInterval(() => {
-    if (_current >= _slices.length - 1) { stopPlay(); return; }
-    _current++;
-    slider.value = _slices[_current].fromyear;
-    loadSlice(_current);
-  }, 1000);
+  if (_mode === 'period') {
+    _playTimer = setInterval(() => {
+      if (_periodYear >= PERIOD_MAX) { stopPlay(); return; }
+      loadPeriod(_periodYear + PERIOD_STEP);
+    }, 1000);
+  } else {
+    _playTimer = setInterval(() => {
+      if (_current >= _slices.length - 1) { stopPlay(); return; }
+      _current++;
+      slider.value = _slices[_current].fromyear;
+      loadSlice(_current);
+    }, 1000);
+  }
 }
 
 function stopPlay() {
@@ -616,26 +836,63 @@ btnPlay.addEventListener('click', () => {
   if (_playTimer) stopPlay(); else startPlay();
 });
 
-btnPrev.addEventListener('click', () => { stopPlay(); stepSlice(-1); });
-btnNext.addEventListener('click', () => { stopPlay(); stepSlice(1); });
+btnStart.addEventListener('click', () => {
+  if (_mode !== 'period') return;
+  stopPlay();
+  loadPeriod(PERIOD_MIN);
+});
+
+btnPrev.addEventListener('click', () => {
+  stopPlay();
+  if (_mode === 'period') {
+    const prev = _periodYears.length
+      ? [..._periodYears].reverse().find(y => y < _periodYear)
+      : undefined;
+    loadPeriod(prev !== undefined ? prev : Math.max(PERIOD_MIN, _periodYear - PERIOD_STEP));
+  } else stepSlice(-1);
+});
+btnNext.addEventListener('click', () => {
+  stopPlay();
+  if (_mode === 'period') {
+    const next = _periodYears.length
+      ? _periodYears.find(y => y > _periodYear)
+      : undefined;
+    loadPeriod(next !== undefined ? next : Math.min(PERIOD_MAX, _periodYear + PERIOD_STEP));
+  } else stepSlice(1);
+});
 
 slider.addEventListener('input', () => {
-  // Update label while dragging without fetching geometry
   const year = parseInt(slider.value);
-  const idx  = nearestSlice(year);
-  if (idx !== _current) {
-    _current = idx;
-    updateSliceLabel(idx);
+  if (_mode === 'period') {
+    yearInput.value = year;
+    sliceLabel.textContent = formatYear(year);
+    _yearOverlay.textContent = formatYear(year);
+  } else {
+    const idx = nearestSlice(year);
+    if (idx !== _current) { _current = idx; updateSliceLabel(idx); }
   }
 });
 
 slider.addEventListener('change', () => {
   stopPlay();
   const year = parseInt(slider.value);
-  const idx  = nearestSlice(year);
-  _current   = idx;
-  slider.value = _slices[idx].fromyear;
-  loadSlice(idx);
+  if (_mode === 'period') {
+    loadPeriod(year);
+  } else {
+    const idx = nearestSlice(year);
+    _current  = idx;
+    slider.value = _slices[idx].fromyear;
+    loadSlice(idx);
+  }
+});
+
+// Year input (period mode) — Enter or blur commits the year
+yearInput.addEventListener('change', () => {
+  let y = parseInt(yearInput.value);
+  if (isNaN(y)) return;
+  y = Math.max(PERIOD_MIN, Math.min(PERIOD_MAX, y));
+  yearInput.value = y;
+  loadPeriod(y);
 });
 
 function stepSlice(delta) {
@@ -969,7 +1226,8 @@ async function fetchWiki(slice) {
   if (name === _lastWikiName) return;
   _lastWikiName = name;
 
-  document.getElementById('cp-welcome').style.display      = 'none';
+  document.getElementById('cp-welcome-search').style.display = 'none';
+  document.getElementById('cp-welcome-period').style.display = 'none';
   document.getElementById('cp-wiki-content').style.display = 'block';
   document.getElementById('cp-wiki-extract').textContent   = 'Loading…';
   document.getElementById('cp-wiki-thumb').style.display   = 'none';
