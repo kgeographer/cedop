@@ -1,0 +1,1435 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cliopatria Polity Viewer | Computing Place</title>
+  <link rel="stylesheet" href="/static/css/site.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="" />
+  <style>
+    body { overflow: hidden; }
+
+    /* Mode chips */
+    #cp-mode-chips { display: flex; gap: 0.2rem; }
+    .cp-mode-chip {
+      padding: 0.18rem 0.7rem;
+      font-size: 0.75rem;
+      border: 1px solid #ced4da;
+      border-radius: 999px;
+      background: #fff;
+      color: #495057;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .cp-mode-chip.active  { background: #1a3d6b; color: #fff; border-color: #1a3d6b; }
+    .cp-mode-chip:not(.active):hover { background: #e9ecef; }
+
+    /* Period year input */
+    #cp-year-input {
+      width: 78px;
+      font-size: 0.8rem;
+      padding: 0.2rem 0.4rem;
+      display: none;
+    }
+
+    #cp-search-bar {
+      position: relative;
+      z-index: 10;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      padding: 0.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    #cp-search-input {
+      flex: 1;
+      max-width: 480px;
+    }
+    #cp-search-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 2rem;
+      width: 480px;
+      max-height: 320px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      z-index: 100;
+      display: none;
+    }
+    .cp-search-item {
+      padding: 0.45rem 0.75rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .cp-search-item:last-child { border-bottom: none; }
+    .cp-search-item:hover { background: #e9ecef; }
+    .cp-search-item .slices-badge {
+      float: right;
+      color: #6c757d;
+      font-size: 0.78rem;
+    }
+
+    #cp-main {
+      display: flex;
+      height: calc(100vh - 56px - 48px); /* navbar + search bar */
+      padding: 0 2rem;
+    }
+
+    /* Left: map + controls */
+    #cp-left {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    #cp-map {
+      flex: 1 1 0;
+      min-height: 0;
+      position: relative;
+    }
+    #cp-controls {
+      flex: 0 0 auto;
+      background: #f8f9fa;
+      border-top: 1px solid #dee2e6;
+      padding: 0.4rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    #cp-controls .slice-label {
+      font-size: 0.8rem;
+      color: #495057;
+      white-space: nowrap;
+      min-width: 200px;
+    }
+    #cp-year-slider {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    #cp-btn-play.play-ready {
+      opacity: 1;
+      cursor: pointer;
+    }
+    #cp-btn-play:not(.play-ready) {
+      opacity: 0.4;
+      cursor: not-allowed;
+      color: #6c757d;
+      border-color: #ced4da;
+    }
+
+    /* Right: info panel */
+    #cp-right {
+      flex: 0 0 300px;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #dee2e6;
+      background: #fff;
+      overflow: hidden;
+    }
+    #cp-info-header {
+      flex: 0 0 auto;
+      padding: 0.75rem;
+      border-bottom: 1px solid #dee2e6;
+      background: #f8f9fa;
+    }
+    #cp-info-header h6 { margin: 0; font-size: 0.9rem; }
+    #cp-info-meta {
+      font-size: 0.78rem;
+      color: #495057;
+      margin-top: 0.3rem;
+    }
+    #cp-tab-nav {
+      flex: 0 0 auto;
+      border-bottom: 1px solid #dee2e6;
+      background: #f8f9fa;
+      padding: 0 0.5rem;
+    }
+    #cp-tab-nav .nav-link {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.6rem;
+      color: #495057;
+    }
+    #cp-tab-nav .nav-link.active {
+      font-weight: 600;
+      color: #0d6efd;
+      border-bottom: 2px solid #0d6efd;
+      background: none;
+    }
+    #cp-tab-content {
+      flex: 1 1 0;
+      overflow-y: auto;
+      padding: 0.75rem;
+    }
+    /* Wikipedia tab */
+    .wiki-thumb {
+      float: right;
+      margin: 0 0 0.5rem 0.75rem;
+      max-width: 100px;
+    }
+    .wiki-thumb img { width: 100%; border-radius: 3px; }
+    #cp-wiki-extract {
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #343a40;
+    }
+    /* General tab */
+    .seshat-gen-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
+    .seshat-gen-table td { padding: 0.2rem 0.25rem; vertical-align: top; }
+    .seshat-gen-table td:first-child { color: #6c757d; white-space: nowrap; padding-right: 0.5rem; }
+    /* Social tab */
+    .soc-subsection { font-size: 0.72rem; font-weight: 600; color: #495057;
+                      margin: 0.6rem 0 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .soc-subsection:first-child { margin-top: 0; }
+    .soc-grid { display: flex; flex-wrap: wrap; gap: 0.2rem 0.4rem; margin-bottom: 0.3rem; }
+    .soc-item { font-size: 0.72rem; color: #212529; }
+    .soc-item.present::before  { content: '✓ '; color: #198754; }
+    .soc-item.transitional::before { content: '~ '; color: #fd7e14; }
+    .soc-numeric { font-size: 0.75rem; margin-bottom: 0.15rem; }
+    .soc-numeric .soc-num-label { color: #6c757d; }
+    .soc-numeric .soc-num-val   { font-weight: 500; }
+
+    /* Basin tab */
+    .basin-var-label { font-size: 0.75rem; color: #6c757d; margin-bottom: 0.25rem; display: block; }
+    #cp-basin-status { font-size: 0.75rem; color: #6c757d; margin-top: 0.4rem; min-height: 1.2em; }
+    #cp-basin-legend { margin-top: 0.75rem; }
+    #cp-basin-legend-bar { height: 12px; border-radius: 2px; margin-bottom: 0.25rem; }
+    .basin-legend-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: #495057; }
+
+    /* Welcome state */
+    #cp-welcome {
+      padding: 1rem 0.75rem;
+      font-size: 0.85rem;
+      color: #495057;
+      line-height: 1.6;
+    }
+    #cp-welcome h6 { color: #343a40; font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+    #cp-invalid-warn {
+      display: none;
+      font-size: 0.75rem;
+      color: #856404;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 3px;
+      padding: 0.25rem 0.5rem;
+      margin-top: 0.3rem;
+    }
+    #cp-memberof-note {
+      display: none;
+      font-size: 0.75rem;
+      color: #0c5460;
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      border-radius: 3px;
+      padding: 0.25rem 0.5rem;
+      margin-top: 0.3rem;
+    }
+    /* Seshat period-shift banner */
+    .seshat-shift-banner {
+      background: linear-gradient(135deg, #1e2a3a, #0f172a);
+      color: #e2e8f0;
+      border-radius: 5px;
+      padding: 0.55rem 0.75rem;
+      margin-bottom: 0.6rem;
+      font-size: 0.75rem;
+      line-height: 1.5;
+    }
+    .seshat-shift-banner .shift-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #fbbf24;
+      margin-bottom: 0.2rem;
+    }
+    .seshat-shift-banner .shift-from { color: #94a3b8; }
+    .seshat-shift-banner .shift-arrow { color: #fbbf24; margin: 0 0.3rem; }
+    .seshat-shift-banner .shift-to   { color: #e2e8f0; font-weight: 600; }
+    .seshat-shift-banner .shift-count { color: #64748b; font-size: 0.7rem; margin-top: 0.15rem; }
+
+    /* General tab diff rows */
+    @keyframes genFlash {
+      0%   { background-color: #fef08a; }
+      100% { background-color: #fffbeb; }
+    }
+    .gen-row-changed td  { background: #fffbeb; animation: genFlash 1.2s ease-out; }
+    .gen-row-changed .gen-was { display: block; font-size: 0.68rem; color: #92400e; font-style: italic; margin-top: 1px; }
+    .gen-row-added   td  { background: #f0fdf4; }
+    .gen-row-removed td  { background: #fef2f2; color: #9ca3af; }
+    .gen-row-removed td:last-child { text-decoration: line-through; }
+
+    #cp-map-tooltip {
+      display: none;
+      position: absolute;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-size: 0.78rem;
+      padding: 3px 8px;
+      border-radius: 3px;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 20;
+    }
+    #cp-period-year-overlay {
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 50px;
+      background: rgba(15, 30, 60, 0.82);
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 10;
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom" style="height:56px;">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      <img src="/static/images/cp_01_800w.jpg" alt="Computing Place" style="height:40px;" class="me-2">
+    </a>
+    <span class="navbar-text fw-semibold" style="font-size:0.95rem;">Cliopatria Polity Viewer</span>
+    <div class="ms-4 d-flex align-items-center gap-2">
+      <div id="cp-mode-chips">
+        <button class="cp-mode-chip active" data-mode="search">Search</button>
+        <button class="cp-mode-chip" data-mode="period">Period</button>
+      </div>
+      <button id="cp-reset-btn" class="btn btn-sm btn-outline-secondary ms-1" title="Reset view">
+        <i class="bi bi-arrow-counterclockwise"></i>
+      </button>
+    </div>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <a href="/sandbox/lookup" class="text-decoration-none small">Lookup</a>
+      <a href="/sandbox/explorer" class="text-decoration-none small">Explorer</a>
+      <span class="badge bg-secondary-subtle text-dark fw-normal" style="font-size:0.8rem;">Cliopatria</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Search bar -->
+<div id="cp-search-bar">
+  <i class="bi bi-search text-secondary"></i>
+  <input id="cp-search-input" type="text" class="form-control form-control-sm"
+         placeholder="Search polities — e.g. 'empire', 'tang', 'rome'…" autocomplete="off">
+  <span id="cp-search-hint" class="text-muted small">1,522 polities · 3400 BCE – 2024 CE</span>
+  <div id="cp-search-dropdown"></div>
+</div>
+
+<!-- Main two-column layout -->
+<div id="cp-main">
+
+  <!-- Left: map + temporal controls -->
+  <div id="cp-left">
+    <div id="cp-map">
+      <div id="cp-map-tooltip"></div>
+      <div id="cp-period-year-overlay"></div>
+    </div>
+    <div id="cp-controls">
+      <button id="cp-btn-start" class="btn btn-sm btn-outline-secondary" disabled title="Jump to start (3400 BCE)">
+        <i class="bi bi-skip-backward-fill"></i>
+      </button>
+      <button id="cp-btn-prev" class="btn btn-sm btn-outline-secondary" disabled title="Previous slice">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <button id="cp-btn-play" class="btn btn-sm btn-outline-secondary" disabled title="Play through slices">
+        <i class="bi bi-play-fill"></i>
+      </button>
+      <button id="cp-btn-next" class="btn btn-sm btn-outline-secondary" disabled title="Next slice">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+      <input id="cp-year-slider" type="range" class="form-range" disabled>
+      <input id="cp-year-input" type="number" class="form-control form-control-sm"
+             min="-3000" max="2024" placeholder="year" title="Enter a year">
+      <span id="cp-slice-label" class="slice-label text-muted">— select a polity —</span>
+    </div>
+  </div>
+
+  <!-- Right: info panel -->
+  <div id="cp-right">
+
+    <!-- Header: polity name + metadata -->
+    <div id="cp-info-header">
+      <h6 id="cp-polity-name">Polity Viewer</h6>
+      <div id="cp-info-meta"></div>
+      <div id="cp-invalid-warn"><i class="bi bi-exclamation-triangle-fill me-1"></i>Source geometry has self-intersections; display may be approximate.</div>
+      <div id="cp-memberof-note"></div>
+    </div>
+
+    <!-- Tab nav -->
+    <div id="cp-tab-nav">
+      <ul class="nav nav-tabs border-0">
+        <li class="nav-item">
+          <button class="nav-link active" data-tab="wiki">Wikipedia</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-tab="general">General</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-tab="social">Social</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-tab="basins">Basins</button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Tab content -->
+    <div id="cp-tab-content">
+
+      <!-- Wikipedia tab -->
+      <div id="cp-tab-wiki" class="cp-tab-pane">
+        <div id="cp-welcome-search">
+          <h6>Navigating historical polities</h6>
+          <p>Search for any polity by name above. Results include empires, kingdoms, city-states, and confederacies from 3400 BCE to 2024 CE, drawn from the <a href="https://seshat-db.com/" target="_blank">Seshat</a> Cliopatria dataset.</p>
+          <p>Once selected, the map displays the polity's territory for its earliest recorded slice. Use the controls below the map to step through time or drag the slider across the polity's full lifespan.</p>
+          <p class="text-muted" style="font-size:0.78rem;">1,522 distinct polities · 11,178 distinct territorial configurations · 12,987 time slices</p>
+        </div>
+        <div id="cp-welcome-period" style="display:none;">
+          <h6>Browsing by period</h6>
+          <p>All polities active at the selected year are shown on the map. Use the controls below to step forward or backward through time, or enter a year directly.</p>
+          <p>Click any territory to load polity detail — map location, Seshat variables, and Wikipedia summary — in the tabs to the right.</p>
+          <p class="text-muted" style="font-size:0.78rem;">Coverage begins ~3400 BCE. Use ⏮ to jump to the earliest recorded polities.</p>
+        </div>
+        <div id="cp-wiki-content" style="display:none;">
+          <div class="wiki-thumb" id="cp-wiki-thumb" style="display:none;">
+            <img id="cp-wiki-img" src="" alt="">
+          </div>
+          <div id="cp-wiki-extract"></div>
+          <div class="mt-2">
+            <a id="cp-wiki-link" href="#" target="_blank" class="small">Wikipedia <i class="bi bi-box-arrow-up-right"></i></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- General tab -->
+      <div id="cp-tab-general" class="cp-tab-pane" style="display:none;">
+        <div id="cp-general-content" class="text-muted fst-italic" style="font-size:0.82rem;">
+          — select a polity —
+        </div>
+        <div class="mt-2" style="display:none;" id="cp-seshat-link-wrap">
+          <a href="https://seshat-db.com/" target="_blank" class="small text-muted">
+            seshatdatabank.info <i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Social tab -->
+      <div id="cp-tab-social" class="cp-tab-pane" style="display:none;">
+        <div id="cp-social-content" class="text-muted fst-italic" style="font-size:0.82rem;">
+          — select a polity —
+        </div>
+      </div>
+
+      <!-- Basins tab -->
+      <div id="cp-tab-basins" class="cp-tab-pane" style="display:none;">
+        <div class="mb-2">
+          <label class="basin-var-label">Basin variable</label>
+          <select id="cp-basin-var" class="form-select form-select-sm">
+            <option value="">— choose variable —</option>
+            <option value="aridity_index">Aridity index</option>
+            <option value="precipitation_annual">Annual precipitation</option>
+            <option value="temperature_annual">Mean annual temperature</option>
+          </select>
+        </div>
+        <div id="cp-basin-legend" style="display:none;">
+          <div id="cp-basin-legend-bar"></div>
+          <div class="basin-legend-labels">
+            <span id="cp-basin-leg-lo"></span>
+            <span id="cp-basin-leg-hi"></span>
+          </div>
+        </div>
+        <div id="cp-basin-status"></div>
+      </div>
+
+    </div><!-- #cp-tab-content -->
+
+  </div><!-- #cp-right -->
+</div><!-- #cp-main -->
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+<script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmJ7HTuNPh8wSmkU96BpDAGMb2aJ" crossorigin="anonymous"></script>
+<script>
+// ── PMTiles protocol ─────────────────────────────────────────────────────────
+const _pmProtocol = new pmtiles.Protocol();
+maplibregl.addProtocol('pmtiles', _pmProtocol.tile);
+
+// ── Map init ────────────────────────────────────────────────────────────────
+const map = new maplibregl.Map({
+  container: 'cp-map',
+  style: {
+    version: 8,
+    sources: {
+      hillshade: {
+        type: 'raster',
+        tiles: ['https://tiles.openstreetmap.us/raster/hillshade/{z}/{x}/{y}.jpg'],
+        tileSize: 256,
+        attribution: '',
+      },
+      osm: {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+      }
+    },
+    layers: [
+      { id: 'hillshade-tiles', type: 'raster', source: 'hillshade' },
+      { id: 'osm-tiles',       type: 'raster', source: 'osm',
+        paint: { 'raster-opacity': 0.6 } },
+    ]
+  },
+  center: [20, 30],
+  zoom: 1,
+});
+map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+// Add polity layer once map is ready
+map.on('load', () => {
+  // Period-mode layer — all active polities at a given year; sits below everything else
+  map.addSource('period-all', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'period-fill', type: 'fill', source: 'period-all',
+    paint: { 'fill-color': '#b07030', 'fill-opacity': 0.22 }
+  });
+  map.addLayer({
+    id: 'period-outline', type: 'line', source: 'period-all',
+    paint: { 'line-color': '#6b3f10', 'line-width': 1, 'line-opacity': 0.7 }
+  });
+
+  // History layers (prior distinct geometries) — added first so they sit behind current
+  map.addSource('history', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'history-fill',
+    type: 'fill',
+    source: 'history',
+    paint: {
+      'fill-color': '#3d6b9e',
+      'fill-opacity': 0.09,
+    }
+  });
+  map.addLayer({
+    id: 'history-outline',
+    type: 'line',
+    source: 'history',
+    paint: {
+      'line-color': '#1a3d6b',
+      'line-width': 1,
+      'line-dasharray': [4, 3],
+      'line-opacity': 0.55,
+    }
+  });
+
+  // Current polity layers — on top of history
+  map.addSource('polity', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'polity-fill',
+    type: 'fill',
+    source: 'polity',
+    paint: {
+      'fill-color': '#3d6b9e',
+      'fill-opacity': 0.35,
+    }
+  });
+  map.addLayer({
+    id: 'polity-outline',
+    type: 'line',
+    source: 'polity',
+    paint: {
+      'line-color': '#1a3d6b',
+      'line-width': 1.5,
+    }
+  });
+});
+
+// ── History hover tooltip ─────────────────────────────────────────────────────
+const _tooltip = document.getElementById('cp-map-tooltip');
+
+map.on('mousemove', 'history-fill', (e) => {
+  const hits = map.queryRenderedFeatures(e.point, { layers: ['history-fill'] });
+  if (!hits.length) return;
+  // Oldest (highest age) = most persistent territory at this point
+  hits.sort((a, b) => b.properties.age - a.properties.age);
+  _tooltip.textContent = hits[0].properties.label;
+  _tooltip.style.display = 'block';
+  _tooltip.style.left = (e.point.x + 14) + 'px';
+  _tooltip.style.top  = (e.point.y - 6)  + 'px';
+});
+map.on('mouseleave', 'history-fill', () => {
+  map.getCanvas().style.cursor = '';
+  _tooltip.style.display = 'none';
+});
+
+// ── Period hover + click ──────────────────────────────────────────────────────
+map.on('mousemove', 'period-fill', (e) => {
+  if (!e.features.length) return;
+  map.getCanvas().style.cursor = 'pointer';
+  const p = e.features[0].properties;
+  _tooltip.textContent = `${p.name}  ${formatYear(p.fromyear)}–${formatYear(p.toyear)}`;
+  _tooltip.style.display = 'block';
+  _tooltip.style.left = (e.point.x + 14) + 'px';
+  _tooltip.style.top  = (e.point.y - 6)  + 'px';
+});
+map.on('mouseleave', 'period-fill', () => {
+  map.getCanvas().style.cursor = '';
+  _tooltip.style.display = 'none';
+});
+map.on('click', 'period-fill', (e) => {
+  if (!e.features.length) return;
+  selectPolity(e.features[0].properties.name);
+});
+
+// ── State ────────────────────────────────────────────────────────────────────
+let _slices      = [];        // full slice list with geom_group
+let _current     = -1;        // index into _slices
+let _playTimer   = null;
+let _geomCache      = new Map(); // geom_group → GeoJSON geometry object
+let _groupRepId     = new Map(); // geom_group → representative slice id (first in group)
+let _groupDateRange = new Map(); // geom_group → { from, to } in year integers
+const MAX_HISTORY = 6;           // max prior distinct geometries to show as outlines
+
+let _hasIdShift   = false;  // true if current polity has >1 distinct seshatid
+let _prevGeneral  = null;   // general data dict from previous seshatid period
+let _prevSeshatId = null;   // seshatid that produced _prevGeneral
+
+let _mode        = 'search';  // 'search' | 'period'
+let _periodYear  = 1000;
+let _periodYears = [];        // sorted distinct fromyear values for smart stepping
+const PERIOD_MIN = -3000, PERIOD_MAX = 2024, PERIOD_STEP = 10;
+
+// ── Mode switching ────────────────────────────────────────────────────────────
+const searchBar   = document.getElementById('cp-search-bar');
+const yearInput   = document.getElementById('cp-year-input');
+
+function clearMapState() {
+  stopPlay();
+  _slices = []; _current = -1;
+  _geomCache.clear(); _groupRepId.clear(); _groupDateRange.clear();
+  _lastSeshatId = null; _prevGeneral = null; _prevSeshatId = null;
+  _hasIdShift = false;
+  if (map.getSource('polity'))     map.getSource('polity').setData({type:'FeatureCollection',features:[]});
+  if (map.getSource('history'))    map.getSource('history').setData({type:'FeatureCollection',features:[]});
+  if (map.getSource('period-all')) map.getSource('period-all').setData({type:'FeatureCollection',features:[]});
+}
+
+function resetPanel() {
+  document.getElementById('cp-general-content').innerHTML = '— select a polity —';
+  document.getElementById('cp-social-content').innerHTML  = '— select a polity —';
+  document.getElementById('cp-seshat-link-wrap').style.display = 'none';
+  document.getElementById('cp-wiki-content').style.display = 'none';
+  document.getElementById('cp-welcome-search').style.display = _mode === 'period' ? 'none' : 'block';
+  document.getElementById('cp-welcome-period').style.display = _mode === 'period' ? 'block' : 'none';
+  // Activate Wikipedia tab to show welcome
+  document.querySelectorAll('#cp-tab-nav .nav-link').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cp-tab-pane').forEach(p => p.style.display = 'none');
+  document.querySelector('#cp-tab-nav .nav-link[data-tab="wiki"]').classList.add('active');
+  document.getElementById('cp-tab-wiki').style.display = 'block';
+}
+
+const _yearOverlay = document.getElementById('cp-period-year-overlay');
+const btnStart     = document.getElementById('cp-btn-start');
+
+function switchMode(mode) {
+  if (mode === _mode) return;
+  _mode = mode;
+  clearMapState();
+  resetPanel();
+
+  document.querySelectorAll('.cp-mode-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.mode === mode));
+
+  if (mode === 'search') {
+    searchBar.style.display = '';
+    yearInput.style.display = 'none';
+    _yearOverlay.style.display = 'none';
+    slider.disabled = true;
+    btnStart.disabled = true;
+    btnPrev.disabled = btnNext.disabled = true;
+    btnPlay.disabled = true; btnPlay.classList.remove('play-ready');
+    sliceLabel.textContent = '— select a polity —';
+  } else {
+    searchBar.style.display = 'none';
+    yearInput.style.display = 'inline-block';
+    _yearOverlay.style.display = 'block';
+    slider.min = PERIOD_MIN; slider.max = PERIOD_MAX;
+    slider.step = PERIOD_STEP; slider.value = _periodYear;
+    slider.disabled = false;
+    btnStart.disabled = false;
+    btnPrev.disabled = false; btnNext.disabled = false;
+    btnPlay.disabled = false; btnPlay.classList.add('play-ready');
+    yearInput.value = _periodYear;
+    if (!_periodYears.length) {
+      fetch('/api/polity/period/years')
+        .then(r => r.json())
+        .then(years => { _periodYears = years; });
+    }
+    loadPeriod(_periodYear);
+  }
+}
+
+function resetView() {
+  clearMapState();
+  resetPanel();
+  if (_mode === 'search') {
+    document.getElementById('cp-search-input').value = '';
+    slider.disabled = true;
+    btnPrev.disabled = btnNext.disabled = btnPlay.disabled = true;
+    btnPlay.classList.remove('play-ready');
+    sliceLabel.textContent = '— select a polity —';
+  } else {
+    _periodYear = 1000;
+    slider.value = _periodYear;
+    yearInput.value = _periodYear;
+    loadPeriod(_periodYear);
+  }
+}
+
+async function loadPeriod(year) {
+  _periodYear = year;
+  sliceLabel.textContent = 'Loading…';
+  _yearOverlay.textContent = formatYear(year);
+  try {
+    const res = await fetch(`/api/polity/period?year=${year}`);
+    const gj  = await res.json();
+    map.getSource('period-all').setData(gj);
+    sliceLabel.textContent = `${gj.features.length} polities · ${formatYear(year)}`;
+    slider.value    = year;
+    yearInput.value = year;
+  } catch(e) {
+    sliceLabel.textContent = 'Error loading period';
+  }
+}
+
+// Chip toggle
+document.querySelectorAll('.cp-mode-chip').forEach(btn =>
+  btn.addEventListener('click', () => switchMode(btn.dataset.mode)));
+
+// Reset button
+document.getElementById('cp-reset-btn').addEventListener('click', resetView);
+
+// ── Search ───────────────────────────────────────────────────────────────────
+const searchInput    = document.getElementById('cp-search-input');
+const searchDropdown = document.getElementById('cp-search-dropdown');
+let _searchTimer = null;
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(_searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { searchDropdown.style.display = 'none'; return; }
+  _searchTimer = setTimeout(() => fetchSearch(q), 220);
+});
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape') searchDropdown.style.display = 'none';
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#cp-search-bar')) searchDropdown.style.display = 'none';
+});
+
+async function fetchSearch(q) {
+  const res  = await fetch(`/api/polity/search?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  renderDropdown(data);
+}
+
+function renderDropdown(items) {
+  if (!items.length) { searchDropdown.style.display = 'none'; return; }
+  searchDropdown.innerHTML = items.map(it => {
+    const era = formatYear(it.first) + ' – ' + formatYear(it.last);
+    return `<div class="cp-search-item" data-name="${escHtml(it.name)}">
+      ${escHtml(it.name)}
+      <span class="slices-badge">${era} &nbsp;·&nbsp; ${it.slices} slices</span>
+    </div>`;
+  }).join('');
+  searchDropdown.querySelectorAll('.cp-search-item').forEach(el => {
+    el.addEventListener('click', () => selectPolity(el.dataset.name));
+  });
+  searchDropdown.style.display = 'block';
+}
+
+// ── Polity selection ──────────────────────────────────────────────────────────
+async function selectPolity(name) {
+  searchInput.value = name;
+  searchDropdown.style.display = 'none';
+
+  const res    = await fetch(`/api/polity/slices?name=${encodeURIComponent(name)}`);
+  _slices      = await res.json();
+  _current     = 0;
+  _geomCache.clear();
+  _groupRepId.clear();
+  _groupDateRange.clear();
+  _slices.forEach(s => {
+    if (!_groupRepId.has(s.geom_group)) _groupRepId.set(s.geom_group, s.id);
+    if (!_groupDateRange.has(s.geom_group)) {
+      _groupDateRange.set(s.geom_group, { from: s.fromyear, to: s.toyear });
+    } else {
+      const r = _groupDateRange.get(s.geom_group);
+      r.from = Math.min(r.from, s.fromyear);
+      r.to   = Math.max(r.to,   s.toyear);
+    }
+  });
+
+  // Detect seshatid shift polities (the 107)
+  const uniqueIds = new Set(_slices.map(s => s.seshatid).filter(Boolean));
+  _hasIdShift  = uniqueIds.size > 1;
+  _prevGeneral  = null;
+  _prevSeshatId = null;
+  _lastSeshatId = null;   // force re-fetch on first loadSlice
+
+  // Clear history layer on new polity
+  if (map.getSource('history')) {
+    map.getSource('history').setData({ type: 'FeatureCollection', features: [] });
+  }
+
+  initControls();
+  const startIdx = _mode === 'period'
+    ? Math.max(0, _slices.findIndex(s => s.fromyear <= _periodYear && s.toyear >= _periodYear))
+    : 0;
+  _current = startIdx;
+  slider.value = _slices[startIdx].fromyear;
+  await loadSlice(startIdx);
+  fetchWiki(_slices[startIdx]);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+const btnPrev    = document.getElementById('cp-btn-prev');
+const btnNext    = document.getElementById('cp-btn-next');
+const slider     = document.getElementById('cp-year-slider');
+const sliceLabel = document.getElementById('cp-slice-label');
+
+const btnPlay = document.getElementById('cp-btn-play');
+
+function initControls() {
+  const first = _slices[0].fromyear;
+  const last  = _slices[_slices.length - 1].toyear;
+
+  slider.min      = first;
+  slider.max      = last;
+  slider.value    = first;
+  slider.disabled = false;
+
+  btnPrev.disabled = true;
+  btnNext.disabled = _slices.length <= 1;
+
+  stopPlay();
+  btnPlay.disabled = _slices.length <= 1;
+  btnPlay.classList.add('play-ready');
+}
+
+function startPlay() {
+  if (_playTimer) return;
+  btnPlay.innerHTML = '<i class="bi bi-pause-fill"></i>';
+  btnPlay.title = 'Pause';
+  if (_mode === 'period') {
+    _playTimer = setInterval(() => {
+      if (_periodYear >= PERIOD_MAX) { stopPlay(); return; }
+      loadPeriod(_periodYear + PERIOD_STEP);
+    }, 1000);
+  } else {
+    _playTimer = setInterval(() => {
+      if (_current >= _slices.length - 1) { stopPlay(); return; }
+      _current++;
+      slider.value = _slices[_current].fromyear;
+      loadSlice(_current);
+    }, 1000);
+  }
+}
+
+function stopPlay() {
+  if (_playTimer) { clearInterval(_playTimer); _playTimer = null; }
+  btnPlay.innerHTML = '<i class="bi bi-play-fill"></i>';
+  btnPlay.title = 'Play through slices';
+}
+
+btnPlay.addEventListener('click', () => {
+  if (!btnPlay.classList.contains('play-ready')) return;
+  if (_playTimer) stopPlay(); else startPlay();
+});
+
+btnStart.addEventListener('click', () => {
+  if (_mode !== 'period') return;
+  stopPlay();
+  loadPeriod(PERIOD_MIN);
+});
+
+btnPrev.addEventListener('click', () => {
+  stopPlay();
+  if (_mode === 'period') {
+    const prev = _periodYears.length
+      ? [..._periodYears].reverse().find(y => y < _periodYear)
+      : undefined;
+    loadPeriod(prev !== undefined ? prev : Math.max(PERIOD_MIN, _periodYear - PERIOD_STEP));
+  } else stepSlice(-1);
+});
+btnNext.addEventListener('click', () => {
+  stopPlay();
+  if (_mode === 'period') {
+    const next = _periodYears.length
+      ? _periodYears.find(y => y > _periodYear)
+      : undefined;
+    loadPeriod(next !== undefined ? next : Math.min(PERIOD_MAX, _periodYear + PERIOD_STEP));
+  } else stepSlice(1);
+});
+
+slider.addEventListener('input', () => {
+  const year = parseInt(slider.value);
+  if (_mode === 'period') {
+    yearInput.value = year;
+    sliceLabel.textContent = formatYear(year);
+    _yearOverlay.textContent = formatYear(year);
+  } else {
+    const idx = nearestSlice(year);
+    if (idx !== _current) { _current = idx; updateSliceLabel(idx); }
+  }
+});
+
+slider.addEventListener('change', () => {
+  stopPlay();
+  const year = parseInt(slider.value);
+  if (_mode === 'period') {
+    loadPeriod(year);
+  } else {
+    const idx = nearestSlice(year);
+    _current  = idx;
+    slider.value = _slices[idx].fromyear;
+    loadSlice(idx);
+  }
+});
+
+// Year input (period mode) — Enter or blur commits the year
+yearInput.addEventListener('change', () => {
+  let y = parseInt(yearInput.value);
+  if (isNaN(y)) return;
+  y = Math.max(PERIOD_MIN, Math.min(PERIOD_MAX, y));
+  yearInput.value = y;
+  loadPeriod(y);
+});
+
+function stepSlice(delta) {
+  const next = _current + delta;
+  if (next < 0 || next >= _slices.length) return;
+  _current = next;
+  slider.value = _slices[next].fromyear;
+  loadSlice(next);
+}
+
+function nearestSlice(year) {
+  let best = 0, bestDist = Infinity;
+  _slices.forEach((s, i) => {
+    const mid  = (s.fromyear + s.toyear) / 2;
+    const dist = Math.abs(mid - year);
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  });
+  return best;
+}
+
+function updateSliceLabel(idx) {
+  const s = _slices[idx];
+  sliceLabel.textContent =
+    `Slice ${idx + 1} of ${_slices.length}  ·  ${formatYear(s.fromyear)} – ${formatYear(s.toyear)}` +
+    (s.area_km2 ? `  ·  ${Math.round(s.area_km2).toLocaleString()} km²` : '');
+  btnPrev.disabled = idx === 0;
+  btnNext.disabled = idx === _slices.length - 1;
+}
+
+// ── Geometry cache ────────────────────────────────────────────────────────────
+async function fetchGeomGroup(group) {
+  if (_geomCache.has(group)) return;
+  const id  = _groupRepId.get(group);
+  if (!id) return;
+  const res = await fetch(`/api/polity/geom?id=${id}`);
+  const gj  = await res.json();
+  _geomCache.set(group, gj.geometry);
+}
+
+// ── Slice load ────────────────────────────────────────────────────────────────
+async function loadSlice(idx) {
+  const s            = _slices[idx];
+  const currentGroup = s.geom_group;
+
+  // Fetch current group geometry
+  await fetchGeomGroup(currentGroup);
+  const geom = _geomCache.get(currentGroup);
+
+  // Update current polity layer
+  map.getSource('polity').setData({ type: 'Feature', properties: {}, geometry: geom });
+
+  // Fit bounds on first load of each distinct geometry
+  const coords = allCoords(geom);
+  if (coords.length) {
+    const lons = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+    map.fitBounds(
+      [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+      { padding: 40, maxZoom: 8, duration: 600 }
+    );
+  }
+
+  // Fetch and render prior distinct geometry groups as history outlines
+  const minGroup    = Math.max(1, currentGroup - MAX_HISTORY);
+  const priorGroups = [];
+  for (let g = minGroup; g < currentGroup; g++) priorGroups.push(g);
+
+  await Promise.all(priorGroups.map(g => fetchGeomGroup(g)));
+
+  const historyFeatures = priorGroups
+    .filter(g => _geomCache.has(g))
+    .map(g => {
+      const dr = _groupDateRange.get(g) || {};
+      return {
+        type:       'Feature',
+        properties: {
+          geom_group: g,
+          age:        currentGroup - g,
+          label:      `${formatYear(dr.from)} – ${formatYear(dr.to)}`,
+        },
+        geometry: _geomCache.get(g),
+      };
+    });
+
+  map.getSource('history').setData({
+    type: 'FeatureCollection', features: historyFeatures
+  });
+
+  updateSliceLabel(idx);
+  updateInfoHeader(s);
+
+  // Refresh Seshat panel only when seshatid changes
+  if (s.seshatid !== _lastSeshatId) {
+    _lastSeshatId = s.seshatid;
+    fetchSeshat(s.seshatid);
+  }
+}
+let _lastSeshatId = null;
+
+// ── Info header ───────────────────────────────────────────────────────────────
+function updateInfoHeader(s) {
+  const name = searchInput.value.trim();
+  document.getElementById('cp-polity-name').textContent = name;
+
+  const meta = [];
+  meta.push(`${formatYear(s.fromyear)} – ${formatYear(s.toyear)}`);
+  if (s.area_km2) meta.push(`${Math.round(s.area_km2).toLocaleString()} km²`);
+  if (s.seshatid) meta.push(`Seshat: ${s.seshatid}`);
+  document.getElementById('cp-info-meta').textContent = meta.join('  ·  ');
+
+  const warnEl = document.getElementById('cp-invalid-warn');
+  warnEl.style.display = s.invalid_source_geom ? 'block' : 'none';
+
+  const moEl = document.getElementById('cp-memberof-note');
+  if (s.memberof && s.memberof.length) {
+    const singletonSelf = s.memberof.length === 1 && s.memberof[0] === `(${name})`;
+    if (singletonSelf) {
+      moEl.style.display = 'none';
+    } else {
+      moEl.textContent   = `Part of ${s.memberof.join(', ')}`;
+      moEl.style.display = 'block';
+    }
+  } else {
+    moEl.style.display = 'none';
+  }
+}
+
+// ── Basin layer ───────────────────────────────────────────────────────────────
+const RDBU_PAL = ['#b2182b','#ef8a62','#fddbc7','#f7f7f7','#d1e5f0','#67a9cf','#2166ac'];
+
+function interpRdbu(t) {
+  t = Math.max(0, Math.min(1, t));
+  const n = RDBU_PAL.length - 1;
+  const i = Math.floor(t * n);
+  const f = t * n - i;
+  if (i >= n) return RDBU_PAL[n];
+  const a = parseInt(RDBU_PAL[i].slice(1), 16);
+  const b = parseInt(RDBU_PAL[i + 1].slice(1), 16);
+  const r  = Math.round(((a >> 16) & 0xff) * (1 - f) + ((b >> 16) & 0xff) * f);
+  const g  = Math.round(((a >> 8)  & 0xff) * (1 - f) + ((b >> 8)  & 0xff) * f);
+  const bl = Math.round(( a        & 0xff) * (1 - f) + ( b        & 0xff) * f);
+  return `rgb(${r},${g},${bl})`;
+}
+
+const BASIN_VARS = [
+  { key: 'aridity_index',        su: 's', reverse: false, loLabel: 'dry',  hiLabel: 'wet'  },
+  { key: 'precipitation_annual', su: 's', reverse: false, loLabel: 'dry',  hiLabel: 'wet'  },
+  { key: 'temperature_annual',   su: 's', reverse: true,  loLabel: 'cold', hiLabel: 'warm' },
+];
+
+let _basinsLoaded    = false;
+let _basinActive     = false;
+let _basinVarLoaded  = false;
+
+function loadBasinLayer() {
+  if (_basinsLoaded) return;
+  map.addSource('basin06', {
+    type: 'vector',
+    url: 'pmtiles:///static/explorer/basin06.pmtiles'
+  });
+  // Insert below period-fill so polity layers stay on top
+  map.addLayer({
+    id: 'basin-fill', type: 'fill', source: 'basin06', 'source-layer': 'basin06',
+    paint: { 'fill-color': ['coalesce', ['feature-state', 'fc'], 'transparent'], 'fill-opacity': 0.72 }
+  }, 'period-fill');
+  map.addLayer({
+    id: 'basin-outline', type: 'line', source: 'basin06', 'source-layer': 'basin06',
+    paint: { 'line-color': 'rgba(80,80,80,0.2)', 'line-width': 0.5 }
+  }, 'period-fill');
+  _basinsLoaded = true;
+}
+
+function showBasinLayer() {
+  _basinActive = true;
+  if (map.getLayer('basin-fill'))    map.setLayoutProperty('basin-fill',    'visibility', 'visible');
+  if (map.getLayer('basin-outline')) map.setLayoutProperty('basin-outline', 'visibility', 'visible');
+  map.setPaintProperty('polity-fill',   'fill-opacity', 0);
+  map.setPaintProperty('history-fill',  'fill-opacity', 0);
+  map.setPaintProperty('period-fill',   'fill-opacity', 0.08);
+}
+
+function hideBasinLayer() {
+  _basinActive = false;
+  if (map.getLayer('basin-fill'))    map.setLayoutProperty('basin-fill',    'visibility', 'none');
+  if (map.getLayer('basin-outline')) map.setLayoutProperty('basin-outline', 'visibility', 'none');
+  map.setPaintProperty('polity-fill',   'fill-opacity', 0.35);
+  map.setPaintProperty('history-fill',  'fill-opacity', 0.09);
+  map.setPaintProperty('period-fill',   'fill-opacity', 0.22);
+}
+
+async function applyBasinVar(key) {
+  if (!key) return;
+  const varMeta = BASIN_VARS.find(v => v.key === key);
+  if (!varMeta) return;
+  const statusEl = document.getElementById('cp-basin-status');
+  statusEl.textContent = 'Loading…';
+  try {
+    const resp = await fetch(`/api/explorer/values?var=${key}&level=6&su=${varMeta.su}`);
+    const body = await resp.json();
+    const vals  = body.values;
+    const stats = body.meta;
+    const lo = stats.p10 ?? stats.min;
+    const hi = stats.p90 ?? stats.max;
+    const range = hi - lo || 1;
+    map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
+    Object.entries(vals).forEach(([id, v]) => {
+      if (v === null || v <= -9999) return;
+      const t  = Math.max(0, Math.min(1, (v - lo) / range));
+      const fc = interpRdbu(varMeta.reverse ? 1 - t : t);
+      map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: Number(id) }, { fc });
+    });
+    renderBasinLegend(varMeta, lo, hi);
+    statusEl.textContent = `${stats.n_valid.toLocaleString()} basins`;
+    _basinVarLoaded = true;
+  } catch (e) {
+    statusEl.textContent = 'Error loading variable';
+    console.error('applyBasinVar:', e);
+  }
+}
+
+function renderBasinLegend(meta, lo, hi) {
+  const barEl = document.getElementById('cp-basin-legend-bar');
+  const loEl  = document.getElementById('cp-basin-leg-lo');
+  const hiEl  = document.getElementById('cp-basin-leg-hi');
+  const stops = meta.reverse
+    ? [...RDBU_PAL].reverse().map((c, i) => `${c} ${(i / (RDBU_PAL.length - 1) * 100).toFixed(1)}%`).join(', ')
+    : RDBU_PAL.map((c, i) => `${c} ${(i / (RDBU_PAL.length - 1) * 100).toFixed(1)}%`).join(', ');
+  barEl.style.background = `linear-gradient(to right, ${stops})`;
+  loEl.textContent = `${meta.loLabel} (${lo.toFixed(1)})`;
+  hiEl.textContent = `${meta.hiLabel} (${hi.toFixed(1)})`;
+  document.getElementById('cp-basin-legend').style.display = 'block';
+}
+
+document.getElementById('cp-basin-var').addEventListener('change', e => {
+  applyBasinVar(e.target.value);
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('#cp-tab-nav .nav-link').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const leaving = document.querySelector('#cp-tab-nav .nav-link.active')?.dataset.tab;
+    document.querySelectorAll('#cp-tab-nav .nav-link').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.cp-tab-pane').forEach(p => p.style.display = 'none');
+    btn.classList.add('active');
+    document.getElementById(`cp-tab-${btn.dataset.tab}`).style.display = 'block';
+
+    if (btn.dataset.tab === 'basins') {
+      loadBasinLayer();
+      showBasinLayer();
+      // Auto-load aridity on first open
+      if (!_basinVarLoaded) {
+        document.getElementById('cp-basin-var').value = 'aridity_index';
+        applyBasinVar('aridity_index');
+      }
+    } else if (leaving === 'basins') {
+      hideBasinLayer();
+    }
+  });
+});
+
+// ── Seshat ────────────────────────────────────────────────────────────────────
+const GEN_LABELS = {
+  capital:                  'Capital',
+  duration:                 'Duration',
+  peak_years:               'Peak years',
+  language:                 'Language',
+  linguistic_family:        'Language family',
+  religion:                 'Religion',
+  religion_family:          'Religion family',
+  religion_genus:           'Religion genus',
+  degree_of_centralization: 'Centralization',
+  supracultural_entity:     'Supracultural entity',
+  alternative_name:         'Also known as',
+  preceding_entity:         'Preceded by',
+  succeeding_entity:        'Succeeded by',
+};
+const GEN_ORDER = Object.keys(GEN_LABELS);
+
+const SOC_LABELS = {
+  Bureaucracy_Characteristics:         'Bureaucracy',
+  Hierarchical_Complexity:             'Complexity',
+  Information:                         'Information',
+  Law:                                 'Law',
+  Professions:                         'Professions',
+  Social_Scale:                        'Social Scale',
+  'Special-purpose_Sites':             'Sites',
+  'Specialized_Buildings:_polity_owned': 'Buildings',
+  Transport_Infrastructure:            'Transport',
+};
+
+const NUMERIC_LABELS = {
+  administrative_level:              'Admin levels',
+  military_level:                    'Military levels',
+  religious_level:                   'Religious levels',
+  settlement_hierarchy:              'Settlement hierarchy',
+  polity_population:                 'Population',
+  polity_territory:                  'Territory (km²)',
+  population_of_the_largest_settlement: 'Largest settlement pop.',
+  largest_communication_distance:    'Max comm. distance (km)',
+};
+
+// Fields excluded from shift diff (transition metadata, not state descriptors)
+const GEN_SKIP_DIFF = new Set(['duration', 'preceding_entity', 'succeeding_entity']);
+
+function diffGeneral(prev, curr) {
+  const diffs = {};
+  const allKeys = new Set([...Object.keys(prev), ...Object.keys(curr)]);
+  for (const k of allKeys) {
+    if (GEN_SKIP_DIFF.has(k)) continue;
+    const pv = prev[k], cv = curr[k];
+    if (pv === undefined && cv !== undefined)       diffs[k] = { type: 'added' };
+    else if (pv !== undefined && cv === undefined)  diffs[k] = { type: 'removed', was: pv };
+    else if (String(pv) !== String(cv))             diffs[k] = { type: 'changed', was: pv };
+  }
+  return diffs;
+}
+
+async function fetchSeshat(seshatid) {
+  const genEl  = document.getElementById('cp-general-content');
+  const socEl  = document.getElementById('cp-social-content');
+  const linkWr = document.getElementById('cp-seshat-link-wrap');
+
+  if (!seshatid) {
+    genEl.innerHTML = '<span class="text-muted fst-italic">No Seshat ID for this slice.</span>';
+    socEl.innerHTML = '<span class="text-muted fst-italic">No Seshat ID for this slice.</span>';
+    linkWr.style.display = 'none';
+    return;
+  }
+  genEl.innerHTML = '<span class="text-muted">Loading…</span>';
+  socEl.innerHTML = '<span class="text-muted">Loading…</span>';
+
+  try {
+    const res  = await fetch(`/api/polity/seshat?seshatid=${encodeURIComponent(seshatid)}`);
+    if (!res.ok) throw new Error('not found');
+    const json = await res.json();
+
+    // ── General tab ──────────────────────────────────────────────────────────
+    const g = json.general || {};
+
+    // Compute diff on seshatid shift (not on initial load)
+    const isShift = _hasIdShift && _prevGeneral !== null && seshatid !== _prevSeshatId;
+    const diffs   = isShift ? diffGeneral(_prevGeneral, g) : {};
+    const nChanged = Object.values(diffs).filter(d => d.type === 'changed').length;
+    const nAdded   = Object.values(diffs).filter(d => d.type === 'added').length;
+    const nRemoved = Object.values(diffs).filter(d => d.type === 'removed').length;
+    const nDiffs   = nChanged + nAdded + nRemoved;
+
+    // Build banner
+    let bannerHtml = '';
+    if (isShift && nDiffs > 0) {
+      const fromName = (_prevGeneral.original_name || _prevSeshatId || '').split(' – ')[0];
+      const toName   = (g.original_name            || seshatid       || '');
+      const parts = [];
+      if (nChanged) parts.push(`${nChanged} changed`);
+      if (nAdded)   parts.push(`${nAdded} added`);
+      if (nRemoved) parts.push(`${nRemoved} removed`);
+      bannerHtml = `
+        <div class="seshat-shift-banner">
+          <div class="shift-label">Seshat period shift</div>
+          <div>
+            <span class="shift-from">${escHtml(fromName)}</span>
+            <span class="shift-arrow">→</span>
+            <span class="shift-to">${escHtml(toName)}</span>
+          </div>
+          <div class="shift-count">${parts.join(' · ')} ${parts.length === 1 ? 'field' : 'fields'}</div>
+        </div>`;
+    }
+
+    // Build rows — include removed fields (in prev but not curr) after regular rows
+    const visibleKeys = new Set([
+      ...GEN_ORDER.filter(k => g[k] !== undefined),
+      ...Object.keys(diffs).filter(k => diffs[k].type === 'removed' && GEN_LABELS[k]),
+    ]);
+    const orderedKeys = [
+      ...GEN_ORDER.filter(k => visibleKeys.has(k)),
+    ];
+
+    const genRows = orderedKeys.map(k => {
+      const diff = diffs[k];
+      let val = g[k] !== undefined
+        ? (Array.isArray(g[k]) ? g[k].join('; ') : g[k])
+        : (diff ? diff.was : '');
+      if (k === 'preceding_entity' || k === 'succeeding_entity') {
+        const m = String(val).match(/--->\s*(.+?)\s*\[/);
+        if (m) val = m[1];
+      }
+      let rowClass = '';
+      let wasHtml  = '';
+      if (diff) {
+        rowClass = `gen-row-${diff.type}`;
+        if (diff.type === 'changed') {
+          let wasVal = Array.isArray(diff.was) ? diff.was.join('; ') : diff.was;
+          wasHtml = `<span class="gen-was">was: ${escHtml(String(wasVal))}</span>`;
+        }
+      }
+      return `<tr class="${rowClass}">
+        <td>${escHtml(GEN_LABELS[k] || k)}</td>
+        <td>${escHtml(String(val))}${wasHtml}</td>
+      </tr>`;
+    }).join('');
+
+    genEl.innerHTML = genRows
+      ? bannerHtml + `<table class="seshat-gen-table">${genRows}</table>`
+      : '<span class="text-muted fst-italic">No general data found.</span>';
+    linkWr.style.display = genRows ? 'block' : 'none';
+
+    // Save current for next diff
+    _prevGeneral  = g;
+    _prevSeshatId = seshatid;
+
+    // ── Social tab ───────────────────────────────────────────────────────────
+    const s = json.social || {};
+    if (!Object.keys(s).length) {
+      socEl.innerHTML = '<span class="text-muted fst-italic">No social complexity data for this polity.</span>';
+    } else {
+      let html = '';
+      for (const [subsection, items] of Object.entries(s)) {
+        const shortLabel = subsection.replace(/ /g,'_');
+        const label = SOC_LABELS[shortLabel] || subsection;
+        html += `<div class="soc-subsection">${escHtml(label)}</div>`;
+        const numerics = items.filter(i => i.type === 'numeric');
+        const binaries = items.filter(i => i.type === 'binary');
+        if (numerics.length) {
+          numerics.forEach(i => {
+            const lbl = NUMERIC_LABELS[i.var] || i.var.replace(/_/g,' ');
+            const val = parseInt(i.value).toLocaleString();
+            html += `<div class="soc-numeric"><span class="soc-num-label">${escHtml(lbl)}: </span>` +
+                    `<span class="soc-num-val">${escHtml(val)}</span></div>`;
+          });
+        }
+        if (binaries.length) {
+          html += '<div class="soc-grid">';
+          binaries.forEach(i => {
+            const lbl = i.var.replace(/_/g,' ');
+            const cls = (i.value.toLowerCase() === 'present') ? 'present' : 'transitional';
+            html += `<span class="soc-item ${cls}">${escHtml(lbl)}</span>`;
+          });
+          html += '</div>';
+        }
+      }
+      socEl.innerHTML = html;
+    }
+  } catch(e) {
+    genEl.innerHTML = '<span class="text-muted fst-italic">No Seshat data for this polity.</span>';
+    socEl.innerHTML = '<span class="text-muted fst-italic">No Seshat data for this polity.</span>';
+    linkWr.style.display = 'none';
+  }
+}
+
+// ── Wikipedia ─────────────────────────────────────────────────────────────────
+let _lastWikiName = '';
+
+async function fetchWiki(slice) {
+  const name = searchInput.value.trim();
+  if (name === _lastWikiName) return;
+  _lastWikiName = name;
+
+  document.getElementById('cp-welcome-search').style.display = 'none';
+  document.getElementById('cp-welcome-period').style.display = 'none';
+  document.getElementById('cp-wiki-content').style.display = 'block';
+  document.getElementById('cp-wiki-extract').textContent   = 'Loading…';
+  document.getElementById('cp-wiki-thumb').style.display   = 'none';
+
+  // Use the wikipedia field from the first slice's memberof or just the polity name
+  const wikiTitle = encodeURIComponent(name.replace(/ /g, '_'));
+  try {
+    const res  = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${wikiTitle}`);
+    const data = await res.json();
+
+    document.getElementById('cp-wiki-extract').textContent = data.extract || 'No summary available.';
+    document.getElementById('cp-wiki-link').href           = data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${wikiTitle}`;
+
+    if (data.thumbnail?.source) {
+      document.getElementById('cp-wiki-img').src         = data.thumbnail.source;
+      document.getElementById('cp-wiki-thumb').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('cp-wiki-extract').textContent = 'Wikipedia summary unavailable.';
+  }
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function formatYear(y) {
+  if (y === null || y === undefined) return '?';
+  return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function allCoords(geom) {
+  // Flatten all coordinate pairs from a GeoJSON geometry
+  const out = [];
+  function walk(arr, depth) {
+    if (depth === 0) { out.push(arr); return; }
+    arr.forEach(c => walk(c, depth - 1));
+  }
+  if (geom.type === 'Polygon')      walk(geom.coordinates, 2);
+  if (geom.type === 'MultiPolygon') walk(geom.coordinates, 3);
+  return out;
+}
+</script>
+</body>
+</html>

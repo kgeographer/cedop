@@ -2502,3 +2502,278 @@ def explorer_scatter(x: str, y: str, level: int = 6):
         "n_paired": len(paired),
         "values":   paired,
     }
+
+
+# -----------------------
+# Cliopatria polity endpoints
+# -----------------------
+
+@router.get("/polity/search")
+def polity_search(q: str = "", year: Optional[int] = None):
+    """Autocomplete search over leaf polity names. Returns name + slice count."""
+    if len(q) < 2:
+        return []
+    sql = """
+        SELECT name, MIN(fromyear) AS first, MAX(toyear) AS last, COUNT(*) AS slices
+        FROM gaz.clio_polities
+        WHERE NOT is_component AND name ILIKE %(pattern)s
+    """
+    params: Dict[str, Any] = {"pattern": f"%{q}%"}
+    if year is not None:
+        sql += " AND fromyear <= %(year)s AND toyear >= %(year)s"
+        params["year"] = year
+    sql += " GROUP BY name ORDER BY name LIMIT 40"
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+    return [
+        {"name": r[0], "first": r[1], "last": r[2], "slices": r[3]}
+        for r in rows
+    ]
+
+
+@router.get("/polity/slices")
+def polity_slices(name: str):
+    """All time slices for a named leaf polity (no geometry).
+    Includes geom_hash and geom_group for client-side history tracking."""
+    sql = """
+        WITH base AS (
+            SELECT id, fromyear, toyear, area, seshatid, invalid_source_geom,
+                   memberof, components,
+                   MD5(ST_AsBinary(geom)) AS geom_hash
+            FROM gaz.clio_polities
+            WHERE name = %(name)s AND NOT is_component
+        ),
+        with_prev AS (
+            SELECT *, LAG(geom_hash) OVER (ORDER BY fromyear) AS prev_hash
+            FROM base
+        ),
+        with_change AS (
+            SELECT *,
+                CASE WHEN geom_hash IS DISTINCT FROM prev_hash THEN 1 ELSE 0 END AS is_new
+            FROM with_prev
+        )
+        SELECT id, fromyear, toyear, area, seshatid, invalid_source_geom,
+               memberof, components, geom_hash,
+               SUM(is_new) OVER (ORDER BY fromyear ROWS UNBOUNDED PRECEDING)::int AS geom_group
+        FROM with_change
+        ORDER BY fromyear
+    """
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(sql, {"name": name})
+            rows = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"Polity '{name}' not found")
+    return [
+        {
+            "id":                  r[0],
+            "fromyear":            r[1],
+            "toyear":              r[2],
+            "area_km2":            round(r[3], 1) if r[3] else None,
+            "seshatid":            r[4],
+            "invalid_source_geom": r[5],
+            "memberof":            r[6],
+            "components":          r[7],
+            "geom_hash":           r[8],
+            "geom_group":          r[9],
+        }
+        for r in rows
+    ]
+
+
+@router.get("/polity/period")
+def polity_period(year: int):
+    """GeoJSON FeatureCollection of all active leaf polities at a given year."""
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT ST_AsGeoJSON(ST_Simplify(geom, 0.08), 4)::json AS geometry,
+                       id, name, seshatid, fromyear, toyear
+                FROM gaz.clio_polities
+                WHERE fromyear <= %(year)s AND toyear >= %(year)s
+                  AND NOT is_component
+                  AND NOT COALESCE(invalid_source_geom, false)
+                  AND geom IS NOT NULL
+                ORDER BY name
+            """, {"year": year})
+            rows = cur.fetchall()
+        features = [
+            {"type": "Feature", "geometry": geom,
+             "properties": {"id": id_, "name": name, "seshatid": seshatid,
+                            "fromyear": fromyear, "toyear": toyear}}
+            for geom, id_, name, seshatid, fromyear, toyear in rows
+            if geom is not None
+        ]
+        return {"type": "FeatureCollection", "features": features}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/polity/period/years")
+def polity_period_years():
+    """Sorted list of distinct fromyear values for non-component polities (for smart stepping)."""
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT fromyear
+                FROM gaz.clio_polities
+                WHERE NOT is_component
+                ORDER BY fromyear
+            """)
+            rows = cur.fetchall()
+        return [r[0] for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/polity/seshat")
+def polity_seshat(seshatid: str):
+    """Seshat general + social variables for a polity."""
+    GENERAL_FIELDS = [
+        'original_name', 'capital', 'language', 'linguistic_family',
+        'religion', 'religion_family', 'religion_genus',
+        'degree_of_centralization', 'duration', 'peak_years',
+        'alternative_name', 'supracultural_entity',
+        'preceding_entity', 'succeeding_entity',
+    ]
+    NUMERIC_VARS = {
+        'polity_population', 'polity_territory',
+        'population_of_the_largest_settlement', 'largest_communication_distance',
+        'administrative_level', 'military_level', 'religious_level', 'settlement_hierarchy',
+    }
+    BINARY_PRESENT = {'present', 'a~p', 'p~a'}
+
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            # General variables
+            cur.execute("""
+                SELECT variable_name, value_from, value_to
+                FROM seshat.general
+                WHERE polity_new_id = %(sid)s AND variable_name = ANY(%(fields)s)
+                ORDER BY variable_name, value_from
+            """, {"sid": seshatid, "fields": GENERAL_FIELDS})
+            gen_rows = cur.fetchall()
+
+            # Social variables — all for this seshatid
+            cur.execute("""
+                SELECT subsection, variable_name, value_from, value_to
+                FROM seshat.social
+                WHERE polity_new_id = %(sid)s
+                ORDER BY subsection, variable_name
+            """, {"sid": seshatid})
+            soc_rows = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+
+    if not gen_rows and not soc_rows:
+        raise HTTPException(status_code=404, detail=f"No Seshat data for '{seshatid}'")
+
+    # Build general dict (multi-value fields become lists)
+    general: Dict[str, Any] = {}
+    for var, vfrom, vto in gen_rows:
+        val = vfrom if not vto else f"{vfrom} – {vto}"
+        if var in general:
+            if isinstance(general[var], list):
+                general[var].append(val)
+            else:
+                general[var] = [general[var], val]
+        else:
+            general[var] = val
+
+    # Build social dict grouped by subsection
+    # Binary: include only if any value is present/A~P/P~A
+    # Numeric: include best (non-unknown) value
+    from collections import defaultdict
+    soc_agg: Dict[str, Dict[str, Any]] = defaultdict(dict)  # subsection → {var → {value, type}}
+    for subsection, var, vfrom, vto in soc_rows:
+        if not vfrom:
+            continue
+        entry = soc_agg[subsection].get(var)
+        if var in NUMERIC_VARS:
+            if vfrom.lower() != 'unknown':
+                try:
+                    num = int(vfrom)
+                    # Keep largest value (most informative for pop/territory)
+                    if entry is None or num > entry.get('num', -1):
+                        soc_agg[subsection][var] = {"type": "numeric", "value": vfrom, "num": num}
+                except ValueError:
+                    pass
+        else:
+            # Binary — record if present/transitional; don't overwrite a present with absent
+            if vfrom.lower() in BINARY_PRESENT:
+                soc_agg[subsection][var] = {"type": "binary", "value": vfrom}
+            elif entry is None and vfrom.lower() not in {'uncoded', 'unknown'}:
+                soc_agg[subsection][var] = {"type": "binary", "value": vfrom}
+
+    # Serialise: drop internal 'num' key, filter to coded entries only
+    social: Dict[str, List[Dict]] = {}
+    for subsection, vars_dict in sorted(soc_agg.items()):
+        entries = []
+        for var, info in sorted(vars_dict.items()):
+            entries.append({"var": var, "type": info["type"], "value": info["value"]})
+        if entries:
+            social[subsection] = entries
+
+    return {"seshatid": seshatid, "general": general, "social": social}
+
+
+@router.get("/polity/geom")
+def polity_geom(id: int):
+    """GeoJSON Feature for a single polity slice by row id."""
+    sql = """
+        SELECT name, fromyear, toyear, area, seshatid,
+               invalid_source_geom, memberof,
+               ST_AsGeoJSON(geom, 6)::json AS geometry
+        FROM gaz.clio_polities
+        WHERE id = %(id)s
+    """
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(sql, {"id": id})
+            r = cur.fetchone()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if "conn" in locals():
+            conn.close()
+    if not r:
+        raise HTTPException(status_code=404, detail=f"Slice id {id} not found")
+    return {
+        "type": "Feature",
+        "properties": {
+            "id":                  id,
+            "name":                r[0],
+            "fromyear":            r[1],
+            "toyear":              r[2],
+            "area_km2":            round(r[3], 1) if r[3] else None,
+            "seshatid":            r[4],
+            "invalid_source_geom": r[5],
+            "memberof":            r[6],
+        },
+        "geometry": r[7],
+    }

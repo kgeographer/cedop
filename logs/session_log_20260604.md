@@ -154,4 +154,14 @@ OLS slope sign (not Spearman sign) used for callout direction detection — they
 for nonlinear relationships.
 
 ### Status
-Provisionally complete. Karl will explore pairs independently. No known blockers.
+Complete. 11 scatter tests added to `tests/test_explorer.py` (41 total, all passing).
+`metadata/edops_codebook_v03.tsv` promoted from `_draft`; `routes.py` updated to load it.
+`sandbox.html` version badge updated to v0.3 Alpha. Committed and pushed.
+
+---
+
+## 7. Next session (planned)
+
+- Cliopatria polities viewer — standalone page rendering `gaz.clio_polities` polygons
+  via MapLibre; basic info panel. Low-stakes warmup before polity–signature association work.
+- Target demo date: 8 June 2026 (Ruth et al.).
