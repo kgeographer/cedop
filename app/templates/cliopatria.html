@@ -196,6 +196,13 @@
     .soc-numeric .soc-num-label { color: #6c757d; }
     .soc-numeric .soc-num-val   { font-weight: 500; }
 
+    /* Basin tab */
+    .basin-var-label { font-size: 0.75rem; color: #6c757d; margin-bottom: 0.25rem; display: block; }
+    #cp-basin-status { font-size: 0.75rem; color: #6c757d; margin-top: 0.4rem; min-height: 1.2em; }
+    #cp-basin-legend { margin-top: 0.75rem; }
+    #cp-basin-legend-bar { height: 12px; border-radius: 2px; margin-bottom: 0.25rem; }
+    .basin-legend-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: #495057; }
+
     /* Welcome state */
     #cp-welcome {
       padding: 1rem 0.75rem;
@@ -375,6 +382,9 @@
         <li class="nav-item">
           <button class="nav-link" data-tab="social">Social</button>
         </li>
+        <li class="nav-item">
+          <button class="nav-link" data-tab="basins">Basins</button>
+        </li>
       </ul>
     </div>
 
@@ -425,15 +435,41 @@
         </div>
       </div>
 
+      <!-- Basins tab -->
+      <div id="cp-tab-basins" class="cp-tab-pane" style="display:none;">
+        <div class="mb-2">
+          <label class="basin-var-label">Basin variable</label>
+          <select id="cp-basin-var" class="form-select form-select-sm">
+            <option value="">— choose variable —</option>
+            <option value="aridity_index">Aridity index</option>
+            <option value="precipitation_annual">Annual precipitation</option>
+            <option value="temperature_annual">Mean annual temperature</option>
+          </select>
+        </div>
+        <div id="cp-basin-legend" style="display:none;">
+          <div id="cp-basin-legend-bar"></div>
+          <div class="basin-legend-labels">
+            <span id="cp-basin-leg-lo"></span>
+            <span id="cp-basin-leg-hi"></span>
+          </div>
+        </div>
+        <div id="cp-basin-status"></div>
+      </div>
+
     </div><!-- #cp-tab-content -->
 
   </div><!-- #cp-right -->
 </div><!-- #cp-main -->
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+<script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmJ7HTuNPh8wSmkU96BpDAGMb2aJ" crossorigin="anonymous"></script>
 <script>
+// ── PMTiles protocol ─────────────────────────────────────────────────────────
+const _pmProtocol = new pmtiles.Protocol();
+maplibregl.addProtocol('pmtiles', _pmProtocol.tile);
+
 // ── Map init ────────────────────────────────────────────────────────────────
 const map = new maplibregl.Map({
   container: 'cp-map',
@@ -1019,13 +1055,136 @@ function updateInfoHeader(s) {
   }
 }
 
+// ── Basin layer ───────────────────────────────────────────────────────────────
+const RDBU_PAL = ['#b2182b','#ef8a62','#fddbc7','#f7f7f7','#d1e5f0','#67a9cf','#2166ac'];
+
+function interpRdbu(t) {
+  t = Math.max(0, Math.min(1, t));
+  const n = RDBU_PAL.length - 1;
+  const i = Math.floor(t * n);
+  const f = t * n - i;
+  if (i >= n) return RDBU_PAL[n];
+  const a = parseInt(RDBU_PAL[i].slice(1), 16);
+  const b = parseInt(RDBU_PAL[i + 1].slice(1), 16);
+  const r  = Math.round(((a >> 16) & 0xff) * (1 - f) + ((b >> 16) & 0xff) * f);
+  const g  = Math.round(((a >> 8)  & 0xff) * (1 - f) + ((b >> 8)  & 0xff) * f);
+  const bl = Math.round(( a        & 0xff) * (1 - f) + ( b        & 0xff) * f);
+  return `rgb(${r},${g},${bl})`;
+}
+
+const BASIN_VARS = [
+  { key: 'aridity_index',        su: 's', reverse: false, loLabel: 'dry',  hiLabel: 'wet'  },
+  { key: 'precipitation_annual', su: 's', reverse: false, loLabel: 'dry',  hiLabel: 'wet'  },
+  { key: 'temperature_annual',   su: 's', reverse: true,  loLabel: 'cold', hiLabel: 'warm' },
+];
+
+let _basinsLoaded    = false;
+let _basinActive     = false;
+let _basinVarLoaded  = false;
+
+function loadBasinLayer() {
+  if (_basinsLoaded) return;
+  map.addSource('basin06', {
+    type: 'vector',
+    url: 'pmtiles:///static/explorer/basin06.pmtiles'
+  });
+  // Insert below period-fill so polity layers stay on top
+  map.addLayer({
+    id: 'basin-fill', type: 'fill', source: 'basin06', 'source-layer': 'basin06',
+    paint: { 'fill-color': ['coalesce', ['feature-state', 'fc'], 'transparent'], 'fill-opacity': 0.72 }
+  }, 'period-fill');
+  map.addLayer({
+    id: 'basin-outline', type: 'line', source: 'basin06', 'source-layer': 'basin06',
+    paint: { 'line-color': 'rgba(80,80,80,0.2)', 'line-width': 0.5 }
+  }, 'period-fill');
+  _basinsLoaded = true;
+}
+
+function showBasinLayer() {
+  _basinActive = true;
+  if (map.getLayer('basin-fill'))    map.setLayoutProperty('basin-fill',    'visibility', 'visible');
+  if (map.getLayer('basin-outline')) map.setLayoutProperty('basin-outline', 'visibility', 'visible');
+  map.setPaintProperty('polity-fill',   'fill-opacity', 0);
+  map.setPaintProperty('history-fill',  'fill-opacity', 0);
+  map.setPaintProperty('period-fill',   'fill-opacity', 0.08);
+}
+
+function hideBasinLayer() {
+  _basinActive = false;
+  if (map.getLayer('basin-fill'))    map.setLayoutProperty('basin-fill',    'visibility', 'none');
+  if (map.getLayer('basin-outline')) map.setLayoutProperty('basin-outline', 'visibility', 'none');
+  map.setPaintProperty('polity-fill',   'fill-opacity', 0.35);
+  map.setPaintProperty('history-fill',  'fill-opacity', 0.09);
+  map.setPaintProperty('period-fill',   'fill-opacity', 0.22);
+}
+
+async function applyBasinVar(key) {
+  if (!key) return;
+  const varMeta = BASIN_VARS.find(v => v.key === key);
+  if (!varMeta) return;
+  const statusEl = document.getElementById('cp-basin-status');
+  statusEl.textContent = 'Loading…';
+  try {
+    const resp = await fetch(`/api/explorer/values?var=${key}&level=6&su=${varMeta.su}`);
+    const body = await resp.json();
+    const vals  = body.values;
+    const stats = body.meta;
+    const lo = stats.p10 ?? stats.min;
+    const hi = stats.p90 ?? stats.max;
+    const range = hi - lo || 1;
+    map.removeFeatureState({ source: 'basin06', sourceLayer: 'basin06' });
+    Object.entries(vals).forEach(([id, v]) => {
+      if (v === null || v <= -9999) return;
+      const t  = Math.max(0, Math.min(1, (v - lo) / range));
+      const fc = interpRdbu(varMeta.reverse ? 1 - t : t);
+      map.setFeatureState({ source: 'basin06', sourceLayer: 'basin06', id: Number(id) }, { fc });
+    });
+    renderBasinLegend(varMeta, lo, hi);
+    statusEl.textContent = `${stats.n_valid.toLocaleString()} basins`;
+    _basinVarLoaded = true;
+  } catch (e) {
+    statusEl.textContent = 'Error loading variable';
+    console.error('applyBasinVar:', e);
+  }
+}
+
+function renderBasinLegend(meta, lo, hi) {
+  const barEl = document.getElementById('cp-basin-legend-bar');
+  const loEl  = document.getElementById('cp-basin-leg-lo');
+  const hiEl  = document.getElementById('cp-basin-leg-hi');
+  const stops = meta.reverse
+    ? [...RDBU_PAL].reverse().map((c, i) => `${c} ${(i / (RDBU_PAL.length - 1) * 100).toFixed(1)}%`).join(', ')
+    : RDBU_PAL.map((c, i) => `${c} ${(i / (RDBU_PAL.length - 1) * 100).toFixed(1)}%`).join(', ');
+  barEl.style.background = `linear-gradient(to right, ${stops})`;
+  loEl.textContent = `${meta.loLabel} (${lo.toFixed(1)})`;
+  hiEl.textContent = `${meta.hiLabel} (${hi.toFixed(1)})`;
+  document.getElementById('cp-basin-legend').style.display = 'block';
+}
+
+document.getElementById('cp-basin-var').addEventListener('change', e => {
+  applyBasinVar(e.target.value);
+});
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('#cp-tab-nav .nav-link').forEach(btn => {
   btn.addEventListener('click', () => {
+    const leaving = document.querySelector('#cp-tab-nav .nav-link.active')?.dataset.tab;
     document.querySelectorAll('#cp-tab-nav .nav-link').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.cp-tab-pane').forEach(p => p.style.display = 'none');
     btn.classList.add('active');
     document.getElementById(`cp-tab-${btn.dataset.tab}`).style.display = 'block';
+
+    if (btn.dataset.tab === 'basins') {
+      loadBasinLayer();
+      showBasinLayer();
+      // Auto-load aridity on first open
+      if (!_basinVarLoaded) {
+        document.getElementById('cp-basin-var').value = 'aridity_index';
+        applyBasinVar('aridity_index');
+      }
+    } else if (leaving === 'basins') {
+      hideBasinLayer();
+    }
   });
 });
 
