@@ -2541,12 +2541,29 @@ def polity_search(q: str = "", year: Optional[int] = None):
 
 @router.get("/polity/slices")
 def polity_slices(name: str):
-    """All time slices for a named leaf polity (no geometry)."""
+    """All time slices for a named leaf polity (no geometry).
+    Includes geom_hash and geom_group for client-side history tracking."""
     sql = """
+        WITH base AS (
+            SELECT id, fromyear, toyear, area, seshatid, invalid_source_geom,
+                   memberof, components,
+                   MD5(ST_AsBinary(geom)) AS geom_hash
+            FROM gaz.clio_polities
+            WHERE name = %(name)s AND NOT is_component
+        ),
+        with_prev AS (
+            SELECT *, LAG(geom_hash) OVER (ORDER BY fromyear) AS prev_hash
+            FROM base
+        ),
+        with_change AS (
+            SELECT *,
+                CASE WHEN geom_hash IS DISTINCT FROM prev_hash THEN 1 ELSE 0 END AS is_new
+            FROM with_prev
+        )
         SELECT id, fromyear, toyear, area, seshatid, invalid_source_geom,
-               memberof, components
-        FROM gaz.clio_polities
-        WHERE name = %(name)s AND NOT is_component
+               memberof, components, geom_hash,
+               SUM(is_new) OVER (ORDER BY fromyear ROWS UNBOUNDED PRECEDING)::int AS geom_group
+        FROM with_change
         ORDER BY fromyear
     """
     try:
@@ -2561,16 +2578,6 @@ def polity_slices(name: str):
             conn.close()
     if not rows:
         raise HTTPException(status_code=404, detail=f"Polity '{name}' not found")
-
-    # Determine if memberof parent is a true composite (>1 distinct components at any slice)
-    parent_is_composite = False
-    for r in rows:
-        memberof = r[6]  # text[]
-        if memberof and len(memberof) > 0:
-            parent_name = memberof[0]
-            # Check if any sibling polities share this parent
-            break
-
     return [
         {
             "id":                  r[0],
@@ -2581,6 +2588,8 @@ def polity_slices(name: str):
             "invalid_source_geom": r[5],
             "memberof":            r[6],
             "components":          r[7],
+            "geom_hash":           r[8],
+            "geom_group":          r[9],
         }
         for r in rows
     ]
@@ -2590,7 +2599,7 @@ def polity_slices(name: str):
 def polity_seshat(seshatid: str):
     """Seshat general + social variables for a polity."""
     GENERAL_FIELDS = [
-        'capital', 'language', 'linguistic_family',
+        'original_name', 'capital', 'language', 'linguistic_family',
         'religion', 'religion_family', 'religion_genus',
         'degree_of_centralization', 'duration', 'peak_years',
         'alternative_name', 'supracultural_entity',

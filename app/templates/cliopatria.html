@@ -69,6 +69,7 @@
     #cp-map {
       flex: 1 1 0;
       min-height: 0;
+      position: relative;
     }
     #cp-controls {
       flex: 0 0 auto;
@@ -200,6 +201,52 @@
       padding: 0.25rem 0.5rem;
       margin-top: 0.3rem;
     }
+    /* Seshat period-shift banner */
+    .seshat-shift-banner {
+      background: linear-gradient(135deg, #1e2a3a, #0f172a);
+      color: #e2e8f0;
+      border-radius: 5px;
+      padding: 0.55rem 0.75rem;
+      margin-bottom: 0.6rem;
+      font-size: 0.75rem;
+      line-height: 1.5;
+    }
+    .seshat-shift-banner .shift-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #fbbf24;
+      margin-bottom: 0.2rem;
+    }
+    .seshat-shift-banner .shift-from { color: #94a3b8; }
+    .seshat-shift-banner .shift-arrow { color: #fbbf24; margin: 0 0.3rem; }
+    .seshat-shift-banner .shift-to   { color: #e2e8f0; font-weight: 600; }
+    .seshat-shift-banner .shift-count { color: #64748b; font-size: 0.7rem; margin-top: 0.15rem; }
+
+    /* General tab diff rows */
+    @keyframes genFlash {
+      0%   { background-color: #fef08a; }
+      100% { background-color: #fffbeb; }
+    }
+    .gen-row-changed td  { background: #fffbeb; animation: genFlash 1.2s ease-out; }
+    .gen-row-changed .gen-was { display: block; font-size: 0.68rem; color: #92400e; font-style: italic; margin-top: 1px; }
+    .gen-row-added   td  { background: #f0fdf4; }
+    .gen-row-removed td  { background: #fef2f2; color: #9ca3af; }
+    .gen-row-removed td:last-child { text-decoration: line-through; }
+
+    #cp-map-tooltip {
+      display: none;
+      position: absolute;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-size: 0.78rem;
+      padding: 3px 8px;
+      border-radius: 3px;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 20;
+    }
   </style>
 </head>
 <body>
@@ -233,7 +280,9 @@
 
   <!-- Left: map + temporal controls -->
   <div id="cp-left">
-    <div id="cp-map"></div>
+    <div id="cp-map">
+      <div id="cp-map-tooltip"></div>
+    </div>
     <div id="cp-controls">
       <button id="cp-btn-prev" class="btn btn-sm btn-outline-secondary" disabled title="Previous slice">
         <i class="bi bi-chevron-left"></i>
@@ -264,10 +313,10 @@
     <div id="cp-tab-nav">
       <ul class="nav nav-tabs border-0">
         <li class="nav-item">
-          <button class="nav-link active" data-tab="wiki">Wikipedia</button>
+          <button class="nav-link" data-tab="wiki">Wikipedia</button>
         </li>
         <li class="nav-item">
-          <button class="nav-link" data-tab="general">General</button>
+          <button class="nav-link active" data-tab="general">General</button>
         </li>
         <li class="nav-item">
           <button class="nav-link" data-tab="social">Social</button>
@@ -279,7 +328,7 @@
     <div id="cp-tab-content">
 
       <!-- Wikipedia tab -->
-      <div id="cp-tab-wiki" class="cp-tab-pane">
+      <div id="cp-tab-wiki" class="cp-tab-pane" style="display:none;">
         <div id="cp-welcome">
           <h6>Navigating historical polities</h6>
           <p>Search for any polity by name above. Results include empires, kingdoms, city-states, and confederacies from 3400 BCE to 2024 CE, drawn from the <a href="https://seshat-db.com/" target="_blank">Seshat</a> Cliopatria dataset.</p>
@@ -298,7 +347,7 @@
       </div>
 
       <!-- General tab -->
-      <div id="cp-tab-general" class="cp-tab-pane" style="display:none;">
+      <div id="cp-tab-general" class="cp-tab-pane">
         <div id="cp-general-content" class="text-muted fst-italic" style="font-size:0.82rem;">
           — select a polity —
         </div>
@@ -357,6 +406,33 @@ map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
 // Add polity layer once map is ready
 map.on('load', () => {
+  // History layers (prior distinct geometries) — added first so they sit behind current
+  map.addSource('history', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'history-fill',
+    type: 'fill',
+    source: 'history',
+    paint: {
+      'fill-color': '#3d6b9e',
+      'fill-opacity': 0.09,
+    }
+  });
+  map.addLayer({
+    id: 'history-outline',
+    type: 'line',
+    source: 'history',
+    paint: {
+      'line-color': '#1a3d6b',
+      'line-width': 1,
+      'line-dasharray': [4, 3],
+      'line-opacity': 0.55,
+    }
+  });
+
+  // Current polity layers — on top of history
   map.addSource('polity', {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] }
@@ -381,10 +457,36 @@ map.on('load', () => {
   });
 });
 
+// ── History hover tooltip ─────────────────────────────────────────────────────
+const _tooltip = document.getElementById('cp-map-tooltip');
+
+map.on('mousemove', 'history-fill', (e) => {
+  const hits = map.queryRenderedFeatures(e.point, { layers: ['history-fill'] });
+  if (!hits.length) return;
+  // Oldest (highest age) = most persistent territory at this point
+  hits.sort((a, b) => b.properties.age - a.properties.age);
+  _tooltip.textContent = hits[0].properties.label;
+  _tooltip.style.display = 'block';
+  _tooltip.style.left = (e.point.x + 14) + 'px';
+  _tooltip.style.top  = (e.point.y - 6)  + 'px';
+});
+map.on('mouseleave', 'history-fill', () => {
+  map.getCanvas().style.cursor = '';
+  _tooltip.style.display = 'none';
+});
+
 // ── State ────────────────────────────────────────────────────────────────────
-let _slices   = [];   // [{id, fromyear, toyear, area_km2, seshatid, invalid_source_geom, memberof}]
-let _current  = -1;   // index into _slices
-let _playTimer = null;
+let _slices      = [];        // full slice list with geom_group
+let _current     = -1;        // index into _slices
+let _playTimer   = null;
+let _geomCache      = new Map(); // geom_group → GeoJSON geometry object
+let _groupRepId     = new Map(); // geom_group → representative slice id (first in group)
+let _groupDateRange = new Map(); // geom_group → { from, to } in year integers
+const MAX_HISTORY = 6;           // max prior distinct geometries to show as outlines
+
+let _hasIdShift   = false;  // true if current polity has >1 distinct seshatid
+let _prevGeneral  = null;   // general data dict from previous seshatid period
+let _prevSeshatId = null;   // seshatid that produced _prevGeneral
 
 // ── Search ───────────────────────────────────────────────────────────────────
 const searchInput    = document.getElementById('cp-search-input');
@@ -435,11 +537,35 @@ async function selectPolity(name) {
   const res    = await fetch(`/api/polity/slices?name=${encodeURIComponent(name)}`);
   _slices      = await res.json();
   _current     = 0;
+  _geomCache.clear();
+  _groupRepId.clear();
+  _groupDateRange.clear();
+  _slices.forEach(s => {
+    if (!_groupRepId.has(s.geom_group)) _groupRepId.set(s.geom_group, s.id);
+    if (!_groupDateRange.has(s.geom_group)) {
+      _groupDateRange.set(s.geom_group, { from: s.fromyear, to: s.toyear });
+    } else {
+      const r = _groupDateRange.get(s.geom_group);
+      r.from = Math.min(r.from, s.fromyear);
+      r.to   = Math.max(r.to,   s.toyear);
+    }
+  });
+
+  // Detect seshatid shift polities (the 107)
+  const uniqueIds = new Set(_slices.map(s => s.seshatid).filter(Boolean));
+  _hasIdShift  = uniqueIds.size > 1;
+  _prevGeneral  = null;
+  _prevSeshatId = null;
+  _lastSeshatId = null;   // force re-fetch on first loadSlice
+
+  // Clear history layer on new polity
+  if (map.getSource('history')) {
+    map.getSource('history').setData({ type: 'FeatureCollection', features: [] });
+  }
 
   initControls();
   await loadSlice(0);
   fetchWiki(_slices[0]);
-  fetchSeshat(_slices[0].seshatid);
 }
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -539,16 +665,30 @@ function updateSliceLabel(idx) {
   btnNext.disabled = idx === _slices.length - 1;
 }
 
+// ── Geometry cache ────────────────────────────────────────────────────────────
+async function fetchGeomGroup(group) {
+  if (_geomCache.has(group)) return;
+  const id  = _groupRepId.get(group);
+  if (!id) return;
+  const res = await fetch(`/api/polity/geom?id=${id}`);
+  const gj  = await res.json();
+  _geomCache.set(group, gj.geometry);
+}
+
 // ── Slice load ────────────────────────────────────────────────────────────────
 async function loadSlice(idx) {
-  const s   = _slices[idx];
-  const res = await fetch(`/api/polity/geom?id=${s.id}`);
-  const gj  = await res.json();
+  const s            = _slices[idx];
+  const currentGroup = s.geom_group;
 
-  map.getSource('polity').setData(gj);
+  // Fetch current group geometry
+  await fetchGeomGroup(currentGroup);
+  const geom = _geomCache.get(currentGroup);
 
-  // Fit map to bounds
-  const coords = allCoords(gj.geometry);
+  // Update current polity layer
+  map.getSource('polity').setData({ type: 'Feature', properties: {}, geometry: geom });
+
+  // Fit bounds on first load of each distinct geometry
+  const coords = allCoords(geom);
   if (coords.length) {
     const lons = coords.map(c => c[0]), lats = coords.map(c => c[1]);
     map.fitBounds(
@@ -557,40 +697,64 @@ async function loadSlice(idx) {
     );
   }
 
-  updateSliceLabel(idx);
-  updateInfoHeader(gj.properties);
+  // Fetch and render prior distinct geometry groups as history outlines
+  const minGroup    = Math.max(1, currentGroup - MAX_HISTORY);
+  const priorGroups = [];
+  for (let g = minGroup; g < currentGroup; g++) priorGroups.push(g);
 
-  // Refresh Seshat panel only when seshatid changes across slices
-  const sid = _slices[idx].seshatid;
-  if (sid !== _lastSeshatId) {
-    _lastSeshatId = sid;
-    fetchSeshat(sid);
+  await Promise.all(priorGroups.map(g => fetchGeomGroup(g)));
+
+  const historyFeatures = priorGroups
+    .filter(g => _geomCache.has(g))
+    .map(g => {
+      const dr = _groupDateRange.get(g) || {};
+      return {
+        type:       'Feature',
+        properties: {
+          geom_group: g,
+          age:        currentGroup - g,
+          label:      `${formatYear(dr.from)} – ${formatYear(dr.to)}`,
+        },
+        geometry: _geomCache.get(g),
+      };
+    });
+
+  map.getSource('history').setData({
+    type: 'FeatureCollection', features: historyFeatures
+  });
+
+  updateSliceLabel(idx);
+  updateInfoHeader(s);
+
+  // Refresh Seshat panel only when seshatid changes
+  if (s.seshatid !== _lastSeshatId) {
+    _lastSeshatId = s.seshatid;
+    fetchSeshat(s.seshatid);
   }
 }
 let _lastSeshatId = null;
 
 // ── Info header ───────────────────────────────────────────────────────────────
-function updateInfoHeader(props) {
-  document.getElementById('cp-polity-name').textContent = props.name;
+function updateInfoHeader(s) {
+  const name = searchInput.value.trim();
+  document.getElementById('cp-polity-name').textContent = name;
 
   const meta = [];
-  meta.push(`${formatYear(props.fromyear)} – ${formatYear(props.toyear)}`);
-  if (props.area_km2) meta.push(`${Math.round(props.area_km2).toLocaleString()} km²`);
-  if (props.seshatid) meta.push(`Seshat: ${props.seshatid}`);
+  meta.push(`${formatYear(s.fromyear)} – ${formatYear(s.toyear)}`);
+  if (s.area_km2) meta.push(`${Math.round(s.area_km2).toLocaleString()} km²`);
+  if (s.seshatid) meta.push(`Seshat: ${s.seshatid}`);
   document.getElementById('cp-info-meta').textContent = meta.join('  ·  ');
 
   const warnEl = document.getElementById('cp-invalid-warn');
-  warnEl.style.display = props.invalid_source_geom ? 'block' : 'none';
+  warnEl.style.display = s.invalid_source_geom ? 'block' : 'none';
 
   const moEl = document.getElementById('cp-memberof-note');
-  if (props.memberof && props.memberof.length) {
-    // Suppress singleton-self wrappers: (X) containing only X adds no information
-    const singletonSelf = props.memberof.length === 1 &&
-                          props.memberof[0] === `(${props.name})`;
+  if (s.memberof && s.memberof.length) {
+    const singletonSelf = s.memberof.length === 1 && s.memberof[0] === `(${name})`;
     if (singletonSelf) {
       moEl.style.display = 'none';
     } else {
-      moEl.textContent   = `Part of ${props.memberof.join(', ')}`;
+      moEl.textContent   = `Part of ${s.memberof.join(', ')}`;
       moEl.style.display = 'block';
     }
   } else {
@@ -649,6 +813,22 @@ const NUMERIC_LABELS = {
   largest_communication_distance:    'Max comm. distance (km)',
 };
 
+// Fields excluded from shift diff (transition metadata, not state descriptors)
+const GEN_SKIP_DIFF = new Set(['duration', 'preceding_entity', 'succeeding_entity']);
+
+function diffGeneral(prev, curr) {
+  const diffs = {};
+  const allKeys = new Set([...Object.keys(prev), ...Object.keys(curr)]);
+  for (const k of allKeys) {
+    if (GEN_SKIP_DIFF.has(k)) continue;
+    const pv = prev[k], cv = curr[k];
+    if (pv === undefined && cv !== undefined)       diffs[k] = { type: 'added' };
+    else if (pv !== undefined && cv === undefined)  diffs[k] = { type: 'removed', was: pv };
+    else if (String(pv) !== String(cv))             diffs[k] = { type: 'changed', was: pv };
+  }
+  return diffs;
+}
+
 async function fetchSeshat(seshatid) {
   const genEl  = document.getElementById('cp-general-content');
   const socEl  = document.getElementById('cp-social-content');
@@ -668,23 +848,81 @@ async function fetchSeshat(seshatid) {
     if (!res.ok) throw new Error('not found');
     const json = await res.json();
 
-    // General tab
+    // ── General tab ──────────────────────────────────────────────────────────
     const g = json.general || {};
-    const genRows = GEN_ORDER.filter(k => g[k] !== undefined).map(k => {
-      let val = Array.isArray(g[k]) ? g[k].join('; ') : g[k];
-      // Trim verbose preceding/succeeding entity strings
-      if ((k === 'preceding_entity' || k === 'succeeding_entity')) {
-        const m = val.match(/--->\s*(.+?)\s*\[/);
+
+    // Compute diff on seshatid shift (not on initial load)
+    const isShift = _hasIdShift && _prevGeneral !== null && seshatid !== _prevSeshatId;
+    const diffs   = isShift ? diffGeneral(_prevGeneral, g) : {};
+    const nChanged = Object.values(diffs).filter(d => d.type === 'changed').length;
+    const nAdded   = Object.values(diffs).filter(d => d.type === 'added').length;
+    const nRemoved = Object.values(diffs).filter(d => d.type === 'removed').length;
+    const nDiffs   = nChanged + nAdded + nRemoved;
+
+    // Build banner
+    let bannerHtml = '';
+    if (isShift && nDiffs > 0) {
+      const fromName = (_prevGeneral.original_name || _prevSeshatId || '').split(' – ')[0];
+      const toName   = (g.original_name            || seshatid       || '');
+      const parts = [];
+      if (nChanged) parts.push(`${nChanged} changed`);
+      if (nAdded)   parts.push(`${nAdded} added`);
+      if (nRemoved) parts.push(`${nRemoved} removed`);
+      bannerHtml = `
+        <div class="seshat-shift-banner">
+          <div class="shift-label">Seshat period shift</div>
+          <div>
+            <span class="shift-from">${escHtml(fromName)}</span>
+            <span class="shift-arrow">→</span>
+            <span class="shift-to">${escHtml(toName)}</span>
+          </div>
+          <div class="shift-count">${parts.join(' · ')} ${parts.length === 1 ? 'field' : 'fields'}</div>
+        </div>`;
+    }
+
+    // Build rows — include removed fields (in prev but not curr) after regular rows
+    const visibleKeys = new Set([
+      ...GEN_ORDER.filter(k => g[k] !== undefined),
+      ...Object.keys(diffs).filter(k => diffs[k].type === 'removed' && GEN_LABELS[k]),
+    ]);
+    const orderedKeys = [
+      ...GEN_ORDER.filter(k => visibleKeys.has(k)),
+    ];
+
+    const genRows = orderedKeys.map(k => {
+      const diff = diffs[k];
+      let val = g[k] !== undefined
+        ? (Array.isArray(g[k]) ? g[k].join('; ') : g[k])
+        : (diff ? diff.was : '');
+      if (k === 'preceding_entity' || k === 'succeeding_entity') {
+        const m = String(val).match(/--->\s*(.+?)\s*\[/);
         if (m) val = m[1];
       }
-      return `<tr><td>${escHtml(GEN_LABELS[k])}</td><td>${escHtml(String(val))}</td></tr>`;
+      let rowClass = '';
+      let wasHtml  = '';
+      if (diff) {
+        rowClass = `gen-row-${diff.type}`;
+        if (diff.type === 'changed') {
+          let wasVal = Array.isArray(diff.was) ? diff.was.join('; ') : diff.was;
+          wasHtml = `<span class="gen-was">was: ${escHtml(String(wasVal))}</span>`;
+        }
+      }
+      return `<tr class="${rowClass}">
+        <td>${escHtml(GEN_LABELS[k] || k)}</td>
+        <td>${escHtml(String(val))}${wasHtml}</td>
+      </tr>`;
     }).join('');
+
     genEl.innerHTML = genRows
-      ? `<table class="seshat-gen-table">${genRows}</table>`
+      ? bannerHtml + `<table class="seshat-gen-table">${genRows}</table>`
       : '<span class="text-muted fst-italic">No general data found.</span>';
     linkWr.style.display = genRows ? 'block' : 'none';
 
-    // Social tab
+    // Save current for next diff
+    _prevGeneral  = g;
+    _prevSeshatId = seshatid;
+
+    // ── Social tab ───────────────────────────────────────────────────────────
     const s = json.social || {};
     if (!Object.keys(s).length) {
       socEl.innerHTML = '<span class="text-muted fst-italic">No social complexity data for this polity.</span>';
@@ -694,10 +932,8 @@ async function fetchSeshat(seshatid) {
         const shortLabel = subsection.replace(/ /g,'_');
         const label = SOC_LABELS[shortLabel] || subsection;
         html += `<div class="soc-subsection">${escHtml(label)}</div>`;
-
-        const numerics  = items.filter(i => i.type === 'numeric');
-        const binaries  = items.filter(i => i.type === 'binary');
-
+        const numerics = items.filter(i => i.type === 'numeric');
+        const binaries = items.filter(i => i.type === 'binary');
         if (numerics.length) {
           numerics.forEach(i => {
             const lbl = NUMERIC_LABELS[i.var] || i.var.replace(/_/g,' ');

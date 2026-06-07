@@ -126,3 +126,77 @@ single-seshatid polities where year_from matching is required (Northern Song cas
 - **Play animation**: wire up the reserved play button
 - **Seshat data**: populate right panel placeholder when Seshat per-polity data is integrated
 - **Navigation link**: add `/polities` to main nav across sandbox pages
+
+---
+
+## 3. Phase A — geometry history outlines (complete)
+
+Visual logic settled after iteration: all history fills at flat `fill-opacity: 0.07`, all
+at the same blue as the current polygon. Stacking is the mechanism — overlapping fills from
+multiple prior steps accumulate and darken, so persistent core territory appears darkest and
+newly-acquired fringe appears lightest. Dashed outlines (`line-dasharray: [4, 3]`) mark each
+prior step boundary uniformly at `line-opacity: 0.55`.
+
+Hover tooltip on history polygons: `queryRenderedFeatures` collects all overlapping history
+features at cursor point, sorts by `age` descending, shows the **oldest** group's date range
+— semantically "this territory has been held since at least X."
+
+---
+
+## 4. Seshat period-shift detection (complete — General tab)
+
+### DB analysis: Northern Song and Holy Roman Empire
+
+Systematic queries against `seshat.general` and `seshat.social` for two test polities
+revealed:
+
+- **Temporal sparsity**: the vast majority of Seshat variables carry no `year_from`/`year_to`
+  subdivision within a given seshatid. Northern Song: 2 of 52 social rows have year
+  annotations (point estimates at 1000 and 1100 CE). HRE `de_empire_1`: 1 of 68 social rows.
+  General table: 0 year-annotated rows for both polities. Within-seshatid diff is not viable
+  with current data.
+
+- **Coverage asymmetry**: later seshatid periods often have much sparser social data than
+  earlier (HRE `de_empire_2`: 1 social row vs `de_empire_1`'s 68). Diffing social across
+  transitions would be misleading — shows data gaps as historical change.
+
+- **The 107**: of 1,522 leaf polities in Cliopatria, 632 (42%) have any Seshat link;
+  107 of those 632 (17%) have multiple distinct seshatids (period shifts). These include
+  Ottoman Empire (5), Kingdom of France (6), Papal States (6), Byzantine Empire (3),
+  Kingdom of England (4), Yamato (3), USA (3).
+
+### Implementation
+
+- `original_name` added to `GENERAL_FIELDS` in `/api/polity/seshat` endpoint
+- Client detects `_hasIdShift` (>1 distinct seshatid in slice list) at polity selection
+- `diffGeneral()` compares prev/curr general dicts; skips `duration`, `preceding_entity`,
+  `succeeding_entity` (transition metadata)
+- On seshatid transition: dark navy banner — "Seshat period shift" / from→to period names /
+  field change count; changed rows flash amber with "was: X" note; added rows green,
+  removed rows red strikethrough
+- General tab is now the **default tab** (was Wikipedia)
+- Social tab diff deferred — data coverage too asymmetric to be reliable
+
+---
+
+## 5. Organizational memo
+
+`data/cliopatria/cliopatria_viewer_memo.md` — draft document covering: what was built,
+data sparsity findings, seshatid/slice temporal mismatch, coverage statistics, EDOPS scope
+vs. viewer scope, and the institutional picture (CEDOP / ISHI / Seshat). Intended for
+discussion with Ruth Mostern and eventually the Seshat team. See that file for detail.
+
+---
+
+## Remaining threads (clio branch)
+
+- **Basin06 overlay** (Phase 2): test `ST_Intersects` on invalid geom rows before wiring
+  toggle; `/api/polity/basins?id=N` → hybas_id array → PMTiles feature-state highlight
+- **Social tab diff**: deferred until fuller Seshat download (Warfare, Religion, Economy
+  variables not yet in local DB)
+- **Navigation link**: add `/polities` to main nav
+- **Play animation refinements**: speed control, loop option
+- **Seshat numeric URL mapping**: `seshat-db.com/core/polity/{N}` IDs not stored — would
+  need a mapping table if direct linking is wanted
+- **EDOPS signature tab** (Phase 3+): once aggregation built, viewer gains environmental
+  profile for current territory
